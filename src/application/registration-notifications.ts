@@ -46,10 +46,7 @@ function guardianLine(registration: Registration): string | null {
   return `${registration.guardianFirstName} ${registration.guardianLastName}`;
 }
 
-function confirmationMessage(
-  registration: Registration,
-  from: string,
-): EmailMessage {
+function confirmationMessage(registration: Registration, from: string): EmailMessage {
   const name = participantName(registration);
   const text = [
     "Dziękujemy za zgłoszenie do Pracowni Twórczej Pozytywka.",
@@ -153,7 +150,9 @@ export async function sendRegistrationNotifications(
   dependencies: RegistrationNotificationDependencies,
 ): Promise<RegistrationNotificationResult> {
   const messages = buildRegistrationNotificationMessages(registration, dependencies);
-  const results = await Promise.allSettled(messages.map((message) => dependencies.sender.send(message)));
+  const results = await Promise.allSettled(
+    messages.map((message) => dependencies.sender.send(message)),
+  );
 
   return {
     attempted: results.length,
