@@ -7,34 +7,58 @@ const oidcKeys = [
   "GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID",
 ] as const;
 
+function emptyStringToUndefined(value: unknown): unknown {
+  if (typeof value !== "string") {
+    return value;
+  }
+
+  return value.trim() === "" ? undefined : value;
+}
+
+const optionalTrimmedStringSchema = z.preprocess(
+  emptyStringToUndefined,
+  z.string().trim().optional(),
+);
+const optionalNonEmptyStringSchema = z.preprocess(
+  emptyStringToUndefined,
+  z.string().trim().min(1).optional(),
+);
+const optionalEmailSchema = z.preprocess(
+  emptyStringToUndefined,
+  z.string().trim().pipe(z.email()).optional(),
+);
 const emailAddressSchema = z.string().trim().pipe(z.email());
-const adminEmailsSchema = z
-  .string()
-  .transform((value) =>
-    value
-      .split(",")
-      .map((email) => email.trim())
-      .filter((email) => email.length > 0),
-  )
-  .pipe(z.array(emailAddressSchema).min(1));
+const adminEmailsSchema = z.preprocess(
+  emptyStringToUndefined,
+  z
+    .string()
+    .transform((value) =>
+      value
+        .split(",")
+        .map((email) => email.trim())
+        .filter((email) => email.length > 0),
+    )
+    .pipe(z.array(emailAddressSchema).min(1))
+    .optional(),
+);
 
 const serverEnvSchema = z
   .object({
     APP_ENV: z.enum(["test", "development", "production"]).default("development"),
     DATA_BACKEND: z.enum(["memory", "google-sheets"]).default("memory"),
-    GOOGLE_SPREADSHEET_ID: z.string().trim().optional(),
-    GCP_PROJECT_ID: z.string().trim().optional(),
-    GCP_PROJECT_NUMBER: z.string().trim().optional(),
-    GCP_SERVICE_ACCOUNT_EMAIL: z.string().trim().pipe(z.email()).optional(),
-    GCP_WORKLOAD_IDENTITY_POOL_ID: z.string().trim().optional(),
-    GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID: z.string().trim().optional(),
+    GOOGLE_SPREADSHEET_ID: optionalTrimmedStringSchema,
+    GCP_PROJECT_ID: optionalTrimmedStringSchema,
+    GCP_PROJECT_NUMBER: optionalTrimmedStringSchema,
+    GCP_SERVICE_ACCOUNT_EMAIL: optionalEmailSchema,
+    GCP_WORKLOAD_IDENTITY_POOL_ID: optionalTrimmedStringSchema,
+    GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID: optionalTrimmedStringSchema,
     EMAIL_PROVIDER: z.enum(["disabled", "resend"]).default("disabled"),
-    RESEND_API_KEY: z.string().trim().min(1).optional(),
-    EMAIL_FROM: z.string().trim().min(1).optional(),
-    REGISTRATION_ADMIN_EMAILS: adminEmailsSchema.optional(),
+    RESEND_API_KEY: optionalNonEmptyStringSchema,
+    EMAIL_FROM: optionalNonEmptyStringSchema,
+    REGISTRATION_ADMIN_EMAILS: adminEmailsSchema,
     ALLOW_TEST_SEED: z.enum(["true", "false"]).default("false"),
-    VERCEL: z.string().optional(),
-    VERCEL_OIDC_TOKEN: z.string().optional(),
+    VERCEL: optionalTrimmedStringSchema,
+    VERCEL_OIDC_TOKEN: optionalTrimmedStringSchema,
   })
   .superRefine((env, context) => {
     if (env.DATA_BACKEND === "google-sheets" && !env.GOOGLE_SPREADSHEET_ID) {
