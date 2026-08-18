@@ -1,0 +1,213 @@
+import { beforeEach, describe, expect, it } from "vitest";
+
+import { APPLICATION_ERROR_CODE, ApplicationError } from "@/application/errors";
+import { submitRegistration } from "@/application/submit-registration";
+import { asCityId, asOfferingId, type PublicCatalog } from "@/domain/catalog";
+import type {
+  ApplicationRepositories,
+  CatalogRepository,
+  RegistrationRepository,
+  SettingsRepository,
+} from "@/domain/repositories";
+import type { Registration, RequestId } from "@/domain/registration";
+import type { PublicSettings } from "@/domain/settings";
+
+const publicCatalog: PublicCatalog = {
+  cities: [{ id: asCityId("gdynia"), name: "Gdynia", sortOrder: 10 }],
+  offerings: [
+    {
+      id: asOfferingId("gdynia-hiphop"),
+      cityId: asCityId("gdynia"),
+      name: "Hip-hop",
+      sortOrder: 10,
+    },
+  ],
+};
+
+class FakeCatalogRepository implements CatalogRepository {
+  async getPublicCatalog() {
+    return publicCatalog;
+  }
+}
+
+class FakeSettingsRepository implements SettingsRepository {
+  constructor(private readonly settings: PublicSettings) {}
+
+  async getPublicSettings() {
+    return this.settings;
+  }
+}
+
+class FakeRegistrationRepository implements RegistrationRepository {
+  readonly records: Registration[] = [];
+
+  async findByRequestId(requestId: RequestId) {
+    return this.records.find((record) => record.requestId === requestId) ?? null;
+  }
+
+  async create(registration: Registration) {
+    this.records.push(registration);
+  }
+}
+
+const baseRequest = {
+  requestId: "11111111-1111-4111-8111-111111111111",
+  cityId: "gdynia",
+  offeringId: "gdynia-hiphop",
+  participantFirstName: "Jan",
+  participantLastName: "Kowalski",
+  age: 18,
+  phone: "500 000 000",
+  email: "JAN@EXAMPLE.COM",
+  renderedAt: Date.now() - 2_000,
+  website: "",
+};
+
+function createRepositories(
+  registrations: FakeRegistrationRepository,
+  settings: Partial<PublicSettings> = {},
+): ApplicationRepositories {
+  return {
+    catalog: new FakeCatalogRepository(),
+    registrations,
+    settings: new FakeSettingsRepository({
+      registrationsOpen: true,
+      formTitle: "Zapisy",
+      successMessage: "Dziękujemy. Zgłoszenie zostało wysłane.",
+      privacyNoticeUrl: "/privacy",
+      privacyNoticeVersion: "v1",
+      ...settings,
+    }),
+  };
+}
+
+describe("submitRegistration", () => {
+  let registrations: FakeRegistrationRepository;
+
+  beforeEach(() => {
+    registrations = new FakeRegistrationRepository();
+  });
+
+  it("creates a normalized registration with snapshots", async () => {
+    const result = await submitRegistration(baseRequest, {
+      repositories: createRepositories(registrations),
+      now: () => new Date("2026-08-18T12:00:00.000Z"),
+    });
+
+    expect(result.idempotentReplay).toBe(false);
+    expect(registrations.records).toHaveLength(1);
+    expect(registrations.records[0]).toMatchObject({
+      requestId: baseRequest.requestId,
+      cityIdSnapshot: "gdynia",
+      cityNameSnapshot: "Gdynia",
+      offeringNameSnapshot: "Hip-hop",
+      phone: "+48500000000",
+      email: "jan@example.com",
+      guardianFirstName: null,
+      guardianLastName: null,
+      schemaVersion: 1,
+    });
+  });
+
+  it("returns the original registration for a transport retry", async () => {
+    const repositories = createRepositories(registrations);
+
+    const first = await submitRegistration(baseRequest, { repositories });
+    const second = await submitRegistration(baseRequest, { repositories });
+
+    expect(second).toEqual({
+      registrationId: first.registrationId,
+      idempotentReplay: true,
+    });
+    expect(registrations.records).toHaveLength(1);
+  });
+
+  it("rejects the same requestId with different logical data", async () => {
+    const repositories = createRepositories(registrations);
+    await submitRegistration(baseRequest, { repositories });
+
+    await expect(
+      submitRegistration({ ...baseRequest, participantFirstName: "Piotr" }, { repositories }),
+    ).rejects.toMatchObject({
+      code: APPLICATION_ERROR_CODE.requestIdConflict,
+    });
+  });
+
+  it("allows a separate business registration when requestId differs", async () => {
+    const repositories = createRepositories(registrations);
+    await submitRegistration(baseRequest, { repositories });
+    await submitRegistration(
+      {
+        ...baseRequest,
+        requestId: "22222222-2222-4222-8222-222222222222",
+      },
+      { repositories },
+    );
+
+    expect(registrations.records).toHaveLength(2);
+  });
+
+  it("drops guardian data when age is adult", async () => {
+    await submitRegistration(
+      {
+        ...baseRequest,
+        guardianFirstName: "Stara wartość",
+        guardianLastName: "Stara wartość",
+      },
+      { repositories: createRepositories(registrations) },
+    );
+
+    expect(registrations.records[0]?.guardianFirstName).toBeNull();
+    expect(registrations.records[0]?.guardianLastName).toBeNull();
+  });
+
+  it("blocks production-like submission without privacy configuration", async () => {
+    const repositories = createRepositories(registrations, {
+      privacyNoticeUrl: null,
+      privacyNoticeVersion: null,
+    });
+
+    await expect(
+      submitRegistration(baseRequest, {
+        repositories,
+        requirePrivacyConfiguration: true,
+      }),
+    ).rejects.toMatchObject({
+      code: APPLICATION_ERROR_CODE.systemNotReady,
+    });
+  });
+
+  it("rejects an unavailable offering", async () => {
+    const repositories: ApplicationRepositories = {
+      ...createRepositories(registrations),
+      catalog: {
+        async getPublicCatalog() {
+          return {
+            cities: publicCatalog.cities,
+            offerings: [],
+          };
+        },
+      },
+    };
+
+    await expect(submitRegistration(baseRequest, { repositories })).rejects.toMatchObject({
+      code: APPLICATION_ERROR_CODE.offeringNotAvailable,
+    });
+  });
+
+  it("uses an application error for closed registrations", async () => {
+    try {
+      await submitRegistration(baseRequest, {
+        repositories: createRepositories(registrations, {
+          registrationsOpen: false,
+        }),
+      });
+      throw new Error("Expected submitRegistration to reject.");
+    } catch (error) {
+      expect(error).toBeInstanceOf(ApplicationError);
+      expect(error).toMatchObject({
+        code: APPLICATION_ERROR_CODE.registrationsClosed,
+      });
+    }
+  });
+});

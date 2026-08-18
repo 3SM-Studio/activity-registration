@@ -1,0 +1,5 @@
+strictDepBuilds: true
+
+allowBuilds:
+  "esbuild@0.28.2": true
+  "unrs-resolver@1.12.2": true
