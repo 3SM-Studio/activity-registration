@@ -12,6 +12,7 @@ const env: ServerEnv = {
   APP_ENV: "test",
   DATA_BACKEND: "google-sheets",
   GOOGLE_SPREADSHEET_ID: "sheet-id",
+  EMAIL_PROVIDER: "disabled",
   ALLOW_TEST_SEED: "false",
 };
 
