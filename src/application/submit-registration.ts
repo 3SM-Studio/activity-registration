@@ -25,6 +25,7 @@ export type SubmitRegistrationDependencies = Readonly<{
 export type SubmitRegistrationResult = Readonly<{
   registrationId: string;
   idempotentReplay: boolean;
+  registration: Registration;
 }>;
 
 function normalizeOptionalName(value: string | undefined): string | null {
@@ -132,6 +133,7 @@ export async function submitRegistration(
     return {
       registrationId: existing.id,
       idempotentReplay: true,
+      registration: existing,
     };
   }
 
@@ -210,5 +212,6 @@ export async function submitRegistration(
   return {
     registrationId: registration.id,
     idempotentReplay: false,
+    registration,
   };
 }
