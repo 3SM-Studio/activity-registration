@@ -7,6 +7,17 @@ const oidcKeys = [
   "GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID",
 ] as const;
 
+const emailAddressSchema = z.string().trim().pipe(z.email());
+const adminEmailsSchema = z
+  .string()
+  .transform((value) =>
+    value
+      .split(",")
+      .map((email) => email.trim())
+      .filter((email) => email.length > 0),
+  )
+  .pipe(z.array(emailAddressSchema).min(1));
+
 const serverEnvSchema = z
   .object({
     APP_ENV: z.enum(["test", "development", "production"]).default("development"),
@@ -17,6 +28,10 @@ const serverEnvSchema = z
     GCP_SERVICE_ACCOUNT_EMAIL: z.string().trim().pipe(z.email()).optional(),
     GCP_WORKLOAD_IDENTITY_POOL_ID: z.string().trim().optional(),
     GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID: z.string().trim().optional(),
+    EMAIL_PROVIDER: z.enum(["disabled", "resend"]).default("disabled"),
+    RESEND_API_KEY: z.string().trim().min(1).optional(),
+    EMAIL_FROM: z.string().trim().min(1).optional(),
+    REGISTRATION_ADMIN_EMAILS: adminEmailsSchema.optional(),
     ALLOW_TEST_SEED: z.enum(["true", "false"]).default("false"),
     VERCEL: z.string().optional(),
     VERCEL_OIDC_TOKEN: z.string().optional(),
@@ -30,11 +45,45 @@ const serverEnvSchema = z
       });
     }
 
+    if (env.EMAIL_PROVIDER === "resend") {
+      if (!env.RESEND_API_KEY) {
+        context.addIssue({
+          code: "custom",
+          path: ["RESEND_API_KEY"],
+          message: "RESEND_API_KEY is required for Resend.",
+        });
+      }
+
+      if (!env.EMAIL_FROM) {
+        context.addIssue({
+          code: "custom",
+          path: ["EMAIL_FROM"],
+          message: "EMAIL_FROM is required for Resend.",
+        });
+      }
+
+      if (!env.REGISTRATION_ADMIN_EMAILS) {
+        context.addIssue({
+          code: "custom",
+          path: ["REGISTRATION_ADMIN_EMAILS"],
+          message: "REGISTRATION_ADMIN_EMAILS is required for Resend.",
+        });
+      }
+    }
+
     if (env.APP_ENV === "production" && env.DATA_BACKEND !== "google-sheets") {
       context.addIssue({
         code: "custom",
         path: ["DATA_BACKEND"],
         message: "Production must use the google-sheets backend.",
+      });
+    }
+
+    if (env.APP_ENV === "production" && env.EMAIL_PROVIDER !== "resend") {
+      context.addIssue({
+        code: "custom",
+        path: ["EMAIL_PROVIDER"],
+        message: "Production must use the Resend email provider.",
       });
     }
 
