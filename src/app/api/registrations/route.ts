@@ -115,7 +115,7 @@ export async function POST(request: Request) {
       idempotentReplay: result.idempotentReplay,
     });
 
-    if (notificationDependencies) {
+    if (notificationDependencies && !result.idempotentReplay) {
       after(async () => {
         try {
           const notificationResult = await sendRegistrationNotifications(
