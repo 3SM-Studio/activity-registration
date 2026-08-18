@@ -1,8 +1,10 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 
 import { APPLICATION_ERROR_CODE, ApplicationError } from "@/application/errors";
+import { sendRegistrationNotifications } from "@/application/registration-notifications";
 import { submitRegistration } from "@/application/submit-registration";
 import { isRequestId } from "@/domain/registration";
+import { createRegistrationNotificationDependencies } from "@/infrastructure/email";
 import { SheetsApiError } from "@/infrastructure/google/sheets-client";
 import { createApplicationRepositories } from "@/infrastructure/repositories";
 import { getServerEnv } from "@/lib/env";
@@ -100,6 +102,7 @@ export async function POST(request: Request) {
   try {
     const env = getServerEnv();
     const repositories = createApplicationRepositories();
+    const notificationDependencies = createRegistrationNotificationDependencies(env);
 
     const result = await submitRegistration(raw, {
       repositories,
@@ -111,6 +114,36 @@ export async function POST(request: Request) {
       registrationId: result.registrationId,
       idempotentReplay: result.idempotentReplay,
     });
+
+    if (notificationDependencies) {
+      after(async () => {
+        try {
+          const notificationResult = await sendRegistrationNotifications(
+            result.registration,
+            notificationDependencies,
+          );
+
+          if (notificationResult.failed > 0) {
+            logger.warn("registration.notifications.partial_failure", {
+              ...(requestId ? { requestId } : {}),
+              registrationId: result.registrationId,
+              warningCount: notificationResult.failed,
+            });
+            return;
+          }
+
+          logger.info("registration.notifications.succeeded", {
+            ...(requestId ? { requestId } : {}),
+            registrationId: result.registrationId,
+          });
+        } catch {
+          logger.error("registration.notifications.failed", {
+            ...(requestId ? { requestId } : {}),
+            registrationId: result.registrationId,
+          });
+        }
+      });
+    }
 
     return NextResponse.json(
       {
