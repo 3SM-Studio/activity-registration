@@ -19,6 +19,31 @@ describe("server environment", () => {
     });
   });
 
+  it("treats empty optional values as unset", () => {
+    expect(
+      parseServerEnv({
+        APP_ENV: "test",
+        DATA_BACKEND: "memory",
+        GOOGLE_SPREADSHEET_ID: "",
+        GCP_PROJECT_ID: "",
+        GCP_PROJECT_NUMBER: "",
+        GCP_SERVICE_ACCOUNT_EMAIL: "",
+        GCP_WORKLOAD_IDENTITY_POOL_ID: "",
+        GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID: "",
+        EMAIL_PROVIDER: "disabled",
+        RESEND_API_KEY: "",
+        EMAIL_FROM: "",
+        REGISTRATION_ADMIN_EMAILS: "",
+        VERCEL: "",
+        VERCEL_OIDC_TOKEN: "",
+      }),
+    ).toMatchObject({
+      APP_ENV: "test",
+      DATA_BACKEND: "memory",
+      EMAIL_PROVIDER: "disabled",
+    });
+  });
+
   it("rejects production without Google Sheets", () => {
     expect(() =>
       parseServerEnv({
