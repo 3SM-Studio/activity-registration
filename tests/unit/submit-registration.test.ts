@@ -2,7 +2,14 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import { APPLICATION_ERROR_CODE, ApplicationError } from "@/application/errors";
 import { submitRegistration } from "@/application/submit-registration";
-import { asCityId, asOfferingId, type PublicCatalog } from "@/domain/catalog";
+import {
+  asCityId,
+  asOfferingId,
+  asSeasonId,
+  type PublicCatalog,
+  type Season,
+  type SeasonId,
+} from "@/domain/catalog";
 import type {
   ApplicationRepositories,
   CatalogRepository,
@@ -11,6 +18,15 @@ import type {
 } from "@/domain/repositories";
 import type { Registration, RequestId } from "@/domain/registration";
 import type { PublicSettings } from "@/domain/settings";
+
+const currentSeason: Season = {
+  id: asSeasonId("test-2026-2027"),
+  name: "2026/2027",
+  startDate: "2026-09-01",
+  endDate: "2027-07-31",
+  active: true,
+  sortOrder: 10,
+};
 
 const publicCatalog: PublicCatalog = {
   cities: [{ id: asCityId("gdynia"), name: "Gdynia", sortOrder: 10 }],
@@ -27,6 +43,10 @@ const publicCatalog: PublicCatalog = {
 class FakeCatalogRepository implements CatalogRepository {
   async getPublicCatalog() {
     return publicCatalog;
+  }
+
+  async findSeasonById(seasonId: SeasonId) {
+    return seasonId === currentSeason.id ? currentSeason : null;
   }
 }
 
@@ -72,6 +92,7 @@ function createRepositories(
     registrations,
     settings: new FakeSettingsRepository({
       registrationsOpen: true,
+      currentSeasonId: currentSeason.id,
       formTitle: "Zapisy",
       successMessage: "Dziękujemy. Zgłoszenie zostało wysłane.",
       privacyNoticeUrl: "/privacy",
@@ -88,7 +109,7 @@ describe("submitRegistration", () => {
     registrations = new FakeRegistrationRepository();
   });
 
-  it("creates a normalized registration with birth date and snapshots", async () => {
+  it("creates a normalized schema-v3 registration with season and snapshots", async () => {
     const result = await submitRegistration(baseRequest, {
       repositories: createRepositories(registrations),
       now: () => new Date("2026-08-18T12:00:00.000Z"),
@@ -99,6 +120,8 @@ describe("submitRegistration", () => {
     expect(registrations.records).toHaveLength(1);
     expect(registrations.records[0]).toMatchObject({
       requestId: baseRequest.requestId,
+      seasonId: "test-2026-2027",
+      seasonNameSnapshot: "2026/2027",
       cityIdSnapshot: "gdynia",
       cityNameSnapshot: "Gdynia",
       offeringNameSnapshot: "Hip-hop",
@@ -108,7 +131,11 @@ describe("submitRegistration", () => {
       email: "jan@example.com",
       guardianFirstName: null,
       guardianLastName: null,
-      schemaVersion: 2,
+      assignedGroupId: null,
+      contactedAt: null,
+      confirmedAt: null,
+      possibleDuplicateOf: null,
+      schemaVersion: 3,
     });
   });
 
@@ -181,6 +208,30 @@ describe("submitRegistration", () => {
     });
   });
 
+  it("fails closed when current season is not configured", async () => {
+    const repositories = createRepositories(registrations, { currentSeasonId: null });
+
+    await expect(submitRegistration(baseRequest, { repositories })).rejects.toMatchObject({
+      code: APPLICATION_ERROR_CODE.systemNotReady,
+    });
+    expect(registrations.records).toHaveLength(0);
+  });
+
+  it("fails closed when configured season is unavailable", async () => {
+    const repositories: ApplicationRepositories = {
+      ...createRepositories(registrations),
+      settings: new FakeSettingsRepository({
+        ...(await createRepositories(registrations).settings.getPublicSettings()),
+        currentSeasonId: asSeasonId("missing-season"),
+      }),
+    };
+
+    await expect(submitRegistration(baseRequest, { repositories })).rejects.toMatchObject({
+      code: APPLICATION_ERROR_CODE.systemNotReady,
+    });
+    expect(registrations.records).toHaveLength(0);
+  });
+
   it("rejects an unavailable offering", async () => {
     const repositories: ApplicationRepositories = {
       ...createRepositories(registrations),
@@ -191,6 +242,9 @@ describe("submitRegistration", () => {
             offerings: [],
           };
         },
+        async findSeasonById(seasonId) {
+          return seasonId === currentSeason.id ? currentSeason : null;
+        },
       },
     };
 
@@ -199,11 +253,12 @@ describe("submitRegistration", () => {
     });
   });
 
-  it("uses an application error for closed registrations", async () => {
+  it("uses an application error for closed registrations before requiring a season", async () => {
     try {
       await submitRegistration(baseRequest, {
         repositories: createRepositories(registrations, {
           registrationsOpen: false,
+          currentSeasonId: null,
         }),
       });
       throw new Error("Expected submitRegistration to reject.");
