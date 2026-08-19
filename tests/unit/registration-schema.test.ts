@@ -43,6 +43,35 @@ describe("registrationRequestSchema", () => {
     expect(result.success).toBe(true);
   });
 
+  it("normalizes person-name whitespace while preserving valid internal spaces", () => {
+    const result = registrationRequestSchema.safeParse({
+      ...base,
+      participantFirstName: "  Anna   Maria  ",
+      participantLastName: "  van   der   Meer  ",
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.participantFirstName).toBe("Anna Maria");
+      expect(result.data.participantLastName).toBe("van der Meer");
+    }
+  });
+
+  it("normalizes guardian-name whitespace", () => {
+    const result = registrationRequestSchema.safeParse({
+      ...base,
+      birthDate: "2010-01-15",
+      guardianFirstName: "  Anna   Maria ",
+      guardianLastName: "  de   la   Cruz ",
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.guardianFirstName).toBe("Anna Maria");
+      expect(result.data.guardianLastName).toBe("de la Cruz");
+    }
+  });
+
   it("rejects an invalid calendar date", () => {
     expect(registrationRequestSchema.safeParse({ ...base, birthDate: "2010-02-31" }).success).toBe(
       false,
@@ -59,6 +88,17 @@ describe("registrationRequestSchema", () => {
     expect(registrationRequestSchema.safeParse({ ...base, email: "not-an-email" }).success).toBe(
       false,
     );
+  });
+
+  it("rejects whitespace inside an email address", () => {
+    const result = registrationRequestSchema.safeParse({ ...base, email: "jan @example.com" });
+    expect(result.success).toBe(false);
+
+    if (!result.success) {
+      expect(result.error.flatten().fieldErrors.email?.[0]).toBe(
+        "Adres e-mail nie może zawierać spacji.",
+      );
+    }
   });
 
   it("trims a valid email before returning parsed data", () => {
