@@ -21,7 +21,7 @@ afterEach(() => {
 });
 
 describe("GoogleSheetsClient", () => {
-  it("appends user values using RAW input mode", async () => {
+  it("appends ordinary user values using RAW input mode", async () => {
     const fetchMock = vi.fn(
       async () =>
         new Response(JSON.stringify({ updates: {} }), {
@@ -32,7 +32,7 @@ describe("GoogleSheetsClient", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const client = new GoogleSheetsClient(env, "sheet-id");
-    await client.appendValues("ZAPISY!A:ZZ", [["=1+1", "@value"]]);
+    await client.appendValues("USTAWIENIA!A:ZZ", [["KEY", "=1+1"]]);
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledWith(
@@ -45,7 +45,44 @@ describe("GoogleSheetsClient", () => {
     );
   });
 
-  it("does not retry an ambiguous append failure", async () => {
+  it("appends a registration through AppendCellsRequest tableId", async () => {
+    const fetchMock = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ replies: [] }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = new GoogleSheetsClient(env, "sheet-id");
+    await client.appendTableRow("900001", ["reg_1", 42, true]);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [, init] = fetchMock.mock.calls[0] ?? [];
+    expect(init).toEqual(expect.objectContaining({ method: "POST" }));
+    expect(JSON.parse(String(init?.body))).toEqual({
+      requests: [
+        {
+          appendCells: {
+            tableId: "900001",
+            rows: [
+              {
+                values: [
+                  { userEnteredValue: { stringValue: "reg_1" } },
+                  { userEnteredValue: { numberValue: 42 } },
+                  { userEnteredValue: { boolValue: true } },
+                ],
+              },
+            ],
+            fields: "userEnteredValue",
+          },
+        },
+      ],
+    });
+  });
+
+  it("does not retry an ambiguous native table append failure", async () => {
     const fetchMock = vi.fn(
       async () =>
         new Response(JSON.stringify({ error: "temporary" }), {
@@ -57,13 +94,13 @@ describe("GoogleSheetsClient", () => {
 
     const client = new GoogleSheetsClient(env, "sheet-id");
 
-    await expect(client.appendValues("ZAPISY!A:ZZ", [["req_1"]])).rejects.toMatchObject({
+    await expect(client.appendTableRow("900001", ["reg_1"])).rejects.toMatchObject({
       status: 503,
     });
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it("reads protected range metadata used by sheet validation", async () => {
+  it("reads protection and native table metadata used by sheet validation", async () => {
     const fetchMock = vi.fn(
       async () =>
         new Response(
@@ -79,8 +116,38 @@ describe("GoogleSheetsClient", () => {
                     range: {
                       sheetId: 7,
                       startColumnIndex: 0,
-                      endColumnIndex: 14,
+                      endColumnIndex: 15,
                     },
+                  },
+                ],
+                tables: [
+                  {
+                    tableId: "900001",
+                    name: "Rejestracje",
+                    range: {
+                      sheetId: 7,
+                      startRowIndex: 0,
+                      endRowIndex: 10,
+                      startColumnIndex: 0,
+                      endColumnIndex: 22,
+                    },
+                    columnProperties: [
+                      { columnIndex: 9, columnName: "BIRTH_DATE", columnType: "DATE" },
+                      {
+                        columnIndex: 15,
+                        columnName: "STATUS",
+                        columnType: "DROPDOWN",
+                        dataValidationRule: {
+                          condition: {
+                            type: "ONE_OF_LIST",
+                            values: [
+                              { userEnteredValue: "NEW" },
+                              { userEnteredValue: "IN_PROGRESS" },
+                            ],
+                          },
+                        },
+                      },
+                    ],
                   },
                 ],
               },
@@ -107,7 +174,26 @@ describe("GoogleSheetsClient", () => {
             description: "activity-registration:system-columns:identity-and-pii",
             warningOnly: true,
             startColumnIndex: 0,
-            endColumnIndex: 14,
+            endColumnIndex: 15,
+          },
+        ],
+        tables: [
+          {
+            tableId: "900001",
+            name: "Rejestracje",
+            startRowIndex: 0,
+            endRowIndex: 10,
+            startColumnIndex: 0,
+            endColumnIndex: 22,
+            columnProperties: [
+              { columnIndex: 9, columnName: "BIRTH_DATE", columnType: "DATE" },
+              {
+                columnIndex: 15,
+                columnName: "STATUS",
+                columnType: "DROPDOWN",
+                dropdownValues: ["NEW", "IN_PROGRESS"],
+              },
+            ],
           },
         ],
       },
