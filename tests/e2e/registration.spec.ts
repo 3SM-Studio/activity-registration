@@ -57,15 +57,19 @@ test("filters offerings by city and submits a minor registration", async ({ page
   await expect(page.getByText("Dziękujemy. Zgłoszenie zostało wysłane.")).toBeVisible();
 });
 
-test("formats a Polish phone number and exposes the country selector", async ({ page }) => {
+test("formats a Polish phone number and uses the shadcn country selector", async ({ page }) => {
   await openRegistrationForm(page);
 
   const phone = page.getByLabel(/Numer telefonu/);
-  const country = page.locator(".PhoneInputCountrySelect");
+  const country = combobox(page, /Kraj numeru telefonu/);
 
-  await expect(country).toHaveValue("PL");
+  await expect(country).toContainText("+48");
   await phone.fill("500000000");
-  await expect(phone).toHaveValue("+48 500 000 000");
+  await expect(phone).toHaveValue("500 000 000");
+
+  await country.click();
+  await expect(page.getByRole("option", { name: /Niemcy.*\+49/ })).toBeVisible();
+  await page.keyboard.press("Escape");
 });
 
 test("changing city clears the previously selected offering", async ({ page }) => {
