@@ -11,11 +11,20 @@ import {
   asRequestId,
   isRegistrationId,
   isRequestId,
+  LEGACY_REGISTRATION_SCHEMA_VERSION,
   REGISTRATION_SCHEMA_VERSION,
   REGISTRATION_SOURCE,
   REGISTRATION_STATUS,
+  type RegistrationSchemaVersion,
 } from "@/domain/registration";
-import { cell, type HeaderMap, SheetSchemaError } from "@/infrastructure/google/header-map";
+import { googleSerialToIsoDate } from "@/infrastructure/google/google-date";
+import {
+  cell,
+  rawCell,
+  type HeaderMap,
+  SheetSchemaError,
+} from "@/infrastructure/google/header-map";
+import { calculateAgeAtDate, dateOnlyInPoland, isValidIsoDateOnly } from "@/lib/birth-date";
 
 export function parseBooleanCell(value: string): boolean {
   const normalized = value.trim().toUpperCase();
@@ -89,6 +98,41 @@ export function assertUniqueIds<T extends { readonly id: string }>(
   }
 }
 
+function parseRegistrationSchemaVersion(raw: string): RegistrationSchemaVersion {
+  const version = Number(raw);
+  if (version === LEGACY_REGISTRATION_SCHEMA_VERSION || version === REGISTRATION_SCHEMA_VERSION) {
+    return version;
+  }
+
+  throw new SheetSchemaError(`Unsupported registration schema version: ${raw}`);
+}
+
+function parseBirthDate(
+  row: readonly unknown[],
+  headers: HeaderMap,
+  schemaVersion: RegistrationSchemaVersion,
+  registrationId: string,
+): string | null {
+  if (schemaVersion === LEGACY_REGISTRATION_SCHEMA_VERSION) {
+    return null;
+  }
+
+  const raw = rawCell(row, headers, "BIRTH_DATE");
+  let birthDate: string;
+
+  if (typeof raw === "number") {
+    birthDate = googleSerialToIsoDate(raw);
+  } else {
+    birthDate = String(raw ?? "").trim();
+  }
+
+  if (!birthDate || !isValidIsoDateOnly(birthDate)) {
+    throw new SheetSchemaError(`Invalid birth date for registration ${registrationId}`);
+  }
+
+  return birthDate;
+}
+
 export function parseRegistrationRow(
   row: readonly unknown[],
   headers: HeaderMap,
@@ -129,15 +173,13 @@ export function parseRegistrationRow(
     throw new SheetSchemaError(`Unsupported registration source for ${id}: ${source}`);
   }
 
-  const age = Number(cell(row, headers, "AGE"));
-  if (!Number.isInteger(age) || age < 0 || age > 120) {
-    throw new SheetSchemaError(`Invalid age for registration ${id}`);
+  const ageAtSubmission = Number(cell(row, headers, "AGE_AT_SUBMISSION"));
+  if (!Number.isInteger(ageAtSubmission) || ageAtSubmission < 0 || ageAtSubmission > 120) {
+    throw new SheetSchemaError(`Invalid age snapshot for registration ${id}`);
   }
 
-  const schemaVersion = Number(cell(row, headers, "SCHEMA_VERSION"));
-  if (schemaVersion !== REGISTRATION_SCHEMA_VERSION) {
-    throw new SheetSchemaError(`Unsupported registration schema version: ${schemaVersion}`);
-  }
+  const schemaVersion = parseRegistrationSchemaVersion(cell(row, headers, "SCHEMA_VERSION"));
+  const birthDate = parseBirthDate(row, headers, schemaVersion, id);
 
   const submittedAt = cell(row, headers, "SUBMITTED_AT");
   const createdAt = cell(row, headers, "CREATED_AT");
@@ -152,6 +194,13 @@ export function parseRegistrationRow(
     }
   }
 
+  if (birthDate) {
+    const expectedAge = calculateAgeAtDate(birthDate, dateOnlyInPoland(new Date(submittedAt)));
+    if (expectedAge !== ageAtSubmission) {
+      throw new SheetSchemaError(`Birth date and age snapshot disagree for registration ${id}`);
+    }
+  }
+
   return {
     id: asRegistrationId(id),
     requestId: asRequestId(requestId),
@@ -162,7 +211,8 @@ export function parseRegistrationRow(
     offeringNameSnapshot: cell(row, headers, "OFFERING_NAME_SNAPSHOT"),
     participantFirstName: cell(row, headers, "PARTICIPANT_FIRST_NAME"),
     participantLastName: cell(row, headers, "PARTICIPANT_LAST_NAME"),
-    age,
+    birthDate,
+    ageAtSubmission,
     guardianFirstName: cell(row, headers, "GUARDIAN_FIRST_NAME") || null,
     guardianLastName: cell(row, headers, "GUARDIAN_LAST_NAME") || null,
     phone: cell(row, headers, "PHONE"),
@@ -173,6 +223,6 @@ export function parseRegistrationRow(
     source,
     createdAt,
     updatedAt,
-    schemaVersion: REGISTRATION_SCHEMA_VERSION,
+    schemaVersion,
   };
 }
