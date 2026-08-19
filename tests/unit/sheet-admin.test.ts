@@ -45,7 +45,19 @@ function offeringRow(
   active: string,
   sortOrder: number,
 ): readonly unknown[] {
-  return [id, cityId, name, "", active, sortOrder, "ROLLING", "CLOSED", "", "", "FALSE"];
+  return [
+    id,
+    cityId,
+    name,
+    "",
+    active,
+    sortOrder,
+    "ROLLING",
+    "CLOSED",
+    "",
+    "",
+    "FALSE",
+  ];
 }
 
 function createValidationClient(): SheetsClient {
@@ -71,7 +83,11 @@ function createValidationClient(): SheetsClient {
     ],
     [
       `${SHEET.cities}!A:ZZ`,
-      [SHEET_SCHEMA[SHEET.cities], ["gdynia", "Gdynia", "TAK", 10], ["broken-city", "", "TAK", 20]],
+      [
+        SHEET_SCHEMA[SHEET.cities],
+        ["gdynia", "Gdynia", "TAK", 10],
+        ["broken-city", "", "TAK", 20],
+      ],
     ],
     [
       `${SHEET.seasons}!A:ZZ`,
@@ -240,7 +256,8 @@ describe("bootstrapSheetStructure", () => {
     await bootstrapSheetStructure(client);
 
     const addTable = batchRequests.find((request) => "addTable" in request)?.addTable as
-      { table?: Record<string, unknown> } | undefined;
+      | { table?: Record<string, unknown> }
+      | undefined;
 
     expect(addTable?.table).toEqual(
       expect.objectContaining({
