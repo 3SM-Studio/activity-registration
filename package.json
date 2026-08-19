@@ -18,7 +18,7 @@
     "test:run": "vitest run",
     "test:e2e": "playwright test",
     "test:integration:sheets": "tsx scripts/test-sheets-integration.ts",
-    "check": "echo __SUBMIT__; prettier src/application/submit-registration.ts; echo __FORM__; prettier src/components/registration/registration-form.tsx; echo __DOMAIN__; prettier src/domain/registration-duplicates.ts; echo __TEST__; prettier tests/unit/registration-duplicates.test.ts; false",
+    "check": "pnpm repo:validate && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test:run && pnpm build",
     "sheet:bootstrap": "tsx scripts/sheet-bootstrap.ts",
     "sheet:validate": "tsx scripts/sheet-validate.ts",
     "sheet:migrate": "tsx scripts/sheet-migrate.ts",
