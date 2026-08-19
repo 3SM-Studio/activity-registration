@@ -5,6 +5,7 @@ type SafeLogContext = Readonly<
     requestId: string;
     registrationId: string;
     idempotentReplay: boolean;
+    businessDuplicate: boolean;
     code: string;
     status: number;
     durationMs: number;

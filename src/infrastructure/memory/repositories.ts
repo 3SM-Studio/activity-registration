@@ -13,6 +13,10 @@ import type {
   RegistrationRepository,
   SettingsRepository,
 } from "@/domain/repositories";
+import {
+  isPotentialDuplicateCandidate,
+  type RegistrationDuplicateCriteria,
+} from "@/domain/registration-duplicates";
 import type { Registration, RequestId } from "@/domain/registration";
 import {
   DEFAULT_FORM_TITLE,
@@ -113,6 +117,14 @@ function getRegistrations(): Registration[] {
 class MemoryRegistrationRepository implements RegistrationRepository {
   async findByRequestId(requestId: RequestId): Promise<Registration | null> {
     return getRegistrations().find((registration) => registration.requestId === requestId) ?? null;
+  }
+
+  async findPotentialDuplicates(
+    criteria: RegistrationDuplicateCriteria,
+  ): Promise<readonly Registration[]> {
+    return getRegistrations().filter((registration) =>
+      isPotentialDuplicateCandidate(registration, criteria),
+    );
   }
 
   async create(registration: Registration): Promise<void> {

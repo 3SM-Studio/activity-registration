@@ -88,6 +88,24 @@ describe("registration notifications", () => {
     expect(messages[1]?.text).toContain("2012-01-15");
   });
 
+  it("keeps probable-duplicate warning internal to the admin notification", async () => {
+    const messages = await buildRegistrationNotificationMessages(
+      registration({
+        possibleDuplicateOf: asRegistrationId("reg_33333333-3333-4333-8333-333333333333"),
+      }),
+      {
+        from: "Pozytywka <zapisy@example.com>",
+        adminEmails: ["biuro@example.com"],
+      },
+    );
+
+    expect(messages[0]?.text).not.toMatch(/duplikat/i);
+    expect(messages[0]?.html).not.toMatch(/duplikat/i);
+    expect(messages[1]?.text).toMatch(/możliwy duplikat/i);
+    expect(messages[1]?.html).toMatch(/możliwy duplikat/i);
+    expect(messages[1]?.text).not.toContain("reg_33333333-3333-4333-8333-333333333333");
+  });
+
   it("escapes participant-controlled values in rendered HTML", async () => {
     const messages = await buildRegistrationNotificationMessages(
       registration({ participantFirstName: "<script>alert(1)</script>" }),

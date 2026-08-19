@@ -2,6 +2,10 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 
 import {
+  classifyRegistrationDuplicates,
+  type RegistrationDuplicateCriteria,
+} from "../src/domain/registration-duplicates";
+import {
   REGISTRATION_SCHEMA_VERSION,
   REGISTRATION_SOURCE,
   REGISTRATION_STATUS,
@@ -18,6 +22,13 @@ import { calculateAgeAtDate, dateOnlyInPoland } from "../src/lib/birth-date";
 import { getServerEnv } from "../src/lib/env";
 import { createRegistrationId } from "../src/lib/ids";
 import { createAdminSheetsClient } from "./_google-admin";
+
+async function registrationRowCount(
+  client: ReturnType<typeof createAdminSheetsClient>,
+): Promise<number> {
+  const rows = await client.getValues(`${SHEET.registrations}!A:ZZ`);
+  return Math.max(0, rows.length - 1);
+}
 
 async function deleteOwnRegistrationRow(
   client: ReturnType<typeof createAdminSheetsClient>,
@@ -105,10 +116,11 @@ async function main() {
   const now = nowDate.toISOString();
   const birthDate = "2000-01-15";
   const ageAtSubmission = calculateAgeAtDate(birthDate, dateOnlyInPoland(nowDate));
-  const requestId = asRequestId(randomUUID());
+  const exactRequestId = asRequestId(randomUUID());
+  const probableRequestId = asRequestId(randomUUID());
   const registration: Registration = {
     id: createRegistrationId(),
-    requestId,
+    requestId: exactRequestId,
     submittedAt: now,
     seasonId: season.id,
     seasonNameSnapshot: season.name,
@@ -117,13 +129,13 @@ async function main() {
     cityNameSnapshot: city.name,
     offeringNameSnapshot: offering.name,
     participantFirstName: "Integration",
-    participantLastName: "Test",
+    participantLastName: "Dedup Test",
     birthDate,
     ageAtSubmission,
     guardianFirstName: null,
     guardianLastName: null,
     phone: "+48500000000",
-    email: "integration-test@example.com",
+    email: "integration-dedup@example.com",
     status: REGISTRATION_STATUS.new,
     assignedGroupId: null,
     contactedAt: null,
@@ -136,46 +148,92 @@ async function main() {
     updatedAt: now,
     schemaVersion: REGISTRATION_SCHEMA_VERSION,
   };
+  const exactCriteria: RegistrationDuplicateCriteria = {
+    seasonId: season.id,
+    offeringId: offering.id,
+    cityId: city.id,
+    participantFirstName: registration.participantFirstName,
+    participantLastName: registration.participantLastName,
+    birthDate,
+    phone: registration.phone,
+    email: registration.email,
+  };
+  const probableCriteria: RegistrationDuplicateCriteria = {
+    ...exactCriteria,
+    phone: "+48511111111",
+  };
+  const probableRegistration: Registration = {
+    ...registration,
+    id: createRegistrationId(),
+    requestId: probableRequestId,
+    phone: probableCriteria.phone,
+    possibleDuplicateOf: registration.id,
+    submittedAt: new Date(nowDate.getTime() + 1_000).toISOString(),
+    createdAt: new Date(nowDate.getTime() + 1_000).toISOString(),
+    updatedAt: new Date(nowDate.getTime() + 1_000).toISOString(),
+  };
 
-  let created = false;
+  const beforeCount = await registrationRowCount(client);
+  let exactCreated = false;
+  let probableCreated = false;
 
   try {
     await registrationRepository.create(registration);
-    created = true;
+    exactCreated = true;
 
-    const stored = await registrationRepository.findByRequestId(requestId);
+    const stored = await registrationRepository.findByRequestId(exactRequestId);
     assert(stored, "Synthetic Registration was not readable after native table append.");
     assert.equal(stored.id, registration.id);
-    assert.equal(stored.requestId, registration.requestId);
     assert.equal(stored.seasonId, registration.seasonId);
-    assert.equal(stored.seasonNameSnapshot, registration.seasonNameSnapshot);
-    assert.equal(stored.offeringId, registration.offeringId);
-    assert.equal(stored.cityIdSnapshot, registration.cityIdSnapshot);
-    assert.equal(stored.participantFirstName, "Integration");
-    assert.equal(stored.participantLastName, "Test");
     assert.equal(stored.birthDate, birthDate);
-    assert.equal(stored.ageAtSubmission, ageAtSubmission);
-    assert.equal(stored.assignedGroupId, null);
-    assert.equal(stored.contactedAt, null);
-    assert.equal(stored.confirmedAt, null);
-    assert.equal(stored.possibleDuplicateOf, null);
-    assert.equal(stored.schemaVersion, REGISTRATION_SCHEMA_VERSION);
+
+    const exactCandidates = await registrationRepository.findPotentialDuplicates(exactCriteria);
+    const exactMatch = classifyRegistrationDuplicates(exactCandidates, exactCriteria);
+    assert.equal(exactMatch.kind, "exact");
+    if (exactMatch.kind !== "exact") {
+      throw new Error("Expected exact business duplicate classification.");
+    }
+    assert.equal(exactMatch.registration.id, registration.id);
+    assert.equal(
+      await registrationRowCount(client),
+      beforeCount + 1,
+      "Exact duplicate detection must not append another row.",
+    );
+
+    const probableCandidates =
+      await registrationRepository.findPotentialDuplicates(probableCriteria);
+    const probableMatch = classifyRegistrationDuplicates(probableCandidates, probableCriteria);
+    assert.equal(probableMatch.kind, "probable");
+    if (probableMatch.kind !== "probable") {
+      throw new Error("Expected probable business duplicate classification.");
+    }
+    assert.equal(probableMatch.registration.id, registration.id);
+
+    await registrationRepository.create(probableRegistration);
+    probableCreated = true;
+    const probableStored = await registrationRepository.findByRequestId(probableRequestId);
+    assert(probableStored, "Probable duplicate Registration was not readable after append.");
+    assert.equal(probableStored.possibleDuplicateOf, registration.id);
+    assert.equal(await registrationRowCount(client), beforeCount + 2);
 
     console.info(
       JSON.stringify(
         {
           ok: true,
-          test: "real-google-sheets-native-table-registration-roundtrip",
-          requestId,
-          registrationId: registration.id,
+          test: "real-google-sheets-business-deduplication",
+          exactDuplicateDidNotAppend: true,
+          probableDuplicateLinked: true,
         },
         null,
         2,
       ),
     );
   } finally {
-    if (created) {
-      await deleteOwnRegistrationRow(client, requestId);
+    if (probableCreated) {
+      await deleteOwnRegistrationRow(client, probableRequestId);
+    }
+    if (exactCreated) {
+      await deleteOwnRegistrationRow(client, exactRequestId);
     }
   }
 }

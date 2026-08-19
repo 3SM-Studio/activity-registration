@@ -9,6 +9,11 @@ import {
 import { offeringAcceptsRegistration } from "@/domain/offering-intake";
 import type { ApplicationRepositories } from "@/domain/repositories";
 import {
+  classifyRegistrationDuplicates,
+  possibleDuplicateRegistrationId,
+  type RegistrationDuplicateCriteria,
+} from "@/domain/registration-duplicates";
+import {
   REGISTRATION_SCHEMA_VERSION,
   REGISTRATION_SOURCE,
   REGISTRATION_STATUS,
@@ -32,6 +37,7 @@ export type SubmitRegistrationDependencies = Readonly<{
 export type SubmitRegistrationResult = Readonly<{
   registrationId: string;
   idempotentReplay: boolean;
+  businessDuplicate: boolean;
   registration: Registration;
 }>;
 
@@ -154,6 +160,7 @@ export async function submitRegistration(
     return {
       registrationId: existing.id,
       idempotentReplay: true,
+      businessDuplicate: false,
       registration: existing,
     };
   }
@@ -226,6 +233,29 @@ export async function submitRegistration(
     );
   }
 
+  const duplicateCriteria: RegistrationDuplicateCriteria = {
+    seasonId: season.id,
+    offeringId: asOfferingId(offering.id),
+    cityId: asCityId(city.id),
+    participantFirstName: normalized.participantFirstName,
+    participantLastName: normalized.participantLastName,
+    birthDate: normalized.birthDate,
+    phone: normalized.phone,
+    email: normalized.email,
+  };
+  const candidates =
+    await dependencies.repositories.registrations.findPotentialDuplicates(duplicateCriteria);
+  const duplicateMatch = classifyRegistrationDuplicates(candidates, duplicateCriteria);
+
+  if (duplicateMatch.kind === "exact") {
+    return {
+      registrationId: duplicateMatch.registration.id,
+      idempotentReplay: false,
+      businessDuplicate: true,
+      registration: duplicateMatch.registration,
+    };
+  }
+
   const now = nowDate.toISOString();
   const registration: Registration = {
     id: createRegistrationId(),
@@ -249,7 +279,7 @@ export async function submitRegistration(
     assignedGroupId: null,
     contactedAt: null,
     confirmedAt: null,
-    possibleDuplicateOf: null,
+    possibleDuplicateOf: possibleDuplicateRegistrationId(duplicateMatch),
     notes: "",
     privacyNoticeVersion: settings.privacyNoticeVersion ?? "unconfigured",
     source: REGISTRATION_SOURCE.web,
@@ -263,6 +293,7 @@ export async function submitRegistration(
   return {
     registrationId: registration.id,
     idempotentReplay: false,
+    businessDuplicate: false,
     registration,
   };
 }
