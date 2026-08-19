@@ -11,7 +11,7 @@ function offeringRow(
   active: string,
   sortOrder: number,
 ): readonly unknown[] {
-  return [id, cityId, name, "", active, sortOrder, "ROLLING", "CLOSED", "", "", "FALSE"];
+  return [id, cityId, name, "", active, sortOrder, "ROLLING", "OPEN", "", "", "FALSE"];
 }
 
 function createClient(): SheetsClient {
@@ -53,17 +53,19 @@ function createClient(): SheetsClient {
 }
 
 describe("GoogleSheetsCatalogRepository", () => {
-  it("publishes only active offerings and cities that have an active offering", async () => {
+  it("publishes active offerings with computed intake status and active cities", async () => {
     const repository = new GoogleSheetsCatalogRepository(createClient());
 
-    await expect(repository.getPublicCatalog()).resolves.toEqual({
+    await expect(repository.getPublicCatalog("2026-08-19")).resolves.toEqual({
       cities: [{ id: "gdynia", name: "Gdynia", sortOrder: 10 }],
       offerings: [
         {
           id: "gdynia-hiphop",
           cityId: "gdynia",
           name: "Hip-hop",
+          publicDescription: null,
           sortOrder: 10,
+          intakeStatus: "OPEN",
         },
       ],
     });
