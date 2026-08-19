@@ -163,7 +163,10 @@ describe("GoogleSheetsRegistrationRepository", () => {
       offeringId: asOfferingId("gdynia-contemporary"),
       offeringNameSnapshot: "Contemporary",
     };
-    const rows = [rowForHeaders(REGISTRATION_HEADERS, candidate), rowForHeaders(REGISTRATION_HEADERS, unrelated)];
+    const rows = [
+      rowForHeaders(REGISTRATION_HEADERS, candidate),
+      rowForHeaders(REGISTRATION_HEADERS, unrelated),
+    ];
     const { client } = createClient(REGISTRATION_HEADERS, rows);
     const repository = new GoogleSheetsRegistrationRepository(client);
     const criteria: RegistrationDuplicateCriteria = {
