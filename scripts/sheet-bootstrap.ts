@@ -1,4 +1,8 @@
 import {
+  bootstrapOperatorSheetExperience,
+  validateOperatorSheetExperience,
+} from "../src/infrastructure/google/operator-sheet";
+import {
   bootstrapSheetStructure,
   validateSheetStructure,
 } from "../src/infrastructure/google/sheet-admin";
@@ -9,8 +13,10 @@ async function main() {
 
   console.info("Bootstrapping Google Sheet structure...");
   await bootstrapSheetStructure(client);
+  await bootstrapOperatorSheetExperience(client);
 
   const report = await validateSheetStructure(client);
+  await validateOperatorSheetExperience(client);
   console.info(
     JSON.stringify(
       {
@@ -18,6 +24,7 @@ async function main() {
         sheets: report.sheets,
         cityCount: report.cityCount,
         offeringCount: report.offeringCount,
+        operatorExperience: "ready",
         warnings: report.warnings,
       },
       null,
