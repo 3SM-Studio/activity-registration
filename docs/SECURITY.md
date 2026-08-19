@@ -1,8 +1,24 @@
 # Security
 
+## Public repository
+
+Repozytorium `3SM-Studio/activity-registration` jest świadomie publiczne.
+
+Publiczne repo nie może zawierać:
+
+- tokenów,
+- private keys,
+- credentials JSON,
+- wartości `.env.local`,
+- realnych PII,
+- danych uczestników,
+- sekretów Resend ani Google.
+
+`.env*` jest ignorowane, z wyjątkiem jawnie bezsekretowego `.env.example`.
+
 ## Google authentication
 
-Produkcja:
+Vercel:
 
 ```text
 Vercel OIDC
@@ -14,6 +30,24 @@ Vercel OIDC
 Nie używamy produkcyjnego długowiecznego private key service account.
 
 Local development może korzystać z Google Application Default Credentials wyłącznie do środowiska TEST.
+
+## TEST / PROD identity isolation
+
+Preview i Production nie mogą współdzielić jednej tożsamości z dostępem do obu arkuszy.
+
+Docelowy model:
+
+```text
+Preview subject
+-> TEST service account
+-> TEST Sheet only
+
+Production subject
+-> PROD service account
+-> PROD Sheet only
+```
+
+Obecny TEST service account nie może otrzymać dostępu do PROD Sheet. Osobny PROD service account i production WIF binding są blockerem przed uruchomieniem PROD.
 
 ## PII
 
@@ -39,7 +73,12 @@ Dopuszczalne identyfikatory techniczne:
 - wartości użytkownika: `RAW`,
 - wymagane nagłówki są walidowane,
 - duplikaty technicznych ID w katalogu są błędem,
-- frontend nie posiada dostępu do credentials Google.
+- frontend nie posiada dostępu do credentials Google,
+- nieidempotentny `append` nie jest automatycznie retryowany,
+- techniczne kolumny `ZAPISY` mają warning-only protected ranges,
+- `STATUS` i `NOTES` pozostają kolumnami operacyjnymi.
+
+Warning-only protection chroni przed przypadkową ręczną edycją, ale nie jest granicą bezpieczeństwa. Prawdziwą granicą są uprawnienia Drive/Sheets, osobne identity TEST/PROD i serwerowy write path.
 
 ## Public endpoint
 
@@ -48,11 +87,14 @@ MVP ma:
 - JSON-only POST,
 - limit rozmiaru requestu,
 - honeypot,
-- podstawowy timing abuse check bez traktowania go jako silnego zabezpieczenia,
+- minimalny sensowny czas od renderu do submit,
 - stabilne publiczne error codes,
-- brak ujawniania odpowiedzi Google API.
+- brak ujawniania odpowiedzi Google API,
+- brak sesji i uprzywilejowanych cookies użytkownika.
 
-CAPTCHA/Turnstile dodajemy po realnym sygnale abuse lub przed dużą kampanią.
+Głównym ryzykiem publicznego endpointu jest spam/abuse, nie klasyczny session CSRF.
+
+CAPTCHA/Turnstile dodajemy po realnym sygnale abuse lub przed większą kampanią.
 
 ## Privacy
 
@@ -63,6 +105,18 @@ Produkcja jest blokowana logicznie, jeśli nie ma:
 
 Treść prawna i okres retencji muszą zostać zatwierdzone poza kodem.
 
+## Email
+
+Po persistence aplikacja wykonuje best-effort participant/admin notifications przez Resend.
+
+- błąd maila nie cofa Registration,
+- replay tego samego `requestId` nie wysyła maili drugi raz,
+- klucz API jest wyłącznie server-side,
+- message content jest HTML-escaped,
+- durable retry/outbox jest osobnym hardeningiem, issue #3.
+
+Przed PROD należy potwierdzić, że każdy wcześniej ujawniony lub testowy Resend key został unieważniony i nie jest używany.
+
 ## Ambiguous writes
 
 `values.append` nie jest automatycznie retryowane wewnątrz klienta Google. Jeśli wynik zapisu jest niepewny, retry całego zgłoszenia używa tego samego `requestId`; backend najpierw odczytuje istniejący rekord, a dopiero potem ewentualnie wykonuje kolejny append. Dzięki temu retry transportowy nie omija warstwy idempotencji.
@@ -71,7 +125,7 @@ Treść prawna i okres retencji muszą zostać zatwierdzone poza kodem.
 
 Aplikacja ustawia bazowe nagłówki bezpieczeństwa dla wszystkich tras:
 
-- `Content-Security-Policy` ograniczone na razie do `frame-ancestors`, `base-uri` i `form-action`,
+- `Content-Security-Policy` ograniczone do `frame-ancestors`, `base-uri` i `form-action`,
 - `X-Frame-Options: DENY`,
 - `X-Content-Type-Options: nosniff`,
 - `Referrer-Policy: strict-origin-when-cross-origin`,

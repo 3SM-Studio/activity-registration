@@ -95,6 +95,7 @@ describe("submitRegistration", () => {
     });
 
     expect(result.idempotentReplay).toBe(false);
+    expect(result.registration).toBe(registrations.records[0]);
     expect(registrations.records).toHaveLength(1);
     expect(registrations.records[0]).toMatchObject({
       requestId: baseRequest.requestId,
@@ -118,6 +119,7 @@ describe("submitRegistration", () => {
     expect(second).toEqual({
       registrationId: first.registrationId,
       idempotentReplay: true,
+      registration: first.registration,
     });
     expect(registrations.records).toHaveLength(1);
   });

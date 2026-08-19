@@ -17,7 +17,8 @@ Mobile jest punktem wyjścia. Na małym ekranie najważniejsza jest jedna czytel
 - **Stage Ink** `#29172D` - główny tekst, najciemniejsze elementy, kontrast.
 - **Warm Paper** `#FFF8ED` - główne tło strony.
 - **Soft Paper** `#FFFCF7` - powierzchnie formularza.
-- **Warm Line** `#E8D7C6` - obramowania i separatory.
+- **Warm Line** `#E8D7C6` - dekoracyjne obramowania i separatory nieinteraktywne.
+- **Interactive Line** `#A58D91` - obrys pól formularza, dobrany tak, aby odcinać się od jasnej powierzchni na poziomie około 3:1.
 
 ### Brand accents
 
@@ -31,12 +32,14 @@ Mobile jest punktem wyjścia. Na małym ekranie najważniejsza jest jedna czytel
 - Success używa Stage Teal na bardzo jasnym tealowym tle.
 - Error pozostaje czerwony i musi zawierać tekst/ikonę, nie sam kolor.
 - Disabled nie może wyglądać jak zwykłe pole aktywne.
+- Focus indicator musi być wyraźny także bez rozpoznawania koloru; obecny 4 px ring ma kontrast co najmniej około 3:1 względem jasnej powierzchni.
 
 ### Rules
 
 - Brak fioletowych gradientów i neonowych glowów.
 - Kolor marki koncentruje się na nagłówku, CTA, focusie i kilku detalach.
 - Formularz nie może być wielokolorowy. Jedna sekcja = jedna spokojna powierzchnia.
+- `Warm Line` nie jest używany jako jedyna granica interaktywnego inputu, ponieważ jest celowo subtelniejszy niż wymagany kontrast kontrolki.
 
 ## 03 Typography
 
@@ -54,7 +57,8 @@ Typografia ma być ludzka i ekspresyjna przez skalę, rytm i wagę, nie przez de
 - system sans stack,
 - minimum 16 px w polach formularza na mobile,
 - etykiety 14-15 px z wagą 600,
-- tekst pomocniczy 14-15 px, wysoki line-height.
+- tekst pomocniczy 14-15 px, wysoki line-height,
+- placeholdery muszą zachować kontrast normalnego tekstu, nie mogą być ledwo widoczną dekoracją.
 
 ### Hierarchy
 
@@ -96,11 +100,12 @@ Typografia ma być ludzka i ekspresyjna przez skalę, rytm i wagę, nie przez de
 
 - minimum 48 px wysokości,
 - jasne tło,
-- Warm Line jako border,
-- wyraźny Raspberry Curtain focus,
+- Interactive Line jako normalny border,
+- wyraźny Raspberry Curtain focus ring o kontrastowym poziomie,
 - tekst Stage Ink,
-- placeholder przygaszony, ale czytelny,
-- disabled ma odrębne tło i kursor.
+- placeholder co najmniej neutral-500,
+- disabled ma odrębne tło i kursor,
+- select zachowuje widoczny natywny affordance/chevron, jeśli nie dostarczamy własnego dostępnego wskaźnika.
 
 ### Button
 
@@ -109,7 +114,7 @@ Typografia ma być ludzka i ekspresyjna przez skalę, rytm i wagę, nie przez de
 - Raspberry Curtain jako tło,
 - biały tekst,
 - Deep Raspberry hover,
-- wyraźny focus ring,
+- wyraźny 4 px focus ring,
 - bez gradientu.
 
 ### Guardian section
@@ -134,7 +139,9 @@ Typografia ma być ludzka i ekspresyjna przez skalę, rytm i wagę, nie przez de
 - Pozwalaj marce pojawić się w tle i detalach, a nie we wszystkich polach.
 - Utrzymuj 44-48 px minimalnych celów dotykowych.
 - Testuj długie polskie etykiety, błędy i stany opiekuna.
+- Testuj viewporty graniczne 320 px i 430 px.
 - Używaj autentycznych nazw Pozytywki tylko wtedy, gdy są potrzebne użytkownikowi.
+- Traktuj testy automatyczne jako regresję, a nie zamiennik ręcznego audytu klawiatury, focusu i kontrastu.
 
 ### Don't
 
@@ -146,3 +153,4 @@ Typografia ma być ludzka i ekspresyjna przez skalę, rytm i wagę, nie przez de
 - Nie chowaj wymaganych informacji w tooltipach.
 - Nie zmieniaj kolejności pól tylko dla symetrii desktopowej.
 - Nie zmniejszaj pól i tekstu na telefonach.
+- Nie usuwaj natywnego affordance kontrolki bez dostępnego zamiennika.

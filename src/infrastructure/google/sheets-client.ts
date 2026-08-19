@@ -20,13 +20,37 @@ type ValuesResponse = Readonly<{
   values?: readonly (readonly unknown[])[];
 }>;
 
-type SpreadsheetMetadata = Readonly<{
+type SpreadsheetMetadataResponse = Readonly<{
   sheets?: readonly {
     properties?: {
       sheetId?: number;
       title?: string;
     };
+    protectedRanges?: readonly {
+      protectedRangeId?: number;
+      description?: string;
+      warningOnly?: boolean;
+      range?: {
+        sheetId?: number;
+        startColumnIndex?: number;
+        endColumnIndex?: number;
+      };
+    }[];
   }[];
+}>;
+
+export type ProtectedRangeMetadata = Readonly<{
+  protectedRangeId: number;
+  description: string;
+  warningOnly: boolean;
+  startColumnIndex?: number;
+  endColumnIndex?: number;
+}>;
+
+export type SheetMetadata = Readonly<{
+  sheetId: number;
+  title: string;
+  protectedRanges?: readonly ProtectedRangeMetadata[];
 }>;
 
 function isRetryableSheetsError(error: unknown): boolean {
@@ -44,7 +68,7 @@ export interface SheetsClient {
     values: readonly (readonly (string | number | boolean)[])[],
   ): Promise<void>;
   clearValues(range: string): Promise<void>;
-  getSheetMetadata(): Promise<readonly { readonly sheetId: number; readonly title: string }[]>;
+  getSheetMetadata(): Promise<readonly SheetMetadata[]>;
   batchUpdate(requests: readonly Record<string, unknown>[]): Promise<void>;
 }
 
@@ -129,17 +153,40 @@ export class GoogleSheetsClient implements SheetsClient {
     });
   }
 
-  async getSheetMetadata(): Promise<
-    readonly { readonly sheetId: number; readonly title: string }[]
-  > {
-    const data = await this.request<SpreadsheetMetadata>(
-      "?fields=sheets.properties(sheetId,title)",
+  async getSheetMetadata(): Promise<readonly SheetMetadata[]> {
+    const data = await this.request<SpreadsheetMetadataResponse>(
+      "?fields=sheets(properties(sheetId,title),protectedRanges(protectedRangeId,description,warningOnly,range(sheetId,startColumnIndex,endColumnIndex)))",
     );
 
     return (data.sheets ?? []).flatMap((sheet) => {
       const sheetId = sheet.properties?.sheetId;
       const title = sheet.properties?.title;
-      return typeof sheetId === "number" && title ? [{ sheetId, title }] : [];
+      if (typeof sheetId !== "number" || !title) {
+        return [];
+      }
+
+      const protectedRanges = (sheet.protectedRanges ?? []).flatMap((range) => {
+        const protectedRangeId = range.protectedRangeId;
+        if (typeof protectedRangeId !== "number") {
+          return [];
+        }
+
+        return [
+          {
+            protectedRangeId,
+            description: range.description ?? "",
+            warningOnly: Boolean(range.warningOnly),
+            ...(typeof range.range?.startColumnIndex === "number"
+              ? { startColumnIndex: range.range.startColumnIndex }
+              : {}),
+            ...(typeof range.range?.endColumnIndex === "number"
+              ? { endColumnIndex: range.range.endColumnIndex }
+              : {}),
+          } satisfies ProtectedRangeMetadata,
+        ];
+      });
+
+      return [{ sheetId, title, protectedRanges } satisfies SheetMetadata];
     });
   }
 
