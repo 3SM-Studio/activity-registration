@@ -69,6 +69,21 @@ const serverEnvSchema = z
       });
     }
 
+    if (
+      env.DATA_BACKEND === "google-sheets" &&
+      (env.VERCEL || env.VERCEL_OIDC_TOKEN)
+    ) {
+      for (const key of oidcKeys) {
+        if (!env[key]) {
+          context.addIssue({
+            code: "custom",
+            path: [key],
+            message: `${key} is required for Google Sheets on Vercel OIDC.`,
+          });
+        }
+      }
+    }
+
     if (env.EMAIL_PROVIDER === "resend") {
       if (!env.RESEND_API_KEY) {
         context.addIssue({
@@ -109,18 +124,6 @@ const serverEnvSchema = z
         path: ["EMAIL_PROVIDER"],
         message: "Production must use the Resend email provider.",
       });
-    }
-
-    if (env.APP_ENV === "production" && env.VERCEL) {
-      for (const key of oidcKeys) {
-        if (!env[key]) {
-          context.addIssue({
-            code: "custom",
-            path: [key],
-            message: `${key} is required for Vercel production OIDC.`,
-          });
-        }
-      }
     }
   });
 
