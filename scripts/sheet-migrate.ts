@@ -1,8 +1,10 @@
-import { bootstrapSheetStructure } from "../src/infrastructure/google/sheet-admin";
+import { LEGACY_REGISTRATION_STATUS, REGISTRATION_STATUS } from "../src/domain/registration";
 import { cell, createHeaderMap } from "../src/infrastructure/google/header-map";
+import { bootstrapSheetStructure } from "../src/infrastructure/google/sheet-admin";
 import {
   LEGACY_OFFERING_HEADERS,
   LEGACY_REGISTRATION_HEADERS,
+  REGISTRATION_HEADERS,
   SETTING_KEY,
   SETTINGS_HEADERS,
   SHEET,
@@ -62,6 +64,19 @@ function headerCells(headers: readonly string[]) {
   ];
 }
 
+function columnLetter(columnIndex: number): string {
+  let value = columnIndex + 1;
+  let result = "";
+
+  while (value > 0) {
+    const remainder = (value - 1) % 26;
+    result = String.fromCharCode(65 + remainder) + result;
+    value = Math.floor((value - 1) / 26);
+  }
+
+  return result;
+}
+
 async function setSystemSchemaVersion(client: SheetsClient, version: number): Promise<void> {
   const settingsRows = await client.getValues(`${SHEET.settings}!A:ZZ`);
   const settingsHeaders = createHeaderMap(settingsRows[0] ?? [], SETTINGS_HEADERS);
@@ -81,13 +96,15 @@ async function setSystemSchemaVersion(client: SheetsClient, version: number): Pr
     throw new Error("Missing USTAWIENIA VALUE column.");
   }
 
-  const columnLetter = String.fromCharCode("A".charCodeAt(0) + versionValueColumn);
   const rowNumber = versionRows[0]?.rowNumber;
   if (!rowNumber) {
     throw new Error(`Missing ${SETTING_KEY.systemSchemaVersion} row.`);
   }
 
-  await client.updateValues(`${SHEET.settings}!${columnLetter}${rowNumber}`, [[String(version)]]);
+  const versionColumnLetter = columnLetter(versionValueColumn);
+  await client.updateValues(`${SHEET.settings}!${versionColumnLetter}${rowNumber}`, [
+    [String(version)],
+  ]);
 }
 
 async function migrateV1ToV2(client: SheetsClient): Promise<void> {
@@ -172,7 +189,6 @@ async function migrateV2ToV3(client: SheetsClient): Promise<void> {
     client.getValues(`${SHEET.registrations}!1:1`),
     client.getValues(`${SHEET.offerings}!1:1`),
   ]);
-
   const registrationHeader = registrationHeaderRows[0] ?? [];
   const offeringHeader = offeringHeaderRows[0] ?? [];
 
@@ -197,10 +213,6 @@ async function migrateV2ToV3(client: SheetsClient): Promise<void> {
   }
 
   if (registrationState === "legacy") {
-    // Google Sheets batchUpdate applies this structure change as one validated batch:
-    // insert columns first, then write their headers in the resulting coordinates.
-    // A rerun can therefore distinguish legacy from fully migrated structure and
-    // will never blindly insert the same v3 columns twice.
     await client.batchUpdate([
       {
         insertDimension: {
@@ -270,14 +282,42 @@ async function migrateV2ToV3(client: SheetsClient): Promise<void> {
   }
 
   await ensureV3OfferingDefaults(client);
-
-  // Structural bootstrap (new sheets, required settings, protections and the
-  // native table contract) must succeed before the sheet advertises schema v3.
-  // If it fails, SYSTEM_SCHEMA_VERSION stays at 2 and a later run sees the
-  // already-migrated headers instead of inserting the columns again.
   await bootstrapSheetStructure(client);
   await setSystemSchemaVersion(client, 3);
   console.info("Migrated sheet schema from version 2 to 3.");
+}
+
+async function migrateRegistrationWorkflowStatuses(client: SheetsClient): Promise<number> {
+  const rows = await client.getValues(`${SHEET.registrations}!A:ZZ`);
+  const headers = createHeaderMap(rows[0] ?? [], REGISTRATION_HEADERS);
+  const statusColumn = headers.get("STATUS");
+  if (statusColumn === undefined) {
+    throw new Error("Missing ZAPISY STATUS column.");
+  }
+
+  const statusColumnLetter = columnLetter(statusColumn);
+  let migratedCount = 0;
+
+  for (const [offset, row] of rows.slice(1).entries()) {
+    const rawStatus = cell(row, headers, "STATUS");
+    const nextStatus =
+      rawStatus === LEGACY_REGISTRATION_STATUS.inProgress
+        ? REGISTRATION_STATUS.inReview
+        : rawStatus === LEGACY_REGISTRATION_STATUS.accepted
+          ? REGISTRATION_STATUS.confirmed
+          : null;
+
+    if (!nextStatus) {
+      continue;
+    }
+
+    await client.updateValues(`${SHEET.registrations}!${statusColumnLetter}${offset + 2}`, [
+      [nextStatus],
+    ]);
+    migratedCount += 1;
+  }
+
+  return migratedCount;
 }
 
 async function readSchemaVersion(client: SheetsClient): Promise<number> {
@@ -295,7 +335,6 @@ async function readSchemaVersion(client: SheetsClient): Promise<number> {
 
   const rawVersion = cell(versionRows[0] ?? [], headers, "VALUE");
   const version = Number(rawVersion);
-
   if (!Number.isInteger(version) || version < 1) {
     throw new Error(`Invalid sheet schema version: ${rawVersion || "<empty>"}.`);
   }
@@ -329,8 +368,11 @@ async function main() {
     );
   }
 
+  const migratedStatuses = await migrateRegistrationWorkflowStatuses(client);
   await bootstrapSheetStructure(client);
-  console.info(`Sheet schema is at version ${SYSTEM_SCHEMA_VERSION}. No migrations are pending.`);
+  console.info(
+    `Sheet schema is at version ${SYSTEM_SCHEMA_VERSION}. Workflow status migration updated ${migratedStatuses} row(s).`,
+  );
 }
 
 main().catch((error: unknown) => {
