@@ -29,6 +29,11 @@ jobs:
           cache: pnpm
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+      - name: Temporary Prettier diagnostic
+        run: |
+          pnpm exec prettier --write tests/unit/sheet-admin.test.ts
+          git diff -- tests/unit/sheet-admin.test.ts
+          exit 1
       - name: Quality gate
         run: pnpm check
       - name: Install Playwright browser
