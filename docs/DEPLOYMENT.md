@@ -3,16 +3,27 @@
 ## Environments
 
 ```text
-development -> memory albo TEST Sheet
-preview     -> TEST Sheet
-production  -> PROD Sheet
+development -> memory albo TEST Sheet przez lokalne ADC
+preview     -> TEST Sheet przez TEST service account
+production  -> PROD Sheet przez osobny PROD service account
 ```
 
 Preview nie może dostać produkcyjnego `GOOGLE_SPREADSHEET_ID` ani tożsamości mającej dostęp do PROD.
 
-## Utworzone Google Sheets
+## Aktualny stan infrastruktury
 
-Zasoby utworzone 2026-08-18:
+Zweryfikowane 2026-08-19:
+
+```text
+Vercel project      pozytywka-activity-registration
+Vercel framework    nextjs
+Production branch   main
+Preview branch       feat/production-integrations
+GCP project          pozytywka-reg-3sm-260819
+GCP project number   656375661462
+```
+
+Google Sheets:
 
 ```text
 TEST  11-wmT8OCSVinFNjAFE7oHvIYUKnVOBgxmwIgvGgWH-8
@@ -28,55 +39,126 @@ ZAPISY
 USTAWIENIA
 ```
 
-TEST zawiera syntetyczny katalog do testów. PROD ma `REGISTRATIONS_OPEN=FALSE` i pustą konfigurację privacy notice, więc pozostaje fail-closed do świadomego uruchomienia.
+TEST zawiera syntetyczny katalog do testów. PROD ma `REGISTRATIONS_OPEN=FALSE`, nie ma zatwierdzonego katalogu ani privacy notice i pozostaje fail-closed.
 
-## Google resources
+## Izolacja TEST i PROD
 
-Przed pierwszym wdrożeniem Google-backed:
+TEST i PROD muszą używać różnych service accountów.
 
-1. włącz Google Sheets API,
-2. dla OIDC/WIF włącz wymagane API IAM, Security Token Service i Service Account Credentials,
-3. utwórz dedykowany service account dla aplikacji,
-4. udostępnij TEST i PROD temu service accountowi z minimalnym wymaganym dostępem,
-5. utwórz Workload Identity Pool i providery dla Vercel OIDC,
-6. mapuj `google.subject` z `assertion.sub`,
-7. przyznaj `roles/iam.workloadIdentityUser` tylko dokładnym principalom Vercel, które mają impersonować service account.
-
-Nie przyznawaj impersonacji całemu poolowi, jeśli można ograniczyć ją do konkretnego projektu i środowiska.
-
-Vercel OIDC `sub` zawiera projekt i środowisko, więc PROD powinien być ograniczony do subjectu w rodzaju:
+Aktualny TEST service account:
 
 ```text
-owner:<team>:project:<project>:environment:production
+activity-registration@pozytywka-reg-3sm-260819.iam.gserviceaccount.com
 ```
 
-Preview powinien używać osobnego principalu i arkusza TEST.
+Ma dostęp wyłącznie do TEST Sheeta i impersonację wyłącznie dla Vercel Preview.
+
+PROD service account nie jest jeszcze utworzony. Przed produkcją utwórz osobny, np.:
+
+```text
+activity-registration-prod@pozytywka-reg-3sm-260819.iam.gserviceaccount.com
+```
+
+Następnie:
+
+1. udostępnij mu wyłącznie PROD Sheet,
+2. binduj wyłącznie Vercel subject `environment:production`,
+3. ustaw jego adres jako `GCP_SERVICE_ACCOUNT_EMAIL` tylko w Vercel Production.
+
+Nie udostępniaj PROD Sheeta TEST service accountowi.
+
+## Google WIF
+
+Pool i provider:
+
+```text
+pool:     vercel
+provider: vercel
+issuer:   https://oidc.vercel.com/atypicalmichas
+```
+
+Kanoniczny audience używany przez aplikację i dopuszczony przez provider:
+
+```text
+//iam.googleapis.com/projects/656375661462/locations/global/workloadIdentityPools/vercel/providers/vercel
+```
+
+Preview subject:
+
+```text
+owner:atypicalmichas:project:pozytywka-activity-registration:environment:preview
+```
+
+Production subject, jeszcze nieprzyznany:
+
+```text
+owner:atypicalmichas:project:pozytywka-activity-registration:environment:production
+```
+
+Szczegółowy runbook: `docs/GCP_WIF_SETUP.md`.
 
 ## E-mail przez Resend
-
-Produkcja wymaga `EMAIL_PROVIDER=resend`.
-
-Konfiguracja:
-
-```text
-EMAIL_PROVIDER=resend
-RESEND_API_KEY=<sending-only key>
-EMAIL_FROM=Pracownia Twórcza Pozytywka <zapisy@<zweryfikowana-domena>>
-REGISTRATION_ADMIN_EMAILS=<adres Pozytywki, opcjonalnie kilka po przecinku>
-```
 
 Wysyłane są dwa maile po skutecznym zapisie do źródła danych:
 
 1. potwierdzenie otrzymania zgłoszenia do osoby zapisującej,
-2. powiadomienie administracyjne do Pozytywki z `reply_to` ustawionym na adres kontaktowy ze zgłoszenia.
+2. powiadomienie administracyjne z `reply_to` ustawionym na adres ze zgłoszenia.
 
-Awaria e-maila nie cofa zapisu. Powiadomienia są uruchamiane po odpowiedzi HTTP przez Next.js `after()`. Resend dostaje stabilny `Idempotency-Key` oparty o identyfikator zgłoszenia.
+Awaria e-maila nie cofa zapisu. Powiadomienia są wykonywane przez Next.js `after()` po zapisaniu rejestracji. Resend dostaje stabilny `Idempotency-Key` oparty o typ wiadomości i ID rejestracji.
 
-Domena nadawcy musi być zweryfikowana w Resend. Preferowany jest dedykowany subdomain wysyłkowy, np. `updates.example.pl`, zamiast głównej domeny.
+To jest mechanizm best-effort. Trwały outbox/reconciliation pozostaje osobnym hardeningiem opisanym w issue #3.
 
-## Vercel environment values
+### Preview
 
-Produkcja:
+Aktualny Preview używa Resend do pełnego E2E:
+
+```text
+EMAIL_PROVIDER=resend
+EMAIL_FROM=Pracownia Twórcza Pozytywka <zapisy@3stupidmen.com>
+REGISTRATION_ADMIN_EMAILS=3stupidmenbusiness@gmail.com
+RESEND_API_KEY=<Sensitive Preview secret>
+```
+
+### Production
+
+Produkcja ma docelowo używać:
+
+```text
+EMAIL_PROVIDER=resend
+RESEND_API_KEY=<production secret>
+EMAIL_FROM=<verified production sender>
+REGISTRATION_ADMIN_EMAILS=pozytywka.boleslaw@gmail.com
+```
+
+Nie kopiuj testowego odbiorcy administracyjnego do Production.
+
+## Vercel Preview env
+
+Branch-specific Preview dla `feat/production-integrations`:
+
+```text
+APP_ENV=test
+DATA_BACKEND=google-sheets
+GOOGLE_SPREADSHEET_ID=11-wmT8OCSVinFNjAFE7oHvIYUKnVOBgxmwIgvGgWH-8
+
+EMAIL_PROVIDER=resend
+EMAIL_FROM=Pracownia Twórcza Pozytywka <zapisy@3stupidmen.com>
+REGISTRATION_ADMIN_EMAILS=3stupidmenbusiness@gmail.com
+RESEND_API_KEY=<Sensitive>
+
+GCP_PROJECT_ID=pozytywka-reg-3sm-260819
+GCP_PROJECT_NUMBER=656375661462
+GCP_SERVICE_ACCOUNT_EMAIL=activity-registration@pozytywka-reg-3sm-260819.iam.gserviceaccount.com
+GCP_WORKLOAD_IDENTITY_POOL_ID=vercel
+GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID=vercel
+ALLOW_TEST_SEED=false
+```
+
+Nie ustawiaj ręcznie `VERCEL_OIDC_TOKEN` w Vercel Environment Variables.
+
+## Vercel Production env, przyszły stan
+
+Dopiero po przygotowaniu osobnej tożsamości PROD:
 
 ```text
 APP_ENV=production
@@ -84,31 +166,39 @@ DATA_BACKEND=google-sheets
 GOOGLE_SPREADSHEET_ID=1YvPxYSPHkiWetpYjPfCq-KrXncjGy6bSCWIIwjl-v38
 
 EMAIL_PROVIDER=resend
-RESEND_API_KEY
-EMAIL_FROM
-REGISTRATION_ADMIN_EMAILS
+RESEND_API_KEY=<production secret>
+EMAIL_FROM=<verified production sender>
+REGISTRATION_ADMIN_EMAILS=pozytywka.boleslaw@gmail.com
 
-GCP_PROJECT_ID
-GCP_PROJECT_NUMBER
-GCP_SERVICE_ACCOUNT_EMAIL
-GCP_WORKLOAD_IDENTITY_POOL_ID
-GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID
+GCP_PROJECT_ID=pozytywka-reg-3sm-260819
+GCP_PROJECT_NUMBER=656375661462
+GCP_SERVICE_ACCOUNT_EMAIL=activity-registration-prod@pozytywka-reg-3sm-260819.iam.gserviceaccount.com
+GCP_WORKLOAD_IDENTITY_POOL_ID=vercel
+GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID=vercel
+ALLOW_TEST_SEED=false
 ```
-
-Preview:
-
-```text
-APP_ENV=test
-DATA_BACKEND=google-sheets
-GOOGLE_SPREADSHEET_ID=11-wmT8OCSVinFNjAFE7oHvIYUKnVOBgxmwIgvGgWH-8
-EMAIL_PROVIDER=disabled
-```
-
-Produkcja nie używa JSON private key service account. Kod wymienia krótko żyjący token Vercel OIDC na credentials Google przez Workload Identity Federation i service account impersonation.
 
 ## Local development z Google
 
-Preferowane są Application Default Credentials ograniczone do TEST. Realne dane produkcyjne nie są używane lokalnie.
+Lokalnie preferowane są Application Default Credentials z impersonacją TEST service accountu. Nie używamy JSON private key.
+
+Lokalny `.env.local` nie powinien zawierać `VERCEL_OIDC_TOKEN`, bo wtedy kod przełączy się z ADC na ścieżkę Vercel WIF.
+
+## Zweryfikowany Preview E2E
+
+2026-08-19 sprawdzono realny flow:
+
+```text
+Vercel Preview
+-> odczyt katalogu z TEST Sheet
+-> POST /api/registrations 201
+-> zapis do ZAPISY w TEST Sheet
+-> registration.submit.succeeded
+-> registration.notifications.succeeded
+-> mail uczestnika dostarczony do Gmail
+```
+
+`registration.notifications.succeeded` oznacza brak błędu obu requestów do providera e-mail. Nie traktuj tego jako niezależnego dowodu mailbox delivery wiadomości administracyjnej.
 
 ## Flow
 
@@ -119,7 +209,8 @@ feature branch
 -> Vercel Preview z TEST
 -> review
 -> merge main
--> production
+-> przygotowanie osobnej konfiguracji PROD
+-> kontrolowany production release
 ```
 
 ## Production gates
@@ -136,10 +227,13 @@ APP_ENV=test DATA_BACKEND=google-sheets pnpm diagnostics
 
 Dodatkowo wymagane są:
 
+- osobny PROD service account,
+- PROD Sheet udostępniony wyłącznie PROD service accountowi,
+- production WIF subject przypięty wyłącznie do PROD service accountu,
 - zatwierdzona privacy notice i jej wersja wpisana do `USTAWIENIA`,
 - zatwierdzona retention policy,
 - prawdziwy katalog miast i zajęć w PROD,
-- zweryfikowana domena Resend,
-- prawdziwy `REGISTRATION_ADMIN_EMAILS`,
-- testowy zapis end-to-end na TEST z kontrolą arkusza i obu wiadomości e-mail,
+- zweryfikowany produkcyjny nadawca Resend,
+- `REGISTRATION_ADMIN_EMAILS=pozytywka.boleslaw@gmail.com`,
+- kontrola smoke testu produkcyjnej konfiguracji przy zamkniętych zapisach,
 - dopiero na końcu zmiana `REGISTRATIONS_OPEN` w PROD na `TRUE`.
