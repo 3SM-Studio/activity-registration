@@ -161,8 +161,11 @@ async function migrateV2ToV3(client: SheetsClient): Promise<void> {
     ]);
   }
 
-  await setSystemSchemaVersion(client, 3);
+  // Structural bootstrap must succeed before the sheet advertises schema v3.
+  // If it fails, SYSTEM_SCHEMA_VERSION stays at 2 so a later run can detect
+  // that the migration is incomplete instead of trusting a partially migrated sheet.
   await bootstrapSheetStructure(client);
+  await setSystemSchemaVersion(client, 3);
   console.info("Migrated sheet schema from version 2 to 3.");
 }
 
