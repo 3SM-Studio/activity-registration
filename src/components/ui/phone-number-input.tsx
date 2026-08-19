@@ -16,7 +16,7 @@ type PhoneNumberInputProps = Readonly<{
   disabled?: boolean;
   autoComplete?: string;
   invalid?: boolean;
-  describedBy?: string;
+  describedBy?: string | undefined;
 }>;
 
 export function PhoneNumberInput({
@@ -32,6 +32,7 @@ export function PhoneNumberInput({
   describedBy,
 }: PhoneNumberInputProps) {
   const optionalProps = {
+    ...(value ? { value: value as Value } : {}),
     ...(required !== undefined ? { required } : {}),
     ...(disabled !== undefined ? { disabled } : {}),
     ...(autoComplete !== undefined ? { autoComplete } : {}),
@@ -50,7 +51,6 @@ export function PhoneNumberInput({
       addInternationalOption={false}
       labels={pl}
       flags={flags}
-      value={value ? (value as Value) : undefined}
       onChange={(nextValue) => onChange(nextValue ?? "")}
       onBlur={onBlur}
       {...optionalProps}
