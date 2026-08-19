@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parseServerEnv } from "@/lib/env";
+import { isUnconfiguredVercelProduction, parseServerEnv } from "@/lib/env";
 
 const emailProductionConfig = {
   EMAIL_PROVIDER: "resend",
@@ -137,5 +137,21 @@ describe("server environment", () => {
         REGISTRATION_ADMIN_EMAILS: "not-an-email",
       }),
     ).toThrow();
+  });
+
+  it("detects an unconfigured Vercel production deployment", () => {
+    expect(isUnconfiguredVercelProduction({ VERCEL_ENV: "production" })).toBe(true);
+    expect(isUnconfiguredVercelProduction({ VERCEL_TARGET_ENV: "production" })).toBe(true);
+  });
+
+  it("does not block explicit production or non-production targets", () => {
+    expect(
+      isUnconfiguredVercelProduction({
+        VERCEL_ENV: "production",
+        APP_ENV: "production",
+      }),
+    ).toBe(false);
+    expect(isUnconfiguredVercelProduction({ VERCEL_ENV: "preview" })).toBe(false);
+    expect(isUnconfiguredVercelProduction({})).toBe(false);
   });
 });
