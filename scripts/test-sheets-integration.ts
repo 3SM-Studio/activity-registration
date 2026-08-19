@@ -84,7 +84,9 @@ async function main() {
   );
 
   if (!offering) {
-    throw new Error("TEST catalog has no offering accepting registrations for the integration test.");
+    throw new Error(
+      "TEST catalog has no offering accepting registrations for the integration test.",
+    );
   }
 
   const city = catalog.cities.find((candidate) => candidate.id === offering.cityId);
