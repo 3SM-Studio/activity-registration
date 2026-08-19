@@ -1,4 +1,5 @@
 import {
+  PUBLIC_INTAKE_STATUS,
   asCityId,
   asOfferingId,
   asSeasonId,
@@ -38,37 +39,47 @@ const catalog: PublicCatalog = {
       id: asOfferingId("gdynia-hiphop"),
       cityId: asCityId("gdynia"),
       name: "Hip-hop",
+      publicDescription: null,
       sortOrder: 10,
+      intakeStatus: PUBLIC_INTAKE_STATUS.open,
     },
     {
       id: asOfferingId("gdynia-contemporary"),
       cityId: asCityId("gdynia"),
       name: "Contemporary",
+      publicDescription: null,
       sortOrder: 20,
+      intakeStatus: PUBLIC_INTAKE_STATUS.open,
     },
     {
       id: asOfferingId("gdynia-taniec-wspolczesny"),
       cityId: asCityId("gdynia"),
       name: "Taniec współczesny",
+      publicDescription: null,
       sortOrder: 30,
+      intakeStatus: PUBLIC_INTAKE_STATUS.open,
     },
     {
       id: asOfferingId("sopot-hiphop"),
       cityId: asCityId("sopot"),
       name: "Hip-hop",
+      publicDescription: null,
       sortOrder: 10,
+      intakeStatus: PUBLIC_INTAKE_STATUS.open,
     },
     {
       id: asOfferingId("sopot-choreografia"),
       cityId: asCityId("sopot"),
       name: "Choreografia",
+      publicDescription: null,
       sortOrder: 20,
+      intakeStatus: PUBLIC_INTAKE_STATUS.open,
     },
   ],
 };
 
 class MemoryCatalogRepository implements CatalogRepository {
-  async getPublicCatalog(): Promise<PublicCatalog> {
+  async getPublicCatalog(_currentDate: string): Promise<PublicCatalog> {
     return catalog;
   }
 
