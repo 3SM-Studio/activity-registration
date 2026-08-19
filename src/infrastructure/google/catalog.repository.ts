@@ -1,8 +1,18 @@
+import type { PublicCatalog, Season, SeasonId } from "@/domain/catalog";
 import type { CatalogRepository } from "@/domain/repositories";
-import type { PublicCatalog } from "@/domain/catalog";
 import { createHeaderMap } from "@/infrastructure/google/header-map";
-import { assertUniqueIds, parseCityRow, parseOfferingRow } from "@/infrastructure/google/parsers";
-import { CITY_HEADERS, OFFERING_HEADERS, SHEET } from "@/infrastructure/google/sheets-contracts";
+import {
+  assertUniqueIds,
+  parseCityRow,
+  parseOfferingRow,
+  parseSeasonRow,
+} from "@/infrastructure/google/parsers";
+import {
+  CITY_HEADERS,
+  OFFERING_HEADERS,
+  SEASON_HEADERS,
+  SHEET,
+} from "@/infrastructure/google/sheets-contracts";
 import type { SheetsClient } from "@/infrastructure/google/sheets-client";
 
 export class GoogleSheetsCatalogRepository implements CatalogRepository {
@@ -35,6 +45,18 @@ export class GoogleSheetsCatalogRepository implements CatalogRepository {
     return { cities, offerings };
   }
 
+  private async readSeasons(): Promise<readonly Season[]> {
+    const rows = await this.client.getValues(`${SHEET.seasons}!A:ZZ`);
+    const headers = createHeaderMap(rows[0] ?? [], SEASON_HEADERS);
+    const seasons = rows
+      .slice(1)
+      .map((row) => parseSeasonRow(row, headers))
+      .filter((season) => season !== null);
+
+    assertUniqueIds(seasons, "season");
+    return seasons;
+  }
+
   async getPublicCatalog(): Promise<PublicCatalog> {
     const { cities, offerings } = await this.readCatalog();
 
@@ -63,5 +85,10 @@ export class GoogleSheetsCatalogRepository implements CatalogRepository {
         sortOrder,
       })),
     };
+  }
+
+  async findSeasonById(seasonId: SeasonId): Promise<Season | null> {
+    const seasons = await this.readSeasons();
+    return seasons.find((season) => season.id === seasonId) ?? null;
   }
 }
