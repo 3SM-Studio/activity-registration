@@ -45,6 +45,17 @@ test("filters offerings by city and submits a minor registration", async ({ page
   await expect(page.getByText("Dziękujemy. Zgłoszenie zostało wysłane.")).toBeVisible();
 });
 
+test("formats a Polish phone number and exposes the country selector", async ({ page }) => {
+  await openRegistrationForm(page);
+
+  const phone = page.getByLabel(/Numer telefonu/);
+  const country = page.locator(".PhoneInputCountrySelect");
+
+  await expect(country).toHaveValue("PL");
+  await phone.fill("500000000");
+  await expect(phone).toHaveValue("+48 500 000 000");
+});
+
 test("changing city clears the previously selected offering", async ({ page }) => {
   await openRegistrationForm(page);
 

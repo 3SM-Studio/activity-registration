@@ -1,3 +1,7 @@
+import { parsePhoneNumberFromString } from "libphonenumber-js";
+
+const PHONE_CHARACTERS = /^[+\d\s().-]+$/;
+
 export class InvalidPhoneError extends Error {
   constructor() {
     super("Podaj poprawny numer telefonu.");
@@ -6,22 +10,18 @@ export class InvalidPhoneError extends Error {
 }
 
 export function normalizePhone(input: string): string {
-  const compact = input.trim().replace(/[\s().-]/g, "");
+  const trimmed = input.trim();
 
-  if (compact.startsWith("0048")) {
-    const local = compact.slice(4);
-    if (/^[1-9]\d{8}$/.test(local)) {
-      return `+48${local}`;
-    }
+  if (!trimmed || !PHONE_CHARACTERS.test(trimmed)) {
+    throw new InvalidPhoneError();
   }
 
-  if (/^[1-9]\d{8}$/.test(compact)) {
-    return `+48${compact}`;
+  const normalizedPrefix = trimmed.startsWith("00") ? `+${trimmed.slice(2)}` : trimmed;
+  const phoneNumber = parsePhoneNumberFromString(normalizedPrefix, "PL");
+
+  if (!phoneNumber || phoneNumber.ext || !phoneNumber.isPossible()) {
+    throw new InvalidPhoneError();
   }
 
-  if (/^\+[1-9]\d{7,14}$/.test(compact)) {
-    return compact;
-  }
-
-  throw new InvalidPhoneError();
+  return phoneNumber.number;
 }
