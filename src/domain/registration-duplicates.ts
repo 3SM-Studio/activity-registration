@@ -27,10 +27,7 @@ export function registrationStatusAllowsFreshRequest(status: string): boolean {
   return FRESH_REQUEST_STATUSES.has(status);
 }
 
-function namesMatch(
-  registration: Registration,
-  criteria: RegistrationDuplicateCriteria,
-): boolean {
+function namesMatch(registration: Registration, criteria: RegistrationDuplicateCriteria): boolean {
   return (
     normalizeNameForDuplicateComparison(registration.participantFirstName) ===
       normalizeNameForDuplicateComparison(criteria.participantFirstName) &&
@@ -73,7 +70,9 @@ export function isPotentialDuplicateCandidate(
   registration: Registration,
   criteria: RegistrationDuplicateCriteria,
 ): boolean {
-  return fullIdentityMatches(registration, criteria) || legacyCandidateMatches(registration, criteria);
+  return (
+    fullIdentityMatches(registration, criteria) || legacyCandidateMatches(registration, criteria)
+  );
 }
 
 function newestFirst(left: Registration, right: Registration): number {
