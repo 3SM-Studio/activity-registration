@@ -2,6 +2,7 @@ import { buildRowByHeaders, createHeaderMap } from "../src/infrastructure/google
 import {
   CITY_HEADERS,
   OFFERING_HEADERS,
+  SEASON_HEADERS,
   SETTINGS_HEADERS,
   SHEET,
   SETTING_KEY,
@@ -11,6 +12,8 @@ import { bootstrapSheetStructure } from "../src/infrastructure/google/sheet-admi
 import type { SheetsClient } from "../src/infrastructure/google/sheets-client";
 import { getServerEnv } from "../src/lib/env";
 import { createAdminSheetsClient } from "./_google-admin";
+
+const SYNTHETIC_CURRENT_SEASON_ID = "test-2026-2027";
 
 async function appendMappedRows(
   client: SheetsClient,
@@ -39,7 +42,9 @@ async function main() {
   await bootstrapSheetStructure(client);
 
   await client.clearValues(`${SHEET.cities}!A2:ZZ`);
+  await client.clearValues(`${SHEET.seasons}!A2:ZZ`);
   await client.clearValues(`${SHEET.offerings}!A2:ZZ`);
+  await client.clearValues(`${SHEET.groups}!A2:ZZ`);
   await client.clearValues(`${SHEET.settings}!A2:ZZ`);
 
   await appendMappedRows(client, SHEET.cities, CITY_HEADERS, [
@@ -47,57 +52,101 @@ async function main() {
     { CITY_ID: "sopot", NAME: "Sopot", ACTIVE: "TAK", SORT_ORDER: 20 },
   ]);
 
+  await appendMappedRows(client, SHEET.seasons, SEASON_HEADERS, [
+    {
+      SEASON_ID: SYNTHETIC_CURRENT_SEASON_ID,
+      NAME: "2026/2027 TEST",
+      START_DATE: "2026-09-01",
+      END_DATE: "2027-07-31",
+      ACTIVE: "TAK",
+      SORT_ORDER: 10,
+    },
+  ]);
+
   await appendMappedRows(client, SHEET.offerings, OFFERING_HEADERS, [
     {
       OFFERING_ID: "gdynia-hiphop",
       CITY_ID: "gdynia",
       NAME: "Hip-hop",
+      PUBLIC_DESCRIPTION: "Syntetyczna oferta TEST",
       ACTIVE: "TAK",
       SORT_ORDER: 10,
+      REGISTRATION_MODE: "ROLLING",
+      INTAKE_STATE: "CLOSED",
+      REGISTRATION_OPEN_FROM: "",
+      REGISTRATION_OPEN_TO: "",
+      WAITLIST_ENABLED: "FALSE",
     },
     {
       OFFERING_ID: "gdynia-contemporary",
       CITY_ID: "gdynia",
       NAME: "Contemporary",
+      PUBLIC_DESCRIPTION: "Syntetyczna oferta TEST",
       ACTIVE: "TAK",
       SORT_ORDER: 20,
+      REGISTRATION_MODE: "ROLLING",
+      INTAKE_STATE: "CLOSED",
+      REGISTRATION_OPEN_FROM: "",
+      REGISTRATION_OPEN_TO: "",
+      WAITLIST_ENABLED: "FALSE",
     },
     {
       OFFERING_ID: "gdynia-taniec-wspolczesny",
       CITY_ID: "gdynia",
       NAME: "Taniec współczesny",
+      PUBLIC_DESCRIPTION: "Syntetyczna oferta TEST",
       ACTIVE: "TAK",
       SORT_ORDER: 30,
+      REGISTRATION_MODE: "ROLLING",
+      INTAKE_STATE: "CLOSED",
+      REGISTRATION_OPEN_FROM: "",
+      REGISTRATION_OPEN_TO: "",
+      WAITLIST_ENABLED: "FALSE",
     },
     {
       OFFERING_ID: "sopot-hiphop",
       CITY_ID: "sopot",
       NAME: "Hip-hop",
+      PUBLIC_DESCRIPTION: "Syntetyczna oferta TEST",
       ACTIVE: "TAK",
       SORT_ORDER: 10,
+      REGISTRATION_MODE: "ROLLING",
+      INTAKE_STATE: "CLOSED",
+      REGISTRATION_OPEN_FROM: "",
+      REGISTRATION_OPEN_TO: "",
+      WAITLIST_ENABLED: "FALSE",
     },
     {
       OFFERING_ID: "sopot-choreografia",
       CITY_ID: "sopot",
       NAME: "Choreografia",
+      PUBLIC_DESCRIPTION: "Syntetyczna oferta TEST",
       ACTIVE: "TAK",
       SORT_ORDER: 20,
+      REGISTRATION_MODE: "ROLLING",
+      INTAKE_STATE: "CLOSED",
+      REGISTRATION_OPEN_FROM: "",
+      REGISTRATION_OPEN_TO: "",
+      WAITLIST_ENABLED: "FALSE",
     },
   ]);
 
   await appendMappedRows(client, SHEET.settings, SETTINGS_HEADERS, [
     { KEY: SETTING_KEY.systemSchemaVersion, VALUE: SYSTEM_SCHEMA_VERSION },
-    { KEY: SETTING_KEY.registrationsOpen, VALUE: "TAK" },
+    { KEY: SETTING_KEY.registrationsOpen, VALUE: "NIE" },
+    { KEY: SETTING_KEY.currentSeasonId, VALUE: SYNTHETIC_CURRENT_SEASON_ID },
     { KEY: SETTING_KEY.publicFormTitle, VALUE: "Zapisy na zajęcia" },
     {
       KEY: SETTING_KEY.successMessage,
       VALUE: "Dziękujemy. Zgłoszenie zostało wysłane.",
     },
     { KEY: SETTING_KEY.privacyNoticeUrl, VALUE: "/polityka-prywatnosci" },
-    { KEY: SETTING_KEY.privacyNoticeVersion, VALUE: "test-v1" },
+    { KEY: SETTING_KEY.privacyNoticeVersion, VALUE: "test-v3" },
   ]);
 
-  console.info("Synthetic TEST catalog seeded. Registration rows were not touched.");
+  console.info(
+    "Synthetic TEST v3 catalog seeded. Registrations remain closed and ZAPISY rows were not touched.",
+  );
 }
 
 main().catch((error: unknown) => {

@@ -40,6 +40,12 @@ function registrationToCells(
     SOURCE: registration.source,
     CREATED_AT: registration.createdAt,
     UPDATED_AT: registration.updatedAt,
+    SEASON_ID: registration.seasonId ?? "",
+    SEASON_NAME_SNAPSHOT: registration.seasonNameSnapshot ?? "",
+    ASSIGNED_GROUP_ID: registration.assignedGroupId ?? "",
+    CONTACTED_AT: registration.contactedAt ?? "",
+    CONFIRMED_AT: registration.confirmedAt ?? "",
+    POSSIBLE_DUPLICATE_OF: registration.possibleDuplicateOf ?? "",
     SCHEMA_VERSION: registration.schemaVersion,
   };
 }

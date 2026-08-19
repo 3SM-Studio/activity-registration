@@ -4,6 +4,16 @@ import { GoogleSheetsCatalogRepository } from "@/infrastructure/google/catalog.r
 import { SHEET, SHEET_SCHEMA } from "@/infrastructure/google/sheets-contracts";
 import type { SheetsClient } from "@/infrastructure/google/sheets-client";
 
+function offeringRow(
+  id: string,
+  cityId: string,
+  name: string,
+  active: string,
+  sortOrder: number,
+): readonly unknown[] {
+  return [id, cityId, name, "", active, sortOrder, "ROLLING", "CLOSED", "", "", "FALSE"];
+}
+
 function createClient(): SheetsClient {
   const values = new Map<string, readonly (readonly unknown[])[]>([
     [
@@ -20,9 +30,9 @@ function createClient(): SheetsClient {
       `${SHEET.offerings}!A:ZZ`,
       [
         SHEET_SCHEMA[SHEET.offerings],
-        ["gdynia-hiphop", "gdynia", "Hip-hop", "TAK", 10],
-        ["sopot-hidden", "sopot", "Ukryte", "NIE", 10],
-        ["inactive-city-class", "inactive-city", "Ukryte", "TAK", 10],
+        offeringRow("gdynia-hiphop", "gdynia", "Hip-hop", "TAK", 10),
+        offeringRow("sopot-hidden", "sopot", "Ukryte", "NIE", 10),
+        offeringRow("inactive-city-class", "inactive-city", "Ukryte", "TAK", 10),
       ],
     ],
   ]);

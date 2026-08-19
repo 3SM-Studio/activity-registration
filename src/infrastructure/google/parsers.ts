@@ -1,14 +1,21 @@
 import {
+  INTAKE_STATE,
+  REGISTRATION_MODE,
   asCityId,
+  asGroupId,
   asOfferingId,
+  asSeasonId,
   isTechnicalId,
   type City,
   type ClassOffering,
+  type InternalGroup,
+  type Season,
 } from "@/domain/catalog";
 import type { Registration } from "@/domain/registration";
 import {
   asRegistrationId,
   asRequestId,
+  BIRTH_DATE_REGISTRATION_SCHEMA_VERSION,
   isRegistrationId,
   isRequestId,
   LEGACY_REGISTRATION_SCHEMA_VERSION,
@@ -40,6 +47,48 @@ function parseSortOrder(value: string): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function parseOptionalInteger(value: string, label: string): number | null {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 0) {
+    throw new SheetSchemaError(`Invalid ${label}: ${value}`);
+  }
+
+  return parsed;
+}
+
+function parseDateOnlyValue(raw: unknown, label: string): string {
+  const value = typeof raw === "number" ? googleSerialToIsoDate(raw) : String(raw ?? "").trim();
+  if (!value || !isValidIsoDateOnly(value)) {
+    throw new SheetSchemaError(`Invalid ${label}: ${String(raw ?? "<empty>")}`);
+  }
+  return value;
+}
+
+function parseOptionalDateOnlyValue(raw: unknown, label: string): string | null {
+  if (raw === null || raw === undefined || String(raw).trim() === "") {
+    return null;
+  }
+  return parseDateOnlyValue(raw, label);
+}
+
+function parseOptionalTimestamp(
+  value: string,
+  label: string,
+  registrationId: string,
+): string | null {
+  if (!value) {
+    return null;
+  }
+  if (Number.isNaN(Date.parse(value))) {
+    throw new SheetSchemaError(`Invalid ${label} for registration ${registrationId}`);
+  }
+  return value;
+}
+
 export function parseCityRow(row: readonly unknown[], headers: HeaderMap): City | null {
   const id = cell(row, headers, "CITY_ID");
   const name = cell(row, headers, "NAME");
@@ -55,6 +104,38 @@ export function parseCityRow(row: readonly unknown[], headers: HeaderMap): City 
   return {
     id: asCityId(id),
     name,
+    active: parseBooleanCell(cell(row, headers, "ACTIVE")),
+    sortOrder: parseSortOrder(cell(row, headers, "SORT_ORDER")),
+  };
+}
+
+export function parseSeasonRow(row: readonly unknown[], headers: HeaderMap): Season | null {
+  const id = cell(row, headers, "SEASON_ID");
+  const name = cell(row, headers, "NAME");
+
+  if (!id && !name) {
+    return null;
+  }
+
+  if (!id || !name || !isTechnicalId(id)) {
+    return null;
+  }
+
+  const startDate = parseDateOnlyValue(
+    rawCell(row, headers, "START_DATE"),
+    `season ${id} START_DATE`,
+  );
+  const endDate = parseDateOnlyValue(rawCell(row, headers, "END_DATE"), `season ${id} END_DATE`);
+
+  if (startDate > endDate) {
+    throw new SheetSchemaError(`Season ${id} START_DATE is after END_DATE.`);
+  }
+
+  return {
+    id: asSeasonId(id),
+    name,
+    startDate,
+    endDate,
     active: parseBooleanCell(cell(row, headers, "ACTIVE")),
     sortOrder: parseSortOrder(cell(row, headers, "SORT_ORDER")),
   };
@@ -76,10 +157,78 @@ export function parseOfferingRow(
     return null;
   }
 
+  const registrationMode = cell(row, headers, "REGISTRATION_MODE");
+  if (!Object.values(REGISTRATION_MODE).includes(registrationMode as never)) {
+    throw new SheetSchemaError(`Offering ${id} has invalid REGISTRATION_MODE: ${registrationMode}`);
+  }
+
+  const intakeState = cell(row, headers, "INTAKE_STATE");
+  if (!Object.values(INTAKE_STATE).includes(intakeState as never)) {
+    throw new SheetSchemaError(`Offering ${id} has invalid INTAKE_STATE: ${intakeState}`);
+  }
+
   return {
     id: asOfferingId(id),
     cityId: asCityId(cityId),
     name,
+    publicDescription: cell(row, headers, "PUBLIC_DESCRIPTION") || null,
+    active: parseBooleanCell(cell(row, headers, "ACTIVE")),
+    sortOrder: parseSortOrder(cell(row, headers, "SORT_ORDER")),
+    registrationMode: registrationMode as ClassOffering["registrationMode"],
+    intakeState: intakeState as ClassOffering["intakeState"],
+    registrationOpenFrom: parseOptionalDateOnlyValue(
+      rawCell(row, headers, "REGISTRATION_OPEN_FROM"),
+      `offering ${id} REGISTRATION_OPEN_FROM`,
+    ),
+    registrationOpenTo: parseOptionalDateOnlyValue(
+      rawCell(row, headers, "REGISTRATION_OPEN_TO"),
+      `offering ${id} REGISTRATION_OPEN_TO`,
+    ),
+    waitlistEnabled: parseBooleanCell(cell(row, headers, "WAITLIST_ENABLED")),
+  };
+}
+
+export function parseGroupRow(row: readonly unknown[], headers: HeaderMap): InternalGroup | null {
+  const id = cell(row, headers, "GROUP_ID");
+  const seasonId = cell(row, headers, "SEASON_ID");
+  const offeringId = cell(row, headers, "OFFERING_ID");
+  const name = cell(row, headers, "NAME");
+
+  if (!id && !seasonId && !offeringId && !name) {
+    return null;
+  }
+
+  if (
+    !id ||
+    !seasonId ||
+    !offeringId ||
+    !name ||
+    !isTechnicalId(id) ||
+    !isTechnicalId(seasonId) ||
+    !isTechnicalId(offeringId)
+  ) {
+    return null;
+  }
+
+  const ageMin = parseOptionalInteger(cell(row, headers, "AGE_MIN"), `group ${id} AGE_MIN`);
+  const ageMax = parseOptionalInteger(cell(row, headers, "AGE_MAX"), `group ${id} AGE_MAX`);
+  if (ageMin !== null && ageMax !== null && ageMin > ageMax) {
+    throw new SheetSchemaError(`Group ${id} AGE_MIN is greater than AGE_MAX.`);
+  }
+
+  return {
+    id: asGroupId(id),
+    seasonId: asSeasonId(seasonId),
+    offeringId: asOfferingId(offeringId),
+    name,
+    ageMin,
+    ageMax,
+    dayOfWeek: cell(row, headers, "DAY_OF_WEEK") || null,
+    startTime: cell(row, headers, "START_TIME") || null,
+    endTime: cell(row, headers, "END_TIME") || null,
+    location: cell(row, headers, "LOCATION") || null,
+    instructor: cell(row, headers, "INSTRUCTOR") || null,
+    capacity: parseOptionalInteger(cell(row, headers, "CAPACITY"), `group ${id} CAPACITY`),
     active: parseBooleanCell(cell(row, headers, "ACTIVE")),
     sortOrder: parseSortOrder(cell(row, headers, "SORT_ORDER")),
   };
@@ -100,7 +249,11 @@ export function assertUniqueIds<T extends { readonly id: string }>(
 
 function parseRegistrationSchemaVersion(raw: string): RegistrationSchemaVersion {
   const version = Number(raw);
-  if (version === LEGACY_REGISTRATION_SCHEMA_VERSION || version === REGISTRATION_SCHEMA_VERSION) {
+  if (
+    version === LEGACY_REGISTRATION_SCHEMA_VERSION ||
+    version === BIRTH_DATE_REGISTRATION_SCHEMA_VERSION ||
+    version === REGISTRATION_SCHEMA_VERSION
+  ) {
     return version;
   }
 
@@ -118,13 +271,7 @@ function parseBirthDate(
   }
 
   const raw = rawCell(row, headers, "BIRTH_DATE");
-  let birthDate: string;
-
-  if (typeof raw === "number") {
-    birthDate = googleSerialToIsoDate(raw);
-  } else {
-    birthDate = String(raw ?? "").trim();
-  }
+  const birthDate = typeof raw === "number" ? googleSerialToIsoDate(raw) : String(raw ?? "").trim();
 
   if (!birthDate || !isValidIsoDateOnly(birthDate)) {
     throw new SheetSchemaError(`Invalid birth date for registration ${registrationId}`);
@@ -201,10 +348,48 @@ export function parseRegistrationRow(
     }
   }
 
+  let seasonId = null;
+  let seasonNameSnapshot = null;
+  let assignedGroupId = null;
+  let contactedAt = null;
+  let confirmedAt = null;
+  let possibleDuplicateOf = null;
+
+  if (schemaVersion === REGISTRATION_SCHEMA_VERSION) {
+    const rawSeasonId = cell(row, headers, "SEASON_ID");
+    const rawSeasonName = cell(row, headers, "SEASON_NAME_SNAPSHOT");
+    if (!isTechnicalId(rawSeasonId) || !rawSeasonName) {
+      throw new SheetSchemaError(`Invalid season snapshot for registration ${id}`);
+    }
+    seasonId = asSeasonId(rawSeasonId);
+    seasonNameSnapshot = rawSeasonName;
+
+    const rawGroupId = cell(row, headers, "ASSIGNED_GROUP_ID");
+    if (rawGroupId) {
+      if (!isTechnicalId(rawGroupId)) {
+        throw new SheetSchemaError(`Invalid assigned group ID for registration ${id}`);
+      }
+      assignedGroupId = asGroupId(rawGroupId);
+    }
+
+    contactedAt = parseOptionalTimestamp(cell(row, headers, "CONTACTED_AT"), "CONTACTED_AT", id);
+    confirmedAt = parseOptionalTimestamp(cell(row, headers, "CONFIRMED_AT"), "CONFIRMED_AT", id);
+
+    const rawPossibleDuplicateOf = cell(row, headers, "POSSIBLE_DUPLICATE_OF");
+    if (rawPossibleDuplicateOf) {
+      if (!isRegistrationId(rawPossibleDuplicateOf)) {
+        throw new SheetSchemaError(`Invalid POSSIBLE_DUPLICATE_OF for registration ${id}`);
+      }
+      possibleDuplicateOf = asRegistrationId(rawPossibleDuplicateOf);
+    }
+  }
+
   return {
     id: asRegistrationId(id),
     requestId: asRequestId(requestId),
     submittedAt,
+    seasonId,
+    seasonNameSnapshot,
     offeringId: asOfferingId(offeringId),
     cityIdSnapshot: asCityId(cityId),
     cityNameSnapshot: cell(row, headers, "CITY_NAME_SNAPSHOT"),
@@ -218,6 +403,10 @@ export function parseRegistrationRow(
     phone: cell(row, headers, "PHONE"),
     email: cell(row, headers, "EMAIL"),
     status: rawStatus as Registration["status"],
+    assignedGroupId,
+    contactedAt,
+    confirmedAt,
+    possibleDuplicateOf,
     notes: cell(row, headers, "NOTES"),
     privacyNoticeVersion: cell(row, headers, "PRIVACY_NOTICE_VERSION"),
     source,

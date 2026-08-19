@@ -38,10 +38,22 @@ function registrationTable(): TableMetadata {
   };
 }
 
+function offeringRow(
+  id: string,
+  cityId: string,
+  name: string,
+  active: string,
+  sortOrder: number,
+): readonly unknown[] {
+  return [id, cityId, name, "", active, sortOrder, "ROLLING", "CLOSED", "", "", "FALSE"];
+}
+
 function createValidationClient(): SheetsClient {
   const rowsByRange = new Map<string, readonly (readonly unknown[])[]>([
     [`${SHEET.cities}!1:1`, [SHEET_SCHEMA[SHEET.cities]]],
+    [`${SHEET.seasons}!1:1`, [SHEET_SCHEMA[SHEET.seasons]]],
     [`${SHEET.offerings}!1:1`, [SHEET_SCHEMA[SHEET.offerings]]],
+    [`${SHEET.groups}!1:1`, [SHEET_SCHEMA[SHEET.groups]]],
     [`${SHEET.registrations}!1:1`, [SHEET_SCHEMA[SHEET.registrations]]],
     [`${SHEET.settings}!1:1`, [SHEET_SCHEMA[SHEET.settings]]],
     [
@@ -50,10 +62,11 @@ function createValidationClient(): SheetsClient {
         SHEET_SCHEMA[SHEET.settings],
         ["SYSTEM_SCHEMA_VERSION", String(SYSTEM_SCHEMA_VERSION)],
         ["REGISTRATIONS_OPEN", "TAK"],
+        ["CURRENT_SEASON_ID", "test-2026-2027"],
         ["PUBLIC_FORM_TITLE", "Zapisy"],
         ["SUCCESS_MESSAGE", "Dziękujemy"],
         ["PRIVACY_NOTICE_URL", "/privacy"],
-        ["PRIVACY_NOTICE_VERSION", "test-v2"],
+        ["PRIVACY_NOTICE_VERSION", "test-v3"],
       ],
     ],
     [
@@ -61,14 +74,22 @@ function createValidationClient(): SheetsClient {
       [SHEET_SCHEMA[SHEET.cities], ["gdynia", "Gdynia", "TAK", 10], ["broken-city", "", "TAK", 20]],
     ],
     [
+      `${SHEET.seasons}!A:ZZ`,
+      [
+        SHEET_SCHEMA[SHEET.seasons],
+        ["test-2026-2027", "2026/2027", "2026-09-01", "2027-07-31", "TAK", 10],
+      ],
+    ],
+    [
       `${SHEET.offerings}!A:ZZ`,
       [
         SHEET_SCHEMA[SHEET.offerings],
-        ["off-1", "gdynia", "Hip-hop", "TAK", 10],
-        ["off-2", "missing-city", "Contemporary", "TAK", 20],
-        ["off-broken", "gdynia", "", "TAK", 30],
+        offeringRow("off-1", "gdynia", "Hip-hop", "TAK", 10),
+        offeringRow("off-2", "missing-city", "Contemporary", "TAK", 20),
+        offeringRow("off-broken", "gdynia", "", "TAK", 30),
       ],
     ],
+    [`${SHEET.groups}!A:ZZ`, [SHEET_SCHEMA[SHEET.groups]]],
   ]);
 
   return {
@@ -103,6 +124,7 @@ function createBootstrapClient(protectedRanges: readonly ProtectedRangeMetadata[
     SHEET_SCHEMA[SHEET.settings],
     ["SYSTEM_SCHEMA_VERSION", String(SYSTEM_SCHEMA_VERSION)],
     ["REGISTRATIONS_OPEN", "NIE"],
+    ["CURRENT_SEASON_ID", ""],
     ["PUBLIC_FORM_TITLE", "Zapisy"],
     ["SUCCESS_MESSAGE", "Dziękujemy"],
     ["PRIVACY_NOTICE_URL", ""],
@@ -137,7 +159,9 @@ describe("validateSheetStructure", () => {
     const report = await validateSheetStructure(createValidationClient());
 
     expect(report.cityCount).toBe(1);
+    expect(report.seasonCount).toBe(1);
     expect(report.offeringCount).toBe(2);
+    expect(report.groupCount).toBe(0);
     expect(report.warnings).toEqual(
       expect.arrayContaining([
         "MIASTA row 3 is incomplete or has an invalid technical ID and will be ignored.",
@@ -156,6 +180,7 @@ describe("validateSheetStructure", () => {
           SHEET_SCHEMA[SHEET.settings],
           ["SYSTEM_SCHEMA_VERSION", String(SYSTEM_SCHEMA_VERSION)],
           ["REGISTRATIONS_OPEN", "MAYBE"],
+          ["CURRENT_SEASON_ID", "test-2026-2027"],
           ["PUBLIC_FORM_TITLE", "Zapisy"],
           ["SUCCESS_MESSAGE", "Dziękujemy"],
           ["PRIVACY_NOTICE_URL", "/privacy"],
@@ -177,7 +202,7 @@ describe("validateSheetStructure", () => {
 });
 
 describe("bootstrapSheetStructure", () => {
-  it("adds warning protections with STATUS and NOTES left editable", async () => {
+  it("adds warning protections while operational v3 columns remain editable", async () => {
     const { client, batchRequests } = createBootstrapClient();
 
     await bootstrapSheetStructure(client);
@@ -196,9 +221,14 @@ describe("bootstrapSheetStructure", () => {
           range: expect.objectContaining({ startColumnIndex: 0, endColumnIndex: 15 }),
         }),
         expect.objectContaining({
-          description: "activity-registration:system-columns:metadata",
+          description: "activity-registration:system-columns:metadata-before-operations",
           warningOnly: true,
-          range: expect.objectContaining({ startColumnIndex: 17, endColumnIndex: 22 }),
+          range: expect.objectContaining({ startColumnIndex: 17, endColumnIndex: 23 }),
+        }),
+        expect.objectContaining({
+          description: "activity-registration:system-columns:metadata-after-operations",
+          warningOnly: true,
+          range: expect.objectContaining({ startColumnIndex: 26, endColumnIndex: 28 }),
         }),
       ]),
     );
@@ -229,7 +259,7 @@ describe("bootstrapSheetStructure", () => {
     );
   });
 
-  it("updates stale registration protections instead of duplicating them", async () => {
+  it("replaces stale v2 registration protections without duplicating them", async () => {
     const existing: readonly ProtectedRangeMetadata[] = [
       {
         protectedRangeId: 101,
@@ -250,6 +280,27 @@ describe("bootstrapSheetStructure", () => {
 
     await bootstrapSheetStructure(client);
 
-    expect(batchRequests.filter((request) => "updateProtectedRange" in request)).toHaveLength(2);
+    expect(batchRequests.filter((request) => "updateProtectedRange" in request)).toHaveLength(1);
+    expect(batchRequests).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          deleteProtectedRange: { protectedRangeId: 102 },
+        }),
+        expect.objectContaining({
+          addProtectedRange: expect.objectContaining({
+            protectedRange: expect.objectContaining({
+              description: "activity-registration:system-columns:metadata-before-operations",
+            }),
+          }),
+        }),
+        expect.objectContaining({
+          addProtectedRange: expect.objectContaining({
+            protectedRange: expect.objectContaining({
+              description: "activity-registration:system-columns:metadata-after-operations",
+            }),
+          }),
+        }),
+      ]),
+    );
   });
 });

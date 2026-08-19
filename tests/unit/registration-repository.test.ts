@@ -21,6 +21,8 @@ const registration: Registration = {
   id: asRegistrationId("reg_11111111-1111-4111-8111-111111111111"),
   requestId: asRequestId("22222222-2222-4222-8222-222222222222"),
   submittedAt: "2026-08-18T12:00:00.000Z",
+  seasonId: null,
+  seasonNameSnapshot: null,
   offeringId: asOfferingId("gdynia-hiphop"),
   cityIdSnapshot: asCityId("gdynia"),
   cityNameSnapshot: "Gdynia",
@@ -34,6 +36,10 @@ const registration: Registration = {
   phone: "+48500000000",
   email: "anna@example.com",
   status: REGISTRATION_STATUS.new,
+  assignedGroupId: null,
+  contactedAt: null,
+  confirmedAt: null,
+  possibleDuplicateOf: null,
   notes: "",
   privacyNoticeVersion: "2026-08-v1",
   source: "WEB",
@@ -65,6 +71,12 @@ function rowForHeaders(headers: readonly string[]): readonly (string | number)[]
     SOURCE: registration.source,
     CREATED_AT: registration.createdAt,
     UPDATED_AT: registration.updatedAt,
+    SEASON_ID: registration.seasonId ?? "",
+    SEASON_NAME_SNAPSHOT: registration.seasonNameSnapshot ?? "",
+    ASSIGNED_GROUP_ID: registration.assignedGroupId ?? "",
+    CONTACTED_AT: registration.contactedAt ?? "",
+    CONFIRMED_AT: registration.confirmedAt ?? "",
+    POSSIBLE_DUPLICATE_OF: registration.possibleDuplicateOf ?? "",
     SCHEMA_VERSION: registration.schemaVersion,
   };
 
@@ -119,7 +131,7 @@ describe("GoogleSheetsRegistrationRepository", () => {
     ]);
   });
 
-  it("reads an idempotent registration from reordered headers", async () => {
+  it("reads a schema-v2 idempotent registration from reordered v3 headers", async () => {
     const reorderedHeaders = [
       ...REGISTRATION_HEADERS.slice(8),
       ...REGISTRATION_HEADERS.slice(0, 8),

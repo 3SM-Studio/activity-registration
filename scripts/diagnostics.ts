@@ -1,6 +1,6 @@
 import { validateSheetStructure } from "../src/infrastructure/google/sheet-admin";
-import { createAdminSheetsClient } from "./_google-admin";
 import { getServerEnv } from "../src/lib/env";
+import { createAdminSheetsClient } from "./_google-admin";
 
 async function main() {
   const env = getServerEnv();
@@ -31,7 +31,9 @@ async function main() {
         dataBackend: env.DATA_BACKEND,
         spreadsheetConfigured: Boolean(env.GOOGLE_SPREADSHEET_ID),
         cityCount: report.cityCount,
+        seasonCount: report.seasonCount,
         offeringCount: report.offeringCount,
+        groupCount: report.groupCount,
         warnings: report.warnings,
       },
       null,

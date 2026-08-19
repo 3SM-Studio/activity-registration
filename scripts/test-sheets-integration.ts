@@ -11,6 +11,7 @@ import {
 import { GoogleSheetsCatalogRepository } from "../src/infrastructure/google/catalog.repository";
 import { cell, createHeaderMap } from "../src/infrastructure/google/header-map";
 import { GoogleSheetsRegistrationRepository } from "../src/infrastructure/google/registration.repository";
+import { GoogleSheetsSettingsRepository } from "../src/infrastructure/google/settings.repository";
 import { validateSheetStructure } from "../src/infrastructure/google/sheet-admin";
 import { REGISTRATION_HEADERS, SHEET } from "../src/infrastructure/google/sheets-contracts";
 import { calculateAgeAtDate, dateOnlyInPoland } from "../src/lib/birth-date";
@@ -70,8 +71,12 @@ async function main() {
   await validateSheetStructure(client);
 
   const catalogRepository = new GoogleSheetsCatalogRepository(client);
+  const settingsRepository = new GoogleSheetsSettingsRepository(client);
   const registrationRepository = new GoogleSheetsRegistrationRepository(client);
-  const catalog = await catalogRepository.getPublicCatalog();
+  const [catalog, settings] = await Promise.all([
+    catalogRepository.getPublicCatalog(),
+    settingsRepository.getPublicSettings(),
+  ]);
   const offering = catalog.offerings[0];
 
   if (!offering) {
@@ -83,6 +88,15 @@ async function main() {
     throw new Error("TEST catalog offering references a city that is not public.");
   }
 
+  if (!settings.currentSeasonId) {
+    throw new Error("TEST settings have no CURRENT_SEASON_ID for the integration test.");
+  }
+
+  const season = await catalogRepository.findSeasonById(settings.currentSeasonId);
+  if (!season || !season.active) {
+    throw new Error("TEST CURRENT_SEASON_ID does not resolve to an active season.");
+  }
+
   const nowDate = new Date();
   const now = nowDate.toISOString();
   const birthDate = "2000-01-15";
@@ -92,6 +106,8 @@ async function main() {
     id: createRegistrationId(),
     requestId,
     submittedAt: now,
+    seasonId: season.id,
+    seasonNameSnapshot: season.name,
     offeringId: offering.id,
     cityIdSnapshot: city.id,
     cityNameSnapshot: city.name,
@@ -105,6 +121,10 @@ async function main() {
     phone: "+48500000000",
     email: "integration-test@example.com",
     status: REGISTRATION_STATUS.new,
+    assignedGroupId: null,
+    contactedAt: null,
+    confirmedAt: null,
+    possibleDuplicateOf: null,
     notes: "synthetic integration test",
     privacyNoticeVersion: "integration-test",
     source: REGISTRATION_SOURCE.web,
@@ -123,12 +143,18 @@ async function main() {
     assert(stored, "Synthetic Registration was not readable after native table append.");
     assert.equal(stored.id, registration.id);
     assert.equal(stored.requestId, registration.requestId);
+    assert.equal(stored.seasonId, registration.seasonId);
+    assert.equal(stored.seasonNameSnapshot, registration.seasonNameSnapshot);
     assert.equal(stored.offeringId, registration.offeringId);
     assert.equal(stored.cityIdSnapshot, registration.cityIdSnapshot);
     assert.equal(stored.participantFirstName, "Integration");
     assert.equal(stored.participantLastName, "Test");
     assert.equal(stored.birthDate, birthDate);
     assert.equal(stored.ageAtSubmission, ageAtSubmission);
+    assert.equal(stored.assignedGroupId, null);
+    assert.equal(stored.contactedAt, null);
+    assert.equal(stored.confirmedAt, null);
+    assert.equal(stored.possibleDuplicateOf, null);
     assert.equal(stored.schemaVersion, REGISTRATION_SCHEMA_VERSION);
 
     console.info(

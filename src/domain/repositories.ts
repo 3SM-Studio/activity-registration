@@ -1,9 +1,10 @@
-import type { PublicCatalog } from "@/domain/catalog";
+import type { PublicCatalog, Season, SeasonId } from "@/domain/catalog";
 import type { Registration, RequestId } from "@/domain/registration";
 import type { PublicSettings } from "@/domain/settings";
 
 export interface CatalogRepository {
   getPublicCatalog(): Promise<PublicCatalog>;
+  findSeasonById(seasonId: SeasonId): Promise<Season | null>;
 }
 
 export interface RegistrationRepository {
