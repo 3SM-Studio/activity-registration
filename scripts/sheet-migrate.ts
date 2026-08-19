@@ -147,25 +147,18 @@ async function migrateV2ToV3(client: SheetsClient): Promise<void> {
     ]),
   ]);
 
-  const existingOfferingCount = offeringRows.slice(1).filter((row) =>
-    row.some((value) => String(value ?? "").trim().length > 0),
-  ).length;
+  for (const [offset, row] of offeringRows.slice(1).entries()) {
+    if (!row.some((value) => String(value ?? "").trim().length > 0)) {
+      continue;
+    }
 
-  if (existingOfferingCount > 0) {
-    const safeDefaults = Array.from({ length: existingOfferingCount }, () => [
-      "",
-      "ROLLING",
-      "CLOSED",
-      "",
-      "",
-      "FALSE",
-    ] as const);
-
-    await client.updateValues(`${SHEET.offerings}!D2:D${existingOfferingCount + 1}`, safeDefaults.map(([description]) => [description]));
-    await client.updateValues(
-      `${SHEET.offerings}!G2:K${existingOfferingCount + 1}`,
-      safeDefaults.map(([, mode, state, from, to, waitlist]) => [mode, state, from, to, waitlist]),
-    );
+    const rowNumber = offset + 2;
+    await Promise.all([
+      client.updateValues(`${SHEET.offerings}!D${rowNumber}`, [[""]]),
+      client.updateValues(`${SHEET.offerings}!G${rowNumber}:K${rowNumber}`, [
+        ["ROLLING", "CLOSED", "", "", "FALSE"],
+      ]),
+    ]);
   }
 
   await setSystemSchemaVersion(client, 3);
