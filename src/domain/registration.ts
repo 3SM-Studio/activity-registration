@@ -23,12 +23,37 @@ export type RegistrationSource = (typeof REGISTRATION_SOURCE)[keyof typeof REGIS
 
 export const REGISTRATION_STATUS = {
   new: "NEW",
-  inProgress: "IN_PROGRESS",
-  accepted: "ACCEPTED",
+  inReview: "IN_REVIEW",
+  contacted: "CONTACTED",
+  waitlisted: "WAITLISTED",
+  confirmed: "CONFIRMED",
+  rejected: "REJECTED",
   cancelled: "CANCELLED",
 } as const;
 
 export type RegistrationStatus = (typeof REGISTRATION_STATUS)[keyof typeof REGISTRATION_STATUS];
+
+export const LEGACY_REGISTRATION_STATUS = {
+  inProgress: "IN_PROGRESS",
+  accepted: "ACCEPTED",
+} as const;
+
+export function normalizeStoredRegistrationStatus(value: string): RegistrationStatus | null {
+  const current = Object.values(REGISTRATION_STATUS).find((status) => status === value);
+  if (current) {
+    return current;
+  }
+
+  if (value === LEGACY_REGISTRATION_STATUS.inProgress) {
+    return REGISTRATION_STATUS.inReview;
+  }
+
+  if (value === LEGACY_REGISTRATION_STATUS.accepted) {
+    return REGISTRATION_STATUS.confirmed;
+  }
+
+  return null;
+}
 
 export type Registration = Readonly<{
   id: RegistrationId;
