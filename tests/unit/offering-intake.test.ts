@@ -34,9 +34,7 @@ function offering(overrides: Partial<ClassOffering> = {}): ClassOffering {
 
 describe("offering intake", () => {
   it("keeps a rolling OPEN offering open", () => {
-    expect(computeOfferingIntakeStatus(offering(), "2026-08-19")).toBe(
-      PUBLIC_INTAKE_STATUS.open,
-    );
+    expect(computeOfferingIntakeStatus(offering(), "2026-08-19")).toBe(PUBLIC_INTAKE_STATUS.open);
   });
 
   it("honors manual CLOSED for rolling intake", () => {
@@ -74,12 +72,8 @@ describe("offering intake", () => {
       registrationOpenTo: "2026-09-30",
     });
 
-    expect(computeOfferingIntakeStatus(windowed, "2026-09-01")).toBe(
-      PUBLIC_INTAKE_STATUS.open,
-    );
-    expect(computeOfferingIntakeStatus(windowed, "2026-09-30")).toBe(
-      PUBLIC_INTAKE_STATUS.open,
-    );
+    expect(computeOfferingIntakeStatus(windowed, "2026-09-01")).toBe(PUBLIC_INTAKE_STATUS.open);
+    expect(computeOfferingIntakeStatus(windowed, "2026-09-30")).toBe(PUBLIC_INTAKE_STATUS.open);
   });
 
   it("returns CLOSED after a windowed registration period", () => {
