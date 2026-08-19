@@ -1,16 +1,11 @@
 "use client";
 
-import type { FocusEventHandler } from "react";
+import type { ElementType, FocusEventHandler } from "react";
 import { getCountryCallingCode, type Country } from "react-phone-number-input";
 import flags from "react-phone-number-input/flags";
 
 import { cn } from "@/lib/cn";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 
 type CountryOption = Readonly<{
   value?: Country;
@@ -29,7 +24,7 @@ type PhoneCountrySelectProps = Readonly<{
   "aria-label"?: string;
   onFocus?: FocusEventHandler<HTMLElement>;
   onBlur?: FocusEventHandler<HTMLElement>;
-  iconComponent?: React.ElementType;
+  iconComponent?: ElementType;
 }>;
 
 function CountryFlag({ country, label }: Readonly<{ country: Country; label: string }>) {
@@ -72,15 +67,15 @@ export function PhoneCountrySelect({
 
   return (
     <Select
-      name={name}
+      {...(name ? { name } : {})}
       value={value ?? ""}
       onValueChange={(nextValue) => onChange(nextValue as Country)}
-      disabled={disabled || readOnly}
+      disabled={Boolean(disabled || readOnly)}
     >
       <SelectTrigger
         aria-label={ariaLabel ?? "Kraj numeru telefonu"}
-        onFocus={onFocus}
-        onBlur={onBlur}
+        {...(onFocus ? { onFocus } : {})}
+        {...(onBlur ? { onBlur } : {})}
         className={cn(
           "h-full w-auto min-w-[7rem] shrink-0 rounded-none border-0 border-r border-border bg-transparent px-3 shadow-none focus-visible:border-border focus-visible:ring-0",
           className,
