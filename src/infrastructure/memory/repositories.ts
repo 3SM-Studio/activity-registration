@@ -79,7 +79,7 @@ const catalog: PublicCatalog = {
 };
 
 class MemoryCatalogRepository implements CatalogRepository {
-  async getPublicCatalog(_currentDate: string): Promise<PublicCatalog> {
+  async getPublicCatalog(): Promise<PublicCatalog> {
     return catalog;
   }
 
