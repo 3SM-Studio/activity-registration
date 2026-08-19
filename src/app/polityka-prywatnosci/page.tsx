@@ -1,9 +1,11 @@
 import { notFound } from "next/navigation";
 
-import { getServerEnv } from "@/lib/env";
+import { getServerEnv, isUnconfiguredVercelProduction } from "@/lib/env";
+
+export const dynamic = "force-dynamic";
 
 export default function TestPrivacyPage() {
-  if (getServerEnv().APP_ENV === "production") {
+  if (isUnconfiguredVercelProduction() || getServerEnv().APP_ENV === "production") {
     notFound();
   }
 

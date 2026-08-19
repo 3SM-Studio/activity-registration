@@ -53,25 +53,20 @@ const serverEnvSchema = z
 
 export type ServerEnv = z.output<typeof serverEnvSchema>;
 
-function inferVercelProductionAppEnv(input: unknown): unknown {
+export function isUnconfiguredVercelProduction(input: unknown = process.env): boolean {
   if (typeof input !== "object" || input === null || Array.isArray(input)) {
-    return input;
+    return false;
   }
 
   const env = input as Record<string, unknown>;
-  if (env.APP_ENV) {
-    return input;
-  }
+  const isProductionTarget =
+    env.VERCEL_ENV === "production" || env.VERCEL_TARGET_ENV === "production";
 
-  if (env.VERCEL_ENV !== "production" && env.VERCEL_TARGET_ENV !== "production") {
-    return input;
-  }
-
-  return { ...env, APP_ENV: "production" };
+  return isProductionTarget && env.APP_ENV !== "production";
 }
 
 export function parseServerEnv(input: unknown): ServerEnv {
-  return serverEnvSchema.parse(inferVercelProductionAppEnv(input));
+  return serverEnvSchema.parse(input);
 }
 
 export function getServerEnv(): ServerEnv {

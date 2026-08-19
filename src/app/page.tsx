@@ -1,7 +1,7 @@
 import { getPublicFormConfig } from "@/application/get-public-form-config";
 import { RegistrationForm } from "@/components/registration/registration-form";
 import { createApplicationRepositories } from "@/infrastructure/repositories";
-import { getServerEnv } from "@/lib/env";
+import { getServerEnv, isUnconfiguredVercelProduction } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +18,43 @@ function PozytywkaMark() {
   );
 }
 
+function ProductionClosedState() {
+  return (
+    <main className="min-h-screen px-4 py-10 sm:px-6 sm:py-16">
+      <div className="mx-auto flex min-h-[70vh] w-full max-w-2xl items-center">
+        <section className="w-full rounded-[1.75rem] border border-[var(--line)] bg-[var(--surface)] p-6 shadow-[0_28px_90px_-48px_rgba(77,36,58,0.34)] sm:p-10">
+          <div className="mb-8 flex items-center gap-3">
+            <PozytywkaMark />
+            <div>
+              <p className="text-[0.68rem] font-bold uppercase tracking-[0.2em] text-[var(--brand)]">
+                Pracownia Twórcza
+              </p>
+              <p className="text-lg font-extrabold tracking-[-0.02em] text-neutral-950">
+                Pozytywka
+              </p>
+            </div>
+          </div>
+          <p className="text-sm font-bold uppercase tracking-[0.16em] text-[var(--teal)]">
+            Zapisy online
+          </p>
+          <h1 className="mt-3 text-balance text-4xl font-extrabold tracking-[-0.04em] text-neutral-950 sm:text-5xl">
+            Zapisy są obecnie zamknięte
+          </h1>
+          <p className="mt-5 max-w-xl text-base leading-7 text-neutral-600">
+            Formularz produkcyjny nie został jeszcze uruchomiony. Wróć później, gdy zapisy będą
+            gotowe do przyjmowania zgłoszeń.
+          </p>
+        </section>
+      </div>
+    </main>
+  );
+}
+
 export default async function HomePage() {
+  if (isUnconfiguredVercelProduction()) {
+    return <ProductionClosedState />;
+  }
+
   const env = getServerEnv();
   const { catalog, settings } = await getPublicFormConfig(createApplicationRepositories(), {
     requirePrivacyConfiguration: env.APP_ENV === "production",
