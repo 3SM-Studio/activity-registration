@@ -105,7 +105,10 @@ describe("registration business duplicates", () => {
 
   it("allows a fresh request after CANCELLED and future REJECTED statuses", () => {
     expect(
-      classifyRegistrationDuplicates([registration({ status: REGISTRATION_STATUS.cancelled })], criteria),
+      classifyRegistrationDuplicates(
+        [registration({ status: REGISTRATION_STATUS.cancelled })],
+        criteria,
+      ),
     ).toEqual({ kind: "none" });
 
     expect(
