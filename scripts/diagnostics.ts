@@ -1,10 +1,7 @@
 import { LEGACY_REGISTRATION_STATUS } from "../src/domain/registration";
 import { validateSheetStructure } from "../src/infrastructure/google/sheet-admin";
 import { cell, createHeaderMap } from "../src/infrastructure/google/header-map";
-import {
-  REGISTRATION_HEADERS,
-  SHEET,
-} from "../src/infrastructure/google/sheets-contracts";
+import { REGISTRATION_HEADERS, SHEET } from "../src/infrastructure/google/sheets-contracts";
 import { getServerEnv } from "../src/lib/env";
 import { createAdminSheetsClient } from "./_google-admin";
 
