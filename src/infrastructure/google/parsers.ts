@@ -75,7 +75,11 @@ function parseOptionalDateOnlyValue(raw: unknown, label: string): string | null 
   return parseDateOnlyValue(raw, label);
 }
 
-function parseOptionalTimestamp(value: string, label: string, registrationId: string): string | null {
+function parseOptionalTimestamp(
+  value: string,
+  label: string,
+  registrationId: string,
+): string | null {
   if (!value) {
     return null;
   }
@@ -117,7 +121,10 @@ export function parseSeasonRow(row: readonly unknown[], headers: HeaderMap): Sea
     return null;
   }
 
-  const startDate = parseDateOnlyValue(rawCell(row, headers, "START_DATE"), `season ${id} START_DATE`);
+  const startDate = parseDateOnlyValue(
+    rawCell(row, headers, "START_DATE"),
+    `season ${id} START_DATE`,
+  );
   const endDate = parseDateOnlyValue(rawCell(row, headers, "END_DATE"), `season ${id} END_DATE`);
 
   if (startDate > endDate) {
