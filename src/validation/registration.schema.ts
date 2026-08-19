@@ -12,7 +12,11 @@ const personName = (label: string) =>
     .transform(normalizePersonName)
     .pipe(z.string().min(1, `${label} jest wymagane.`).max(100, `${label} jest zbyt długie.`));
 
-const optionalPersonName = z.string().transform(normalizePersonName).pipe(z.string().max(100)).optional();
+const optionalPersonName = z
+  .string()
+  .transform(normalizePersonName)
+  .pipe(z.string().max(100))
+  .optional();
 
 export const registrationRequestSchema = z
   .object({
