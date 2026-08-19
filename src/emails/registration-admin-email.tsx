@@ -24,6 +24,9 @@ const colors = {
   muted: "#74616f",
   line: "#e8d7c6",
   brand: "#a3205a",
+  warningBackground: "#fff7ed",
+  warningForeground: "#9a3412",
+  warningLine: "#fed7aa",
 } as const;
 
 const labelStyle = {
@@ -105,6 +108,30 @@ export function RegistrationAdminEmail({ registration }: RegistrationAdminEmailP
           >
             Nowe zgłoszenie
           </Heading>
+
+          {registration.possibleDuplicateOf ? (
+            <Section
+              style={{
+                backgroundColor: colors.warningBackground,
+                border: `1px solid ${colors.warningLine}`,
+                borderRadius: "12px",
+                margin: "0 0 20px",
+                padding: "12px 16px",
+              }}
+            >
+              <Text
+                style={{
+                  color: colors.warningForeground,
+                  fontSize: "14px",
+                  fontWeight: 700,
+                  lineHeight: "20px",
+                  margin: 0,
+                }}
+              >
+                UWAGA: możliwy duplikat wcześniejszego zgłoszenia
+              </Text>
+            </Section>
+          ) : null}
 
           <Section
             style={{
