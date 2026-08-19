@@ -27,7 +27,10 @@ export function registrationStatusAllowsFreshRequest(status: string): boolean {
   return FRESH_REQUEST_STATUSES.has(status);
 }
 
-function namesMatch(registration: Registration, criteria: RegistrationDuplicateCriteria): boolean {
+function namesMatch(
+  registration: Registration,
+  criteria: RegistrationDuplicateCriteria,
+): boolean {
   return (
     normalizeNameForDuplicateComparison(registration.participantFirstName) ===
       normalizeNameForDuplicateComparison(criteria.participantFirstName) &&
