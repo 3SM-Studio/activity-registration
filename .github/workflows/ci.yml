@@ -15,10 +15,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  format-and-check:
+  format-sources:
     if: github.event_name == 'pull_request' && github.head_ref == 'feat/full-shadcn-form'
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
         with:
@@ -33,61 +33,16 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm format
-      - run: pnpm check
-      - run: google-chrome --version
-      - run: pnpm test:e2e
-        env:
-          PLAYWRIGHT_USE_SYSTEM_CHROME: "1"
-      - name: Restore normal CI
-        run: |
-          cat > .github/workflows/ci.yml <<'YAML'
-          name: CI
-
-          on:
-            pull_request:
-            push:
-              branches:
-                - main
-                - preview
-
-          permissions:
-            contents: read
-
-          concurrency:
-            group: ci-${{ github.workflow }}-${{ github.ref }}
-            cancel-in-progress: true
-
-          jobs:
-            check:
-              runs-on: ubuntu-latest
-              timeout-minutes: 25
-              steps:
-                - uses: actions/checkout@v7
-                - uses: pnpm/action-setup@v6
-                  with:
-                    version: 11.20.0
-                    run_install: false
-                - uses: actions/setup-node@v7
-                  with:
-                    node-version: 24.19.0
-                    cache: pnpm
-                - name: Install dependencies
-                  run: pnpm install --frozen-lockfile
-                - name: Quality gate
-                  run: pnpm check
-                - name: Verify system Chrome
-                  run: google-chrome --version
-                - name: Critical E2E
-                  run: pnpm test:e2e
-                  env:
-                    PLAYWRIGHT_USE_SYSTEM_CHROME: "1"
-          YAML
-      - name: Commit verified formatting
+      - name: Commit formatted product files
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -m "style: format shadcn form migration"
+          git add src tests
+          if git diff --cached --quiet; then
+            echo "No source formatting changes needed"
+            exit 0
+          fi
+          git commit -m "style: format final shadcn sources"
           git push origin HEAD:feat/full-shadcn-form
 
   check:
