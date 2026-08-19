@@ -9,6 +9,13 @@ const emailProductionConfig = {
   REGISTRATION_ADMIN_EMAILS: "biuro@example.com, zapisy@example.com",
 } as const;
 
+const vercelWifConfig = {
+  GCP_PROJECT_NUMBER: "123456789",
+  GCP_SERVICE_ACCOUNT_EMAIL: "activity@example.iam.gserviceaccount.com",
+  GCP_WORKLOAD_IDENTITY_POOL_ID: "vercel",
+  GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID: "vercel",
+} as const;
+
 describe("server environment", () => {
   it("defaults local development to memory with email disabled", () => {
     expect(parseServerEnv({})).toMatchObject({
@@ -64,7 +71,18 @@ describe("server environment", () => {
     ).toThrow();
   });
 
-  it("requires complete WIF config for production running on Vercel", () => {
+  it("requires complete WIF config for preview Google Sheets on Vercel", () => {
+    expect(() =>
+      parseServerEnv({
+        APP_ENV: "test",
+        DATA_BACKEND: "google-sheets",
+        GOOGLE_SPREADSHEET_ID: "sheet-test",
+        VERCEL: "1",
+      }),
+    ).toThrow();
+  });
+
+  it("requires complete WIF config for production Google Sheets on Vercel", () => {
     expect(() =>
       parseServerEnv({
         APP_ENV: "production",
@@ -76,6 +94,22 @@ describe("server environment", () => {
     ).toThrow();
   });
 
+  it("accepts complete preview Vercel configuration", () => {
+    expect(
+      parseServerEnv({
+        APP_ENV: "test",
+        DATA_BACKEND: "google-sheets",
+        GOOGLE_SPREADSHEET_ID: "sheet-test",
+        VERCEL: "1",
+        ...vercelWifConfig,
+      }),
+    ).toMatchObject({
+      APP_ENV: "test",
+      DATA_BACKEND: "google-sheets",
+      EMAIL_PROVIDER: "disabled",
+    });
+  });
+
   it("accepts complete production Vercel configuration", () => {
     expect(
       parseServerEnv({
@@ -83,10 +117,7 @@ describe("server environment", () => {
         DATA_BACKEND: "google-sheets",
         GOOGLE_SPREADSHEET_ID: "sheet-prod",
         VERCEL: "1",
-        GCP_PROJECT_NUMBER: "123456789",
-        GCP_SERVICE_ACCOUNT_EMAIL: "activity@example.iam.gserviceaccount.com",
-        GCP_WORKLOAD_IDENTITY_POOL_ID: "vercel",
-        GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID: "vercel-prod",
+        ...vercelWifConfig,
         ...emailProductionConfig,
       }),
     ).toMatchObject({
