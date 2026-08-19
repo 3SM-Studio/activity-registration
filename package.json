@@ -39,6 +39,7 @@
     "react-email": "6.9.1",
     "react-hook-form": "7.84.0",
     "react-icons": "5.7.0",
+    "react-phone-number-input": "3.4.17",
     "tailwind-merge": "3.6.0",
     "zod": "4.4.3"
   },
