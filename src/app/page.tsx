@@ -27,7 +27,10 @@ function PozytywkaMark() {
 function ClosedState({
   title,
   description,
-}: Readonly<{ title: string; description: string }>) {
+}: Readonly<{
+  title: string;
+  description: string;
+}>) {
   return (
     <main className="min-h-screen px-4 py-10 sm:px-6 sm:py-16">
       <div className="mx-auto flex min-h-[70vh] w-full max-w-2xl items-center">
