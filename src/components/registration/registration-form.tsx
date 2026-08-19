@@ -402,7 +402,6 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
                     value={field.value ?? ""}
                     onChange={field.onChange}
                     onBlur={field.onBlur}
-                    inputRef={field.ref}
                     required
                     autoComplete="tel"
                     invalid={Boolean(errors.phone)}

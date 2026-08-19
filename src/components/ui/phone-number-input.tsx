@@ -1,6 +1,5 @@
 "use client";
 
-import type { Ref } from "react";
 import PhoneInput, { type Value } from "react-phone-number-input";
 import flags from "react-phone-number-input/flags";
 import pl from "react-phone-number-input/locale/pl";
@@ -13,12 +12,11 @@ type PhoneNumberInputProps = Readonly<{
   value: string;
   onChange: (value: string) => void;
   onBlur: () => void;
-  inputRef?: Ref<HTMLInputElement>;
   required?: boolean;
   disabled?: boolean;
   autoComplete?: string;
   invalid?: boolean;
-  describedBy?: string;
+  describedBy?: string | undefined;
 }>;
 
 export function PhoneNumberInput({
@@ -27,7 +25,6 @@ export function PhoneNumberInput({
   value,
   onChange,
   onBlur,
-  inputRef,
   required,
   disabled,
   autoComplete,
@@ -36,7 +33,6 @@ export function PhoneNumberInput({
 }: PhoneNumberInputProps) {
   return (
     <PhoneInput
-      ref={inputRef}
       id={id}
       name={name}
       className={cn("pozytywka-phone-input", invalid && "pozytywka-phone-input--invalid")}
