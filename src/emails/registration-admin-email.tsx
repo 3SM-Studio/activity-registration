@@ -114,7 +114,10 @@ export function RegistrationAdminEmail({ registration }: RegistrationAdminEmailP
             }}
           >
             <DetailRow label="Uczestnik" value={participantName} />
-            <DetailRow label="Wiek" value={String(registration.age)} />
+            {registration.birthDate ? (
+              <DetailRow label="Data urodzenia" value={registration.birthDate} />
+            ) : null}
+            <DetailRow label="Wiek przy zapisie" value={String(registration.ageAtSubmission)} />
             <DetailRow label="Zajęcia" value={registration.offeringNameSnapshot} />
             <DetailRow label="Miasto" value={registration.cityNameSnapshot} />
             {guardian ? <DetailRow label="Rodzic/opiekun" value={guardian} /> : null}
