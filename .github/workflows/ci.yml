@@ -30,6 +30,11 @@ jobs:
           cache: pnpm
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+      - name: Format probe
+        run: |
+          pnpm exec prettier --write scripts/sheet-migrate.ts src/infrastructure/google/parsers.ts src/infrastructure/google/sheet-admin.ts
+          git diff -- scripts/sheet-migrate.ts src/infrastructure/google/parsers.ts src/infrastructure/google/sheet-admin.ts
+          exit 1
       - name: Quality gate
         run: pnpm check
       - name: Verify system Chrome
