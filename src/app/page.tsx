@@ -1,3 +1,5 @@
+import { LuCircleAlert } from "react-icons/lu";
+
 import { getPublicFormConfig } from "@/application/get-public-form-config";
 import { RegistrationForm } from "@/components/registration/registration-form";
 import { createApplicationRepositories } from "@/infrastructure/repositories";
@@ -34,9 +36,10 @@ function ProductionClosedState() {
               </p>
             </div>
           </div>
-          <p className="text-sm font-bold uppercase tracking-[0.16em] text-[var(--teal)]">
-            Zapisy online
-          </p>
+          <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-[0.16em] text-[var(--teal)]">
+            <LuCircleAlert className="size-4" aria-hidden="true" />
+            <span>Zapisy online</span>
+          </div>
           <h1 className="mt-3 text-balance text-4xl font-extrabold tracking-[-0.04em] text-neutral-950 sm:text-5xl">
             Zapisy są obecnie zamknięte
           </h1>
