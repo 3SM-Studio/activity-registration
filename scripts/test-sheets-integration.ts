@@ -12,10 +12,7 @@ import { GoogleSheetsCatalogRepository } from "../src/infrastructure/google/cata
 import { cell, createHeaderMap } from "../src/infrastructure/google/header-map";
 import { GoogleSheetsRegistrationRepository } from "../src/infrastructure/google/registration.repository";
 import { validateSheetStructure } from "../src/infrastructure/google/sheet-admin";
-import {
-  REGISTRATION_HEADERS,
-  SHEET,
-} from "../src/infrastructure/google/sheets-contracts";
+import { REGISTRATION_HEADERS, SHEET } from "../src/infrastructure/google/sheets-contracts";
 import { getServerEnv } from "../src/lib/env";
 import { createRegistrationId } from "../src/lib/ids";
 import { createAdminSheetsClient } from "./_google-admin";
