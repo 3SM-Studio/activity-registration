@@ -1,0 +1,62 @@
+"use client";
+
+import type { Ref } from "react";
+import PhoneInput, { type Value } from "react-phone-number-input";
+import flags from "react-phone-number-input/flags";
+import pl from "react-phone-number-input/locale/pl";
+
+import { cn } from "@/lib/cn";
+
+type PhoneNumberInputProps = Readonly<{
+  id: string;
+  name: string;
+  value: string;
+  onChange: (value: string) => void;
+  onBlur: () => void;
+  inputRef?: Ref<HTMLInputElement>;
+  required?: boolean;
+  disabled?: boolean;
+  autoComplete?: string;
+  invalid?: boolean;
+  describedBy?: string;
+}>;
+
+export function PhoneNumberInput({
+  id,
+  name,
+  value,
+  onChange,
+  onBlur,
+  inputRef,
+  required,
+  disabled,
+  autoComplete,
+  invalid,
+  describedBy,
+}: PhoneNumberInputProps) {
+  return (
+    <PhoneInput
+      ref={inputRef}
+      id={id}
+      name={name}
+      className={cn(
+        "pozytywka-phone-input",
+        invalid && "pozytywka-phone-input--invalid",
+      )}
+      defaultCountry="PL"
+      international
+      countryCallingCodeEditable={false}
+      addInternationalOption={false}
+      labels={pl}
+      flags={flags}
+      value={value ? (value as Value) : undefined}
+      onChange={(nextValue) => onChange(nextValue ?? "")}
+      onBlur={onBlur}
+      required={required}
+      disabled={disabled}
+      autoComplete={autoComplete}
+      aria-invalid={invalid || undefined}
+      aria-describedby={describedBy}
+    />
+  );
+}

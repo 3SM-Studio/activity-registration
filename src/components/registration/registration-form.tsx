@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, type ChangeEventHandler } from "react";
-import { useForm, useWatch } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
 
 import { APPLICATION_ERROR_CODE } from "@/application/errors";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
+import { PhoneNumberInput } from "@/components/ui/phone-number-input";
 import { FieldError } from "@/components/registration/field-error";
 import type { PublicCatalog } from "@/domain/catalog";
 import type { PublicSettings } from "@/domain/settings";
@@ -391,17 +392,23 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
               <Label htmlFor="phone">
                 Numer telefonu <span aria-hidden="true">*</span>
               </Label>
-              <Input
-                id="phone"
-                required
-                type="tel"
-                inputMode="tel"
-                autoComplete="tel"
-                maxLength={40}
-                placeholder="+48 500 000 000"
-                aria-invalid={Boolean(errors.phone)}
-                aria-describedby={errors.phone ? "phone-error" : undefined}
-                {...register("phone")}
+              <Controller
+                name="phone"
+                control={control}
+                render={({ field }) => (
+                  <PhoneNumberInput
+                    id="phone"
+                    name={field.name}
+                    value={field.value ?? ""}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    inputRef={field.ref}
+                    required
+                    autoComplete="tel"
+                    invalid={Boolean(errors.phone)}
+                    describedBy={errors.phone ? "phone-error" : undefined}
+                  />
+                )}
               />
               <FieldError id="phone-error" message={errors.phone?.message} />
             </div>
