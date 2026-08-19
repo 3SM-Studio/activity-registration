@@ -7,6 +7,11 @@ import {
   createHeaderMap,
 } from "@/infrastructure/google/header-map";
 import {
+  assertUniqueIds,
+  parseCityRow,
+  parseOfferingRow,
+} from "@/infrastructure/google/parsers";
+import {
   SETTING_KEY,
   SETTINGS_HEADERS,
   SHEET,
