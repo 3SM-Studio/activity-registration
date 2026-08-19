@@ -62,4 +62,55 @@ describe("GoogleSheetsClient", () => {
     });
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
+
+  it("reads protected range metadata used by sheet validation", async () => {
+    const fetchMock = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            sheets: [
+              {
+                properties: { sheetId: 7, title: "ZAPISY" },
+                protectedRanges: [
+                  {
+                    protectedRangeId: 12,
+                    description: "activity-registration:system-columns:identity-and-pii",
+                    warningOnly: true,
+                    range: {
+                      sheetId: 7,
+                      startColumnIndex: 0,
+                      endColumnIndex: 14,
+                    },
+                  },
+                ],
+              },
+            ],
+          }),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          },
+        ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = new GoogleSheetsClient(env, "sheet-id");
+    const metadata = await client.getSheetMetadata();
+
+    expect(metadata).toEqual([
+      {
+        sheetId: 7,
+        title: "ZAPISY",
+        protectedRanges: [
+          {
+            protectedRangeId: 12,
+            description: "activity-registration:system-columns:identity-and-pii",
+            warningOnly: true,
+            startColumnIndex: 0,
+            endColumnIndex: 14,
+          },
+        ],
+      },
+    ]);
+  });
 });
