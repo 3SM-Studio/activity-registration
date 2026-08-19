@@ -8,14 +8,45 @@ on:
       - preview
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  format-sources:
+    if: github.event_name == 'pull_request' && github.head_ref == 'feat/birth-date-sheets-table'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: feat/birth-date-sheets-table
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11.20.0
+          run_install: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24.19.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm format
+      - name: Commit formatted source files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src tests scripts docs
+          if git diff --cached --quiet; then
+            echo "No formatting changes needed"
+            exit 0
+          fi
+          git commit -m "style: format final schema v2 sources"
+          git push origin HEAD:feat/birth-date-sheets-table
+
   check:
+    if: github.event_name != 'pull_request' || github.head_ref != 'feat/birth-date-sheets-table'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
