@@ -28,7 +28,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { PUBLIC_INTAKE_STATUS, type PublicCatalog, type PublicOffering } from "@/domain/catalog";
+import {
+  PUBLIC_INTAKE_STATUS,
+  type PublicCatalog,
+  type PublicOffering,
+} from "@/domain/catalog";
 import type { PublicSettings } from "@/domain/settings";
 import { calculateAgeToday } from "@/lib/birth-date";
 import {
@@ -238,7 +242,9 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
           ✓
         </div>
         <h2 className="text-xl font-semibold text-foreground">
-          {successState === "duplicate" ? "Takie zgłoszenie jest już w systemie" : "Zgłoszenie przyjęte"}
+          {successState === "duplicate"
+            ? "Takie zgłoszenie jest już w systemie"
+            : "Zgłoszenie przyjęte"}
         </h2>
         <p className="mt-2 text-muted-foreground">
           {successState === "duplicate"
