@@ -3,7 +3,7 @@ import type { Registration, RequestId } from "@/domain/registration";
 import type { PublicSettings } from "@/domain/settings";
 
 export interface CatalogRepository {
-  getPublicCatalog(): Promise<PublicCatalog>;
+  getPublicCatalog(currentDate: string): Promise<PublicCatalog>;
   findSeasonById(seasonId: SeasonId): Promise<Season | null>;
 }
 
