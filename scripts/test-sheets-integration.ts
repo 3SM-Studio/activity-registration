@@ -79,7 +79,8 @@ async function main() {
     settingsRepository.getPublicSettings(),
   ]);
   const offering = catalog.offerings.find(
-    (candidate) => candidate.intakeStatus === "OPEN" || candidate.intakeStatus === "WAITLIST_ONLY",
+    (candidate) =>
+      candidate.intakeStatus === "OPEN" || candidate.intakeStatus === "WAITLIST_ONLY",
   );
 
   if (!offering) {
