@@ -62,18 +62,13 @@ jobs:
               'import { useEffect, useMemo, useRef, useState, type ChangeEventHandler } from "react";',
               1,
           )
-          old = '''  const invalid = () => {
-            setGlobalError(null);
-            setShowValidationSummary(true);
-
-            requestAnimationFrame(() => {
-              validationSummaryRef.current?.focus({ preventScroll: true });
-              validationSummaryRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-            });
-          };
-
-          '''
-          new = '''  useEffect(() => {
+          start_marker = "  const invalid = () => {"
+          end_marker = "  const submit = async (data: RegistrationRequest) => {"
+          start = text.find(start_marker)
+          end = text.find(end_marker, start)
+          if start < 0 or end < 0:
+              raise SystemExit("validation callback markers not found")
+          replacement = '''  useEffect(() => {
             if (!showValidationSummary) {
               return;
             }
@@ -92,9 +87,7 @@ jobs:
           };
 
           '''
-          if old not in text:
-              raise SystemExit("validation callback block not found")
-          p.write_text(text.replace(old, new, 1))
+          p.write_text(text[:start] + replacement + text[end:])
           PY
       - name: Format
         run: pnpm format
