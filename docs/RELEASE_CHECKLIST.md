@@ -1,6 +1,6 @@
 # Release checklist
 
-This checklist reflects the approved v3 direction. Items marked complete describe already verified v2 foundations. v3 runtime work remains staged and must not be treated as complete because documentation exists.
+This checklist reflects the approved v3 direction. Items marked complete describe verified foundations or completed preparatory work. v3 runtime/schema work remains staged.
 
 ## Product truth
 
@@ -48,7 +48,7 @@ This checklist reflects the approved v3 direction. Items marked complete describ
 - [ ] `REJECTED`/`CANCELLED` previous request may be resubmitted
 - [ ] legacy row without DOB never hard-blocks using guessed identity
 - [ ] reconciliation reports business duplicate candidates without logging PII
-- [ ] concurrency limitation of Sheets dedupe is documented and accepted
+- [ ] concurrency limitation of Sheets dedupe is documented and accepted in implementation/tests
 
 ## Public UX
 
@@ -95,13 +95,17 @@ This checklist reflects the approved v3 direction. Items marked complete describ
 
 ## TEST hygiene
 
-- [ ] TEST registrations default to `FALSE` outside controlled QA
-- [ ] pre-cleanup backup created
-- [ ] manual/real-looking PII QA rows removed from TEST
-- [ ] routine QA uses synthetic fixtures only
+- [x] TEST registrations set to `FALSE` outside controlled QA
+- [x] pre-cleanup full spreadsheet backup created
+- [x] manual/real-looking PII QA rows removed from `ZAPISY`
+- [x] TEST `ZAPISY` now contains only an explicitly synthetic `example.com` fixture
+- [x] routine QA policy requires synthetic fixtures only
 - [ ] routine E2E does not send to real external participant mailboxes
-- [ ] canonical preview deployment SHA is verified against GitHub `preview` before QA
-- [ ] unintended feature-branch Vercel deployments diagnosed and stopped
+- [x] feature-branch Vercel deployment root cause diagnosed
+- [x] Vercel catch-all changed from `*` to `**` so slash branches are disabled
+- [x] repository contract now protects the Vercel branch rule
+- [x] commits after the `**` fix produced no feature-branch Vercel deployment
+- [ ] canonical preview deployment SHA equals current GitHub `preview` before next product QA
 
 ## Privacy / RODO
 
@@ -183,16 +187,16 @@ This checklist reflects the approved v3 direction. Items marked complete describ
 - [x] `pnpm check` required before merge
 - [x] full Playwright E2E required before merge
 - [x] real-Google integration command is TEST-only
-- [ ] docs/v3-product-truth PR green and merged
-- [ ] test-hygiene-and-preview PR green and merged
-- [ ] schema-v3-foundation PR green and merged
-- [ ] offering-intake-rules PR green and merged
-- [ ] business-deduplication PR green and merged
-- [ ] workflow-statuses PR green and merged
-- [ ] operator-Sheets PR green and merged
-- [ ] copy-and-repeat-flow PR green and merged
-- [ ] group-catalog PR completed after real data exists
-- [ ] privacy-retention-readiness PR/gates complete
+- [x] `docs/v3-product-truth` PR green and merged
+- [ ] `chore/test-hygiene-and-preview` PR green and merged
+- [ ] `feat/sheets-schema-v3-foundation` PR green and merged
+- [ ] `feat/offering-intake-rules` PR green and merged
+- [ ] `feat/registration-business-deduplication` PR green and merged
+- [ ] `feat/registration-workflow-statuses` PR green and merged
+- [ ] `feat/operator-sheets-experience` PR green and merged
+- [ ] `feat/registration-copy-and-repeat-flow` PR green and merged
+- [ ] `feat/group-catalog-operations` completed after real data exists
+- [ ] privacy-retention readiness complete
 - [ ] abuse-hardening decision/PR complete
 
 Do not use stale fixed test-count numbers as a release gate. The current CI run is the source of truth for exact test counts.

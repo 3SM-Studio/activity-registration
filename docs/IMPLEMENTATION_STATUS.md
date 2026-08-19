@@ -6,11 +6,11 @@ Date: 2026-08-19
 
 The currently implemented application is **schema v2**.
 
-The v3 product/domain plan is approved as the next target, but v3 runtime/schema changes are not yet implemented on this docs-only branch.
+The v3 product/domain plan is approved as the next target. v3 runtime/schema changes are not yet implemented.
 
 ## Verified architecture
 
-Current Preview/TEST flow:
+Current Preview/TEST architecture:
 
 ```text
 Browser
@@ -66,10 +66,54 @@ TEST and PROD remain separated at spreadsheet/identity level.
 - E-mail runs only after persistence and does not roll back a successful Registration.
 - Transport replay does not send duplicate notifications.
 - Unit tests, Playwright E2E, repository contract validation and GitHub Actions CI.
-- Desktop and mobile viewport coverage, including 320 px / 430 px and Samsung-like regression scenarios.
+- Desktop/mobile viewport coverage including Samsung-like regression scenarios.
 - Real-Google TEST-only integration roundtrip command.
 - Exact-pinned dependencies and `pnpm-lock.yaml`.
 - Public repository is intentional; secrets, credentials and participant PII stay outside Git.
+
+## Completed v3 preparation
+
+### Product truth
+
+`docs/v3-product-truth` was merged after green Quality gate and Critical E2E.
+
+The repository now contains `docs/REGISTRATION_V3_PLAN.md` and truth docs explicitly distinguish current v2 runtime from target v3.
+
+### TEST hygiene
+
+Before further v3 work:
+
+- TEST registrations were set to `FALSE`,
+- a full spreadsheet backup was created,
+- manual/real-looking PII rows were removed from `ZAPISY`,
+- `ZAPISY` now contains one explicitly synthetic fixture using `example.com`,
+- normal TEST policy is synthetic data only.
+
+No PROD data was modified.
+
+### Vercel branch deployments
+
+Root cause of deployment spam was identified.
+
+The previous catch-all:
+
+```json
+"*": false
+```
+
+did not cover slash branches such as `feat/...`, `fix/...`, `docs/...` under Vercel minimatch behavior, so those unspecified branches defaulted to deployment enabled.
+
+The branch contract is now:
+
+```json
+"**": false,
+"preview": true,
+"main": true
+```
+
+`scripts/repo-validate.mjs` protects that configuration.
+
+Multiple commits pushed after the `**` fix produced zero new feature-branch Vercel deployments, confirming the fix behaves as intended.
 
 ## Current known v2 product limitations
 
@@ -85,15 +129,13 @@ TEST and PROD remain separated at spreadsheet/identity level.
 - The form still contains a visual stepper-like presentation even though it is one page.
 - `ZAPISY` is technically strong but not yet optimized as an operator-first view for Iwona.
 - Production privacy notice and retention policy are not finalized.
-- TEST contains manual/real-looking PII from earlier QA and must be cleaned in the dedicated hygiene step.
-- Canonical Preview has previously drifted behind GitHub `preview` due Vercel deployment rate limiting.
-- Feature-branch deployment filtering needs verification in Vercel despite repository configuration.
+- Canonical Preview is currently known to be behind the latest GitHub `preview` commit and must be refreshed/verified before the next product QA.
 
 ## Approved v3 target
 
 The approved v3 contract is in `docs/REGISTRATION_V3_PLAN.md`.
 
-v3 introduces, in staged PRs:
+v3 introduces in staged PRs:
 
 - `Season`,
 - internal `Group`,
@@ -113,24 +155,24 @@ v3 introduces, in staged PRs:
 
 ## Immediate implementation sequence
 
-1. `docs/v3-product-truth` - current docs-only stage.
-2. `chore/test-hygiene-and-preview`.
+1. `docs/v3-product-truth` - complete.
+2. `chore/test-hygiene-and-preview` - current stage.
 3. `feat/sheets-schema-v3-foundation`.
 4. `feat/offering-intake-rules`.
 5. `feat/registration-business-deduplication`.
 6. `feat/registration-workflow-statuses`.
 7. `feat/operator-sheets-experience`.
 8. `feat/registration-copy-and-repeat-flow`.
-9. `feat/group-catalog-operations` after real Iwona group data is available.
+9. `feat/group-catalog-operations` after real Iwona group data exists.
 10. `chore/privacy-retention-readiness`.
 11. `feat/abuse-hardening`.
 12. `chore/prod-readiness`.
 
-Do not collapse all stages into one PR.
+Do not collapse stages into one PR.
 
 ## External input still required
 
-From Iwona / business audit:
+From Iwona/business audit:
 
 - verified real city/offering catalog,
 - real internal groups,
@@ -185,8 +227,8 @@ diagnostics
 test:integration:sheets
 ```
 
-Do not rely on old hardcoded test-count numbers in documentation. The current CI run is the source of truth for exact counts.
+Do not rely on old hardcoded test-count numbers. Current CI is the source of truth.
 
 ## Release statement
 
-v2 is a working TEST/Preview registration MVP with strong technical foundations. v3 is now the approved product/domain direction required to align the software with Pozytywka's real review/contact/group-assignment workflow. PROD remains intentionally fail-closed until the remaining product, legal, infrastructure and manual QA gates are closed.
+v2 remains the working registration runtime. Product truth and environment hygiene are now being aligned before schema v3 starts. PROD remains intentionally fail-closed until product, legal, infrastructure and manual QA gates are complete.
