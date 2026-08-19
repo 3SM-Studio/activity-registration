@@ -83,7 +83,9 @@ export function BirthDatePicker({
           endMonth={today}
           disabled={{ before: earliest, after: today }}
           locale={pl}
-          initialFocus
+          formatters={{
+            formatMonthDropdown: (date) => format(date, "LLLL", { locale: pl }),
+          }}
         />
       </PopoverContent>
     </Popover>
