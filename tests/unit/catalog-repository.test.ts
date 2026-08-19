@@ -33,6 +33,7 @@ function createClient(): SheetsClient {
     },
     async updateValues() {},
     async appendValues() {},
+    async appendTableRow() {},
     async clearValues() {},
     async getSheetMetadata() {
       return [];
