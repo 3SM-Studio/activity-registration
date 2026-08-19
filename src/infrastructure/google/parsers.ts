@@ -11,6 +11,10 @@ import {
   type InternalGroup,
   type Season,
 } from "@/domain/catalog";
+import {
+  OfferingConfigurationError,
+  validateOfferingConfiguration,
+} from "@/domain/offering-intake";
 import type { Registration } from "@/domain/registration";
 import {
   asRegistrationId,
@@ -167,7 +171,7 @@ export function parseOfferingRow(
     throw new SheetSchemaError(`Offering ${id} has invalid INTAKE_STATE: ${intakeState}`);
   }
 
-  return {
+  const offering: ClassOffering = {
     id: asOfferingId(id),
     cityId: asCityId(cityId),
     name,
@@ -186,6 +190,17 @@ export function parseOfferingRow(
     ),
     waitlistEnabled: parseBooleanCell(cell(row, headers, "WAITLIST_ENABLED")),
   };
+
+  try {
+    validateOfferingConfiguration(offering);
+  } catch (error) {
+    if (error instanceof OfferingConfigurationError) {
+      throw new SheetSchemaError(error.message);
+    }
+    throw error;
+  }
+
+  return offering;
 }
 
 export function parseGroupRow(row: readonly unknown[], headers: HeaderMap): InternalGroup | null {
