@@ -1,6 +1,6 @@
 import { REGISTRATION_STATUS } from "@/domain/registration";
-import { REGISTRATION_HEADERS } from "@/infrastructure/google/sheets-contracts";
-import type { SheetMetadata } from "@/infrastructure/google/sheets-client";
+import { REGISTRATION_HEADERS, SHEET } from "@/infrastructure/google/sheets-contracts";
+import type { SheetMetadata, SheetsClient } from "@/infrastructure/google/sheets-client";
 
 const STATUS_COLUMN_INDEX = REGISTRATION_HEADERS.indexOf("STATUS");
 const POSSIBLE_DUPLICATE_COLUMN_INDEX = REGISTRATION_HEADERS.indexOf("POSSIBLE_DUPLICATE_OF");
@@ -229,4 +229,40 @@ export function buildOperatorSheetRequests(sheet: SheetMetadata): readonly Recor
   });
 
   return requests;
+}
+
+function registrationSheet(metadata: readonly SheetMetadata[]): SheetMetadata {
+  const sheet = metadata.find((candidate) => candidate.title === SHEET.registrations);
+  if (!sheet) {
+    throw new Error("Missing ZAPISY sheet for operator console bootstrap.");
+  }
+  return sheet;
+}
+
+export async function bootstrapOperatorSheetExperience(client: SheetsClient): Promise<void> {
+  const metadata = await client.getSheetMetadata();
+  await client.batchUpdate(buildOperatorSheetRequests(registrationSheet(metadata)));
+}
+
+export async function validateOperatorSheetExperience(client: SheetsClient): Promise<void> {
+  const metadata = await client.getSheetMetadata();
+  const sheet = registrationSheet(metadata);
+
+  for (const title of Object.values(REGISTRATION_OPERATOR_FILTER_VIEW_TITLES)) {
+    const matches = (sheet.filterViews ?? []).filter((view) => view.title === title);
+    if (matches.length !== 1) {
+      throw new Error(`ZAPISY operator filter view is missing or duplicated: ${title}.`);
+    }
+  }
+
+  const configuredFormulas = new Set(
+    (sheet.conditionalFormats ?? []).flatMap((rule) =>
+      rule.customFormula ? [rule.customFormula] : [],
+    ),
+  );
+  for (const formula of OWNED_OPERATOR_FORMAT_FORMULAS) {
+    if (!configuredFormulas.has(formula)) {
+      throw new Error(`ZAPISY operator conditional format is missing: ${formula}.`);
+    }
+  }
 }
