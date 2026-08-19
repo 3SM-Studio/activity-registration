@@ -1,0 +1,85 @@
+name: Apply phone UI patch
+
+on:
+  push:
+    branches:
+      - feat/phone-input
+    paths:
+      - .github/workflows/apply-phone-ui.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/phone-input
+
+      - name: Apply implementation
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          def replace_once(path, old, new):
+              p = Path(path)
+              text = p.read_text()
+              if old not in text:
+                  raise SystemExit(f"Missing expected fragment in {path}")
+              p.write_text(text.replace(old, new, 1))
+
+          Path("src/components/ui/phone-number-input.tsx").write_text('''"use client";\n\nimport type { Ref } from "react";\nimport PhoneInput, { type Value } from "react-phone-number-input";\nimport flags from "react-phone-number-input/flags";\nimport pl from "react-phone-number-input/locale/pl";\n\nimport { cn } from "@/lib/cn";\n\ntype PhoneNumberInputProps = Readonly<{\n  id: string;\n  name: string;\n  value: string;\n  onChange: (value: string) => void;\n  onBlur: () => void;\n  inputRef?: Ref<HTMLInputElement>;\n  required?: boolean;\n  disabled?: boolean;\n  autoComplete?: string;\n  invalid?: boolean;\n  describedBy?: string;\n}>;\n\nexport function PhoneNumberInput({\n  id,\n  name,\n  value,\n  onChange,\n  onBlur,\n  inputRef,\n  required,\n  disabled,\n  autoComplete,\n  invalid,\n  describedBy,\n}: PhoneNumberInputProps) {\n  return (\n    <PhoneInput\n      ref={inputRef}\n      id={id}\n      name={name}\n      className={cn(\n        "pozytywka-phone-input",\n        invalid && "pozytywka-phone-input--invalid",\n      )}\n      defaultCountry="PL"\n      international\n      countryCallingCodeEditable={false}\n      addInternationalOption={false}\n      labels={pl}\n      flags={flags}\n      value={value ? (value as Value) : undefined}\n      onChange={(nextValue) => onChange(nextValue ?? "")}\n      onBlur={onBlur}\n      required={required}\n      disabled={disabled}\n      autoComplete={autoComplete}\n      aria-invalid={invalid || undefined}\n      aria-describedby={describedBy}\n    />\n  );\n}\n''')
+
+          replace_once(
+              "src/app/layout.tsx",
+              'import "./globals.css";',
+              'import "react-phone-number-input/style.css";\n\nimport "./globals.css";',
+          )
+
+          css = Path("src/app/globals.css")
+          text = css.read_text()
+          if ".pozytywka-phone-input {" not in text:
+              text += '''\n\n.pozytywka-phone-input {\n  --PhoneInputCountryFlag-height: 1rem;\n  --PhoneInputCountrySelectArrow-color: var(--foreground);\n  --PhoneInputCountrySelectArrow-opacity: 0.7;\n  --PhoneInput-color--focus: var(--brand);\n  height: 3rem;\n  width: 100%;\n  border: 1px solid var(--color-neutral-400);\n  border-radius: 1rem;\n  background: #ffffff;\n  box-shadow: 0 1px 0 rgb(41 23 45 / 0.04);\n  transition: border-color 150ms ease, box-shadow 150ms ease;\n}\n\n.pozytywka-phone-input:focus-within {\n  border-color: var(--brand);\n  box-shadow: 0 0 0 4px var(--brand-ring);\n}\n\n.pozytywka-phone-input--invalid {\n  border-color: #b91c1c;\n}\n\n.pozytywka-phone-input .PhoneInputCountry {\n  align-self: stretch;\n  margin: 0;\n  padding: 0 0.75rem 0 1rem;\n  border-right: 1px solid var(--line);\n}\n\n.pozytywka-phone-input .PhoneInputCountrySelect {\n  cursor: pointer;\n}\n\n.pozytywka-phone-input .PhoneInputCountrySelectArrow {\n  margin-left: 0.5rem;\n}\n\n.pozytywka-phone-input .PhoneInputInput {\n  min-width: 0;\n  height: 100%;\n  border: 0;\n  border-radius: 0 1rem 1rem 0;\n  background: transparent;\n  padding: 0 1rem;\n  color: var(--foreground);\n  font-size: 1rem;\n  outline: none;\n}\n\n.pozytywka-phone-input .PhoneInputInput::placeholder {\n  color: var(--color-neutral-500);\n}\n'''
+              css.write_text(text)
+
+          form = "src/components/registration/registration-form.tsx"
+          replace_once(
+              form,
+              'import { useForm, useWatch } from "react-hook-form";',
+              'import { Controller, useForm, useWatch } from "react-hook-form";',
+          )
+          replace_once(
+              form,
+              'import { NativeSelect } from "@/components/ui/native-select";',
+              'import { NativeSelect } from "@/components/ui/native-select";\nimport { PhoneNumberInput } from "@/components/ui/phone-number-input";',
+          )
+          replace_once(
+              form,
+              '''              <Input\n                id="phone"\n                required\n                type="tel"\n                inputMode="tel"\n                autoComplete="tel"\n                maxLength={40}\n                placeholder="+48 500 000 000"\n                aria-invalid={Boolean(errors.phone)}\n                aria-describedby={errors.phone ? "phone-error" : undefined}\n                {...register("phone")}\n              />''',
+              '''              <Controller\n                name="phone"\n                control={control}\n                render={({ field }) => (\n                  <PhoneNumberInput\n                    id="phone"\n                    name={field.name}\n                    value={field.value ?? ""}\n                    onChange={field.onChange}\n                    onBlur={field.onBlur}\n                    inputRef={field.ref}\n                    required\n                    autoComplete="tel"\n                    invalid={Boolean(errors.phone)}\n                    describedBy={errors.phone ? "phone-error" : undefined}\n                  />\n                )}\n              />''',
+          )
+
+          e2e = "tests/e2e/registration.spec.ts"
+          replace_once(
+              e2e,
+              'test("changing city clears the previously selected offering", async ({ page }) => {',
+              '''test("formats a Polish phone number and exposes the country selector", async ({ page }) => {\n  await openRegistrationForm(page);\n\n  const phone = page.getByLabel(/Numer telefonu/);\n  const country = page.locator(".PhoneInputCountrySelect");\n\n  await expect(country).toHaveValue("PL");\n  await phone.fill("500000000");\n  await expect(phone).toHaveValue("+48 500 000 000");\n});\n\ntest("changing city clears the previously selected offering", async ({ page }) => {''',
+          )
+          PY
+
+      - name: Remove setup-only workflows
+        run: |
+          rm -f .github/workflows/apply-phone-ui.yml
+          rm -f .github/workflows/implement-phone-input.yml
+          rm -f .github/workflows/update-libphone-lock.yml
+
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "feat: add international phone input"
+          git push origin HEAD:feat/phone-input
