@@ -68,7 +68,7 @@ Potwierdzono również faktyczne dostarczenie maila uczestnika do Gmaila.
 
 ## Verified gates
 
-Na code headzie `73764dfa515229382b39ed578686be9a21165adb` zweryfikowano:
+Na branchu zawierającym finalne zmiany runtime zweryfikowano:
 
 - `pnpm install --frozen-lockfile` przechodzi,
 - repository contract validation przechodzi,
@@ -80,19 +80,19 @@ Na code headzie `73764dfa515229382b39ed578686be9a21165adb` zweryfikowano:
 - Playwright: 21/21 testów na desktop + 320 px + 430 px,
 - GitHub Actions CI zakończone sukcesem.
 
-Na późniejszym branch headzie `367b4c59948c801d4b40393bad3cb63e5754b5b7`, zawierającym dodatkową synchronizację dokumentacji, CI #53 również zakończyło się sukcesem wraz z pełnym `pnpm check` i Critical E2E.
+Po synchronizacji dokumentacji CI #53 również zakończyło się sukcesem wraz z pełnym `pnpm check` i Critical E2E.
 
 Dodatkowo zweryfikowano:
 
-- Vercel Preview dla `367b4c5` ma stan `READY`,
-- publiczny formularz na tym Preview renderuje realny TEST katalog z Google Sheets,
+- Vercel Preview zawierający finalne zmiany runtime ma stan `READY`,
+- publiczny formularz renderuje realny TEST katalog z Google Sheets,
 - runtime nie raportował nowych błędów/fatal logs po weryfikacji,
 - realny TEST Sheet został odczytany i zapisany przez Vercel WIF,
 - realny publiczny Preview submit został zapisany w `ZAPISY` TEST,
 - Resend zaakceptował participant + admin notifications,
 - participant mailbox delivery została zweryfikowana.
 
-Późniejsze commity po `367b4c5` są wyłącznie synchronizacją dokumentacji i checklisty; nie zmieniają runtime ani testów.
+Późniejsze commity są wyłącznie synchronizacją dokumentacji i checklisty; nie zmieniają runtime ani testów.
 
 ## Remaining work before PROD
 
