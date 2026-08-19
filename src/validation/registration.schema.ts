@@ -1,11 +1,18 @@
 import { TECHNICAL_ID_PATTERN } from "@/domain/catalog";
 import { calculateAgeToday, isValidIsoDateOnly } from "@/lib/birth-date";
+import { containsWhitespace, normalizePersonName } from "@/lib/text-normalization";
 import { z } from "zod";
 
 const nonEmptyText = (label: string, maxLength = 100) =>
   z.string().trim().min(1, `${label} jest wymagane.`).max(maxLength, `${label} jest zbyt długie.`);
 
-const optionalPersonName = z.string().trim().max(100).optional();
+const personName = (label: string) =>
+  z
+    .string()
+    .transform(normalizePersonName)
+    .pipe(z.string().min(1, `${label} jest wymagane.`).max(100, `${label} jest zbyt długie.`));
+
+const optionalPersonName = z.string().transform(normalizePersonName).pipe(z.string().max(100)).optional();
 
 export const registrationRequestSchema = z
   .object({
@@ -18,8 +25,8 @@ export const registrationRequestSchema = z
       TECHNICAL_ID_PATTERN,
       "Nieprawidłowy identyfikator zajęć.",
     ),
-    participantFirstName: nonEmptyText("Imię", 100),
-    participantLastName: nonEmptyText("Nazwisko", 100),
+    participantFirstName: personName("Imię"),
+    participantLastName: personName("Nazwisko"),
     birthDate: nonEmptyText("Data urodzenia", 10).refine(isValidIsoDateOnly, {
       message: "Podaj poprawną datę urodzenia.",
     }),
@@ -29,6 +36,9 @@ export const registrationRequestSchema = z
     email: z
       .string()
       .trim()
+      .refine((value) => !containsWhitespace(value), {
+        message: "Adres e-mail nie może zawierać spacji.",
+      })
       .pipe(
         z
           .email({ error: "Podaj poprawny adres e-mail." })
