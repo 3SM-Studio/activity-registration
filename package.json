@@ -18,7 +18,7 @@
     "test:run": "vitest run",
     "test:e2e": "playwright test",
     "test:integration:sheets": "tsx scripts/test-sheets-integration.ts",
-    "check": "echo __WORKFLOW_DOC__; prettier docs/REGISTRATION_WORKFLOW.md; echo __DIAGNOSTICS__; prettier scripts/diagnostics.ts; echo __MIGRATE__; prettier scripts/sheet-migrate.ts; echo __SHEET_ADMIN_TEST__; prettier tests/unit/sheet-admin.test.ts; false",
+    "check": "pnpm repo:validate && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test:run && pnpm build",
     "sheet:bootstrap": "tsx scripts/sheet-bootstrap.ts",
     "sheet:validate": "tsx scripts/sheet-validate.ts",
     "sheet:migrate": "tsx scripts/sheet-migrate.ts",
