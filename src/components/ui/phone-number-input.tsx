@@ -16,7 +16,7 @@ type PhoneNumberInputProps = Readonly<{
   disabled?: boolean;
   autoComplete?: string;
   invalid?: boolean;
-  describedBy?: string | undefined;
+  describedBy?: string;
 }>;
 
 export function PhoneNumberInput({
@@ -31,6 +31,14 @@ export function PhoneNumberInput({
   invalid,
   describedBy,
 }: PhoneNumberInputProps) {
+  const optionalProps = {
+    ...(required !== undefined ? { required } : {}),
+    ...(disabled !== undefined ? { disabled } : {}),
+    ...(autoComplete !== undefined ? { autoComplete } : {}),
+    ...(invalid ? { "aria-invalid": true as const } : {}),
+    ...(describedBy ? { "aria-describedby": describedBy } : {}),
+  };
+
   return (
     <PhoneInput
       id={id}
@@ -45,11 +53,7 @@ export function PhoneNumberInput({
       value={value ? (value as Value) : undefined}
       onChange={(nextValue) => onChange(nextValue ?? "")}
       onBlur={onBlur}
-      required={required}
-      disabled={disabled}
-      autoComplete={autoComplete}
-      aria-invalid={invalid || undefined}
-      aria-describedby={describedBy}
+      {...optionalProps}
     />
   );
 }
