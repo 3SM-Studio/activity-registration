@@ -214,7 +214,8 @@ describe("bootstrapSheetStructure", () => {
 
     const protectedRanges = batchRequests.flatMap((request) => {
       const addProtectedRange = request.addProtectedRange as
-        { protectedRange?: Record<string, unknown> } | undefined;
+        | { protectedRange?: Record<string, unknown> }
+        | undefined;
       return addProtectedRange?.protectedRange ? [addProtectedRange.protectedRange] : [];
     });
 
