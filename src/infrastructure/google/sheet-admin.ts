@@ -137,7 +137,7 @@ async function ensureRegistrationProtections(
   }
 
   const requests: Record<string, unknown>[] = [];
-  const expectedDescriptions = new Set(
+  const expectedDescriptions = new Set<string>(
     REGISTRATION_PROTECTION_SPECS.map((spec) => spec.description),
   );
 
