@@ -32,10 +32,7 @@ function validSettings(overrides: Readonly<Record<string, string>> = {}) {
     ...overrides,
   };
 
-  return [
-    ["KEY", "VALUE"],
-    ...Object.entries(values),
-  ] as const;
+  return [["KEY", "VALUE"], ...Object.entries(values)] as const;
 }
 
 describe("GoogleSheetsSettingsRepository", () => {
