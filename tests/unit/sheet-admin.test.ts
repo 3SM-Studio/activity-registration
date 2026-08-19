@@ -210,8 +210,7 @@ describe("bootstrapSheetStructure", () => {
     await bootstrapSheetStructure(client);
 
     const addTable = batchRequests.find((request) => "addTable" in request)?.addTable as
-      | { table?: Record<string, unknown> }
-      | undefined;
+      { table?: Record<string, unknown> } | undefined;
 
     expect(addTable?.table).toEqual(
       expect.objectContaining({

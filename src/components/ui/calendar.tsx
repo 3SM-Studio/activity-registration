@@ -80,10 +80,7 @@ function Calendar({
           defaultClassNames.weekday,
         ),
         week: cn("mt-2 flex w-full", defaultClassNames.week),
-        week_number_header: cn(
-          "w-(--cell-size) select-none",
-          defaultClassNames.week_number_header,
-        ),
+        week_number_header: cn("w-(--cell-size) select-none", defaultClassNames.week_number_header),
         week_number: cn(
           "text-[0.8rem] text-muted-foreground select-none",
           defaultClassNames.week_number,
@@ -112,18 +109,11 @@ function Calendar({
       }}
       components={{
         Root: ({ className: rootClassName, rootRef, ...rootProps }) => (
-          <div
-            data-slot="calendar"
-            ref={rootRef}
-            className={cn(rootClassName)}
-            {...rootProps}
-          />
+          <div data-slot="calendar" ref={rootRef} className={cn(rootClassName)} {...rootProps} />
         ),
         Chevron: ({ className: chevronClassName, orientation, ...chevronProps }) => {
           if (orientation === "left") {
-            return (
-              <ChevronLeftIcon className={cn("size-4", chevronClassName)} {...chevronProps} />
-            );
+            return <ChevronLeftIcon className={cn("size-4", chevronClassName)} {...chevronProps} />;
           }
 
           if (orientation === "right") {
