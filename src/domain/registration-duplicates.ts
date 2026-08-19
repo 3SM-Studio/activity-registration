@@ -1,5 +1,10 @@
 import type { CityId, OfferingId, SeasonId } from "@/domain/catalog";
-import type { Registration, RegistrationId } from "@/domain/registration";
+import {
+  REGISTRATION_STATUS,
+  type Registration,
+  type RegistrationId,
+  type RegistrationStatus,
+} from "@/domain/registration";
 
 export type RegistrationDuplicateCriteria = Readonly<{
   seasonId: SeasonId;
@@ -17,13 +22,16 @@ export type RegistrationDuplicateMatch =
   | Readonly<{ kind: "exact"; registration: Registration }>
   | Readonly<{ kind: "probable"; registration: Registration }>;
 
-const FRESH_REQUEST_STATUSES = new Set(["REJECTED", "CANCELLED"]);
+const FRESH_REQUEST_STATUSES = new Set<RegistrationStatus>([
+  REGISTRATION_STATUS.rejected,
+  REGISTRATION_STATUS.cancelled,
+]);
 
 export function normalizeNameForDuplicateComparison(value: string): string {
   return value.normalize("NFC").trim().replace(/\s+/gu, " ").toLocaleLowerCase("pl-PL");
 }
 
-export function registrationStatusAllowsFreshRequest(status: string): boolean {
+export function registrationStatusAllowsFreshRequest(status: RegistrationStatus): boolean {
   return FRESH_REQUEST_STATUSES.has(status);
 }
 
