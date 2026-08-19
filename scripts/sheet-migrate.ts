@@ -1,7 +1,4 @@
-import {
-  LEGACY_REGISTRATION_STATUS,
-  REGISTRATION_STATUS,
-} from "../src/domain/registration";
+import { LEGACY_REGISTRATION_STATUS, REGISTRATION_STATUS } from "../src/domain/registration";
 import { bootstrapSheetStructure } from "../src/infrastructure/google/sheet-admin";
 import { cell, createHeaderMap } from "../src/infrastructure/google/header-map";
 import {
@@ -105,7 +102,9 @@ async function setSystemSchemaVersion(client: SheetsClient, version: number): Pr
     throw new Error(`Missing ${SETTING_KEY.systemSchemaVersion} row.`);
   }
 
-  await client.updateValues(`${SHEET.settings}!${versionColumnLetter}${rowNumber}`, [[String(version)]]);
+  await client.updateValues(`${SHEET.settings}!${versionColumnLetter}${rowNumber}`, [
+    [String(version)],
+  ]);
 }
 
 async function migrateV1ToV2(client: SheetsClient): Promise<void> {
