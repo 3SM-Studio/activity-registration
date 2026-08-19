@@ -19,7 +19,11 @@ import {
   SHEET_SCHEMA,
   SYSTEM_SCHEMA_VERSION,
 } from "@/infrastructure/google/sheets-contracts";
-import type { SheetMetadata, SheetsClient, TableMetadata } from "@/infrastructure/google/sheets-client";
+import type {
+  SheetMetadata,
+  SheetsClient,
+  TableMetadata,
+} from "@/infrastructure/google/sheets-client";
 
 export type SheetValidationReport = Readonly<{
   sheets: readonly string[];
@@ -274,7 +278,9 @@ function assertRegistrationTable(table: TableMetadata | undefined): void {
     table.startColumnIndex !== 0 ||
     table.endColumnIndex !== REGISTRATION_HEADERS.length
   ) {
-    throw new SheetSchemaError(`Native ZAPISY table ${REGISTRATIONS_TABLE_NAME} has an invalid range.`);
+    throw new SheetSchemaError(
+      `Native ZAPISY table ${REGISTRATIONS_TABLE_NAME} has an invalid range.`,
+    );
   }
 
   for (const expected of REGISTRATION_TABLE_COLUMNS) {

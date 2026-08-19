@@ -120,8 +120,7 @@ export async function submitRegistration(
     participantLastName: input.participantLastName.trim(),
     birthDate,
     ageAtSubmission,
-    guardianFirstName:
-      ageAtSubmission < 18 ? normalizeOptionalName(input.guardianFirstName) : null,
+    guardianFirstName: ageAtSubmission < 18 ? normalizeOptionalName(input.guardianFirstName) : null,
     guardianLastName: ageAtSubmission < 18 ? normalizeOptionalName(input.guardianLastName) : null,
     phone,
     email: normalizeEmail(input.email),

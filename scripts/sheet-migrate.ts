@@ -34,9 +34,7 @@ async function migrateV1ToV2() {
     },
   ]);
 
-  await client.updateValues(`${SHEET.registrations}!J1:K1`, [
-    ["BIRTH_DATE", "AGE_AT_SUBMISSION"],
-  ]);
+  await client.updateValues(`${SHEET.registrations}!J1:K1`, [["BIRTH_DATE", "AGE_AT_SUBMISSION"]]);
 
   const settingsRows = await client.getValues(`${SHEET.settings}!A:ZZ`);
   const settingsHeaders = createHeaderMap(settingsRows[0] ?? [], SETTINGS_HEADERS);

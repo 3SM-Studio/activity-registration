@@ -122,10 +122,7 @@ export interface SheetsClient {
     range: string,
     values: readonly (readonly (string | number | boolean)[])[],
   ): Promise<void>;
-  appendTableRow(
-    tableId: string,
-    row: readonly (string | number | boolean)[],
-  ): Promise<void>;
+  appendTableRow(tableId: string, row: readonly (string | number | boolean)[]): Promise<void>;
   clearValues(range: string): Promise<void>;
   getSheetMetadata(): Promise<readonly SheetMetadata[]>;
   batchUpdate(requests: readonly Record<string, unknown>[]): Promise<void>;
@@ -283,11 +280,7 @@ export class GoogleSheetsClient implements SheetsClient {
         }
 
         const columnProperties = (table.columnProperties ?? []).flatMap((column) => {
-          if (
-            typeof column.columnIndex !== "number" ||
-            !column.columnName ||
-            !column.columnType
-          ) {
+          if (typeof column.columnIndex !== "number" || !column.columnName || !column.columnType) {
             return [];
           }
 
