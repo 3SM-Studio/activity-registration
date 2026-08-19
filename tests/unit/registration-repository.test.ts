@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { asCityId, asOfferingId } from "@/domain/catalog";
+import { asCityId, asOfferingId, asSeasonId } from "@/domain/catalog";
+import type { RegistrationDuplicateCriteria } from "@/domain/registration-duplicates";
 import {
   asRegistrationId,
   asRequestId,
@@ -48,36 +49,39 @@ const registration: Registration = {
   schemaVersion: 2,
 };
 
-function rowForHeaders(headers: readonly string[]): readonly (string | number)[] {
+function rowForHeaders(
+  headers: readonly string[],
+  record: Registration = registration,
+): readonly (string | number)[] {
   const values: Readonly<Record<string, string | number>> = {
-    REGISTRATION_ID: registration.id,
-    REQUEST_ID: registration.requestId,
-    SUBMITTED_AT: registration.submittedAt,
-    OFFERING_ID: registration.offeringId,
-    CITY_ID_SNAPSHOT: registration.cityIdSnapshot,
-    CITY_NAME_SNAPSHOT: registration.cityNameSnapshot,
-    OFFERING_NAME_SNAPSHOT: registration.offeringNameSnapshot,
-    PARTICIPANT_FIRST_NAME: registration.participantFirstName,
-    PARTICIPANT_LAST_NAME: registration.participantLastName,
-    BIRTH_DATE: isoDateToGoogleSerial(registration.birthDate ?? ""),
-    AGE_AT_SUBMISSION: registration.ageAtSubmission,
-    GUARDIAN_FIRST_NAME: registration.guardianFirstName ?? "",
-    GUARDIAN_LAST_NAME: registration.guardianLastName ?? "",
-    PHONE: registration.phone,
-    EMAIL: registration.email,
-    STATUS: registration.status,
-    NOTES: registration.notes,
-    PRIVACY_NOTICE_VERSION: registration.privacyNoticeVersion,
-    SOURCE: registration.source,
-    CREATED_AT: registration.createdAt,
-    UPDATED_AT: registration.updatedAt,
-    SEASON_ID: registration.seasonId ?? "",
-    SEASON_NAME_SNAPSHOT: registration.seasonNameSnapshot ?? "",
-    ASSIGNED_GROUP_ID: registration.assignedGroupId ?? "",
-    CONTACTED_AT: registration.contactedAt ?? "",
-    CONFIRMED_AT: registration.confirmedAt ?? "",
-    POSSIBLE_DUPLICATE_OF: registration.possibleDuplicateOf ?? "",
-    SCHEMA_VERSION: registration.schemaVersion,
+    REGISTRATION_ID: record.id,
+    REQUEST_ID: record.requestId,
+    SUBMITTED_AT: record.submittedAt,
+    OFFERING_ID: record.offeringId,
+    CITY_ID_SNAPSHOT: record.cityIdSnapshot,
+    CITY_NAME_SNAPSHOT: record.cityNameSnapshot,
+    OFFERING_NAME_SNAPSHOT: record.offeringNameSnapshot,
+    PARTICIPANT_FIRST_NAME: record.participantFirstName,
+    PARTICIPANT_LAST_NAME: record.participantLastName,
+    BIRTH_DATE: isoDateToGoogleSerial(record.birthDate ?? ""),
+    AGE_AT_SUBMISSION: record.ageAtSubmission,
+    GUARDIAN_FIRST_NAME: record.guardianFirstName ?? "",
+    GUARDIAN_LAST_NAME: record.guardianLastName ?? "",
+    PHONE: record.phone,
+    EMAIL: record.email,
+    STATUS: record.status,
+    NOTES: record.notes,
+    PRIVACY_NOTICE_VERSION: record.privacyNoticeVersion,
+    SOURCE: record.source,
+    CREATED_AT: record.createdAt,
+    UPDATED_AT: record.updatedAt,
+    SEASON_ID: record.seasonId ?? "",
+    SEASON_NAME_SNAPSHOT: record.seasonNameSnapshot ?? "",
+    ASSIGNED_GROUP_ID: record.assignedGroupId ?? "",
+    CONTACTED_AT: record.contactedAt ?? "",
+    CONFIRMED_AT: record.confirmedAt ?? "",
+    POSSIBLE_DUPLICATE_OF: record.possibleDuplicateOf ?? "",
+    SCHEMA_VERSION: record.schemaVersion,
   };
 
   return headers.map((header) => values[header] ?? "");
@@ -141,6 +145,39 @@ describe("GoogleSheetsRegistrationRepository", () => {
     const repository = new GoogleSheetsRegistrationRepository(client);
 
     await expect(repository.findByRequestId(registration.requestId)).resolves.toEqual(registration);
+  });
+
+  it("returns only business duplicate candidates from parsed registration rows", async () => {
+    const candidate: Registration = {
+      ...registration,
+      id: asRegistrationId("reg_33333333-3333-4333-8333-333333333333"),
+      requestId: asRequestId("33333333-3333-4333-8333-333333333333"),
+      seasonId: asSeasonId("test-2026-2027"),
+      seasonNameSnapshot: "2026/2027",
+      schemaVersion: 3,
+    };
+    const unrelated: Registration = {
+      ...candidate,
+      id: asRegistrationId("reg_44444444-4444-4444-8444-444444444444"),
+      requestId: asRequestId("44444444-4444-4444-8444-444444444444"),
+      offeringId: asOfferingId("gdynia-contemporary"),
+      offeringNameSnapshot: "Contemporary",
+    };
+    const rows = [rowForHeaders(REGISTRATION_HEADERS, candidate), rowForHeaders(REGISTRATION_HEADERS, unrelated)];
+    const { client } = createClient(REGISTRATION_HEADERS, rows);
+    const repository = new GoogleSheetsRegistrationRepository(client);
+    const criteria: RegistrationDuplicateCriteria = {
+      seasonId: asSeasonId("test-2026-2027"),
+      offeringId: asOfferingId("gdynia-hiphop"),
+      cityId: asCityId("gdynia"),
+      participantFirstName: "JAN",
+      participantLastName: "Kowalski",
+      birthDate: "2009-01-15",
+      phone: "+48500000000",
+      email: "anna@example.com",
+    };
+
+    await expect(repository.findPotentialDuplicates(criteria)).resolves.toEqual([candidate]);
   });
 
   it("fails fast when a matching stored registration has a corrupted technical ID", async () => {
