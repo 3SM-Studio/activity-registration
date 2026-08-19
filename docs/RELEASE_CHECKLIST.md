@@ -71,7 +71,7 @@
 - [x] 14/14 Vitest files, 67/67 tests
 - [x] Next.js production build
 - [x] `pnpm test:e2e`, 21/21 Playwright tests
-- [x] CI green dla zweryfikowanego code head
+- [x] CI #53 green na aktualnym headzie `367b4c5`
 - [ ] `APP_ENV=test DATA_BACKEND=google-sheets ALLOW_TEST_SEED=true pnpm test:integration:sheets` uruchomione na realnym TEST
 - [x] dokumentacja zsynchronizowana z aktualnym zachowaniem i decyzją o publicznym repo
 - [ ] PR #1 zaakceptowany i zmergowany w poprawnej kolejności
