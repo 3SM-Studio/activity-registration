@@ -1,14 +1,23 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 
-import { asRequestId, REGISTRATION_SCHEMA_VERSION, REGISTRATION_SOURCE, REGISTRATION_STATUS, type Registration } from "../src/domain/registration";
+import {
+  REGISTRATION_SCHEMA_VERSION,
+  REGISTRATION_SOURCE,
+  REGISTRATION_STATUS,
+  asRequestId,
+  type Registration,
+} from "../src/domain/registration";
 import { GoogleSheetsCatalogRepository } from "../src/infrastructure/google/catalog.repository";
 import { cell, createHeaderMap } from "../src/infrastructure/google/header-map";
 import { GoogleSheetsRegistrationRepository } from "../src/infrastructure/google/registration.repository";
 import { validateSheetStructure } from "../src/infrastructure/google/sheet-admin";
-import { REGISTRATION_HEADERS, SHEET } from "../src/infrastructure/google/sheets-contracts";
-import { createRegistrationId } from "../src/lib/ids";
+import {
+  REGISTRATION_HEADERS,
+  SHEET,
+} from "../src/infrastructure/google/sheets-contracts";
 import { getServerEnv } from "../src/lib/env";
+import { createRegistrationId } from "../src/lib/ids";
 import { createAdminSheetsClient } from "./_google-admin";
 
 async function clearOwnRegistration(
