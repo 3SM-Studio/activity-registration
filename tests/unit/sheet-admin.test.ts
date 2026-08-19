@@ -27,11 +27,7 @@ function createValidationClient(): SheetsClient {
     ],
     [
       `${SHEET.cities}!A:ZZ`,
-      [
-        SHEET_SCHEMA[SHEET.cities],
-        ["gdynia", "Gdynia", "TAK", 10],
-        ["broken-city", "", "TAK", 20],
-      ],
+      [SHEET_SCHEMA[SHEET.cities], ["gdynia", "Gdynia", "TAK", 10], ["broken-city", "", "TAK", 20]],
     ],
     [
       `${SHEET.offerings}!A:ZZ`,
@@ -153,8 +149,7 @@ describe("bootstrapSheetStructure", () => {
 
     const protectedRanges = batchRequests.flatMap((request) => {
       const addProtectedRange = request.addProtectedRange as
-        | { protectedRange?: Record<string, unknown> }
-        | undefined;
+        { protectedRange?: Record<string, unknown> } | undefined;
       return addProtectedRange?.protectedRange ? [addProtectedRange.protectedRange] : [];
     });
 
