@@ -1,4 +1,6 @@
-export const SYSTEM_SCHEMA_VERSION = 1 as const;
+import { REGISTRATION_STATUS } from "@/domain/registration";
+
+export const SYSTEM_SCHEMA_VERSION = 2 as const;
 
 export const SHEET = {
   cities: "MIASTA",
@@ -6,6 +8,9 @@ export const SHEET = {
   registrations: "ZAPISY",
   settings: "USTAWIENIA",
 } as const;
+
+export const REGISTRATIONS_TABLE_ID = "900001";
+export const REGISTRATIONS_TABLE_NAME = "Rejestracje";
 
 export const CITY_HEADERS = ["CITY_ID", "NAME", "ACTIVE", "SORT_ORDER"] as const;
 
@@ -21,7 +26,8 @@ export const REGISTRATION_HEADERS = [
   "OFFERING_NAME_SNAPSHOT",
   "PARTICIPANT_FIRST_NAME",
   "PARTICIPANT_LAST_NAME",
-  "AGE",
+  "BIRTH_DATE",
+  "AGE_AT_SUBMISSION",
   "GUARDIAN_FIRST_NAME",
   "GUARDIAN_LAST_NAME",
   "PHONE",
@@ -34,6 +40,34 @@ export const REGISTRATION_HEADERS = [
   "UPDATED_AT",
   "SCHEMA_VERSION",
 ] as const;
+
+export type RegistrationHeader = (typeof REGISTRATION_HEADERS)[number];
+
+export const REGISTRATION_TABLE_COLUMNS = REGISTRATION_HEADERS.map((columnName, columnIndex) => {
+  if (columnName === "BIRTH_DATE") {
+    return { columnIndex, columnName, columnType: "DATE" } as const;
+  }
+
+  if (columnName === "AGE_AT_SUBMISSION" || columnName === "SCHEMA_VERSION") {
+    return { columnIndex, columnName, columnType: "DOUBLE" } as const;
+  }
+
+  if (columnName === "STATUS") {
+    return {
+      columnIndex,
+      columnName,
+      columnType: "DROPDOWN",
+      dataValidationRule: {
+        condition: {
+          type: "ONE_OF_LIST",
+          values: Object.values(REGISTRATION_STATUS).map((value) => ({ userEnteredValue: value })),
+        },
+      },
+    } as const;
+  }
+
+  return { columnIndex, columnName, columnType: "TEXT" } as const;
+});
 
 export const SETTINGS_HEADERS = ["KEY", "VALUE"] as const;
 
