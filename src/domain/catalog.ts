@@ -24,6 +24,16 @@ export const INTAKE_STATE = {
 
 export type IntakeState = (typeof INTAKE_STATE)[keyof typeof INTAKE_STATE];
 
+export const PUBLIC_INTAKE_STATUS = {
+  open: "OPEN",
+  waitlistOnly: "WAITLIST_ONLY",
+  upcoming: "UPCOMING",
+  closed: "CLOSED",
+} as const;
+
+export type PublicIntakeStatus =
+  (typeof PUBLIC_INTAKE_STATUS)[keyof typeof PUBLIC_INTAKE_STATUS];
+
 export type City = Readonly<{
   id: CityId;
   name: string;
@@ -72,7 +82,13 @@ export type InternalGroup = Readonly<{
 }>;
 
 export type PublicCity = Pick<City, "id" | "name" | "sortOrder">;
-export type PublicOffering = Pick<ClassOffering, "id" | "cityId" | "name" | "sortOrder">;
+export type PublicOffering = Pick<
+  ClassOffering,
+  "id" | "cityId" | "name" | "publicDescription" | "sortOrder"
+> &
+  Readonly<{
+    intakeStatus: PublicIntakeStatus;
+  }>;
 
 export type PublicCatalog = Readonly<{
   cities: readonly PublicCity[];
