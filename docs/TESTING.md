@@ -48,13 +48,17 @@ E2E w CI używa `DATA_BACKEND=memory`, więc nie dotyka Google Sheets ani realny
 Jawny test integracyjny:
 
 ```bash
-APP_ENV=test DATA_BACKEND=google-sheets pnpm test:integration:sheets
+APP_ENV=test \
+DATA_BACKEND=google-sheets \
+ALLOW_TEST_SEED=true \
+pnpm test:integration:sheets
 ```
 
 Zasady:
 
 - działa wyłącznie przy `APP_ENV=test`,
 - nigdy nie może wykonać zapisu przy `APP_ENV=production`,
+- wymaga jawnego `ALLOW_TEST_SEED=true`,
 - używa wyłącznie syntetycznych danych,
 - waliduje schema TEST,
 - zapisuje syntetyczny Registration,
@@ -92,5 +96,5 @@ Real Google TEST:
 ```bash
 APP_ENV=test DATA_BACKEND=google-sheets pnpm sheet:validate
 APP_ENV=test DATA_BACKEND=google-sheets pnpm diagnostics
-APP_ENV=test DATA_BACKEND=google-sheets pnpm test:integration:sheets
+APP_ENV=test DATA_BACKEND=google-sheets ALLOW_TEST_SEED=true pnpm test:integration:sheets
 ```
