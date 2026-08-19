@@ -163,7 +163,9 @@ test("clears a stale offering after the server rejects it", async ({ page }, tes
   await expect(page.getByText("Wybrane zajęcia nie są już dostępne.").first()).toBeVisible();
 });
 
-test("reuses the same requestId after a temporary transport failure", async ({ page }, testInfo) => {
+test("reuses the same requestId after a temporary transport failure", async ({
+  page,
+}, testInfo) => {
   const requestIds: string[] = [];
   let attempt = 0;
 
@@ -205,7 +207,9 @@ test("reuses the same requestId after a temporary transport failure", async ({ p
   expect(requestIds[0]).toBe(requestIds[1]);
 });
 
-test("shows validation summary without focusing an input after invalid submit", async ({ page }) => {
+test("shows validation summary without focusing an input after invalid submit", async ({
+  page,
+}) => {
   await openRegistrationForm(page);
   await page.waitForTimeout(850);
 
@@ -239,6 +243,8 @@ test("handles accidental honeypot autofill without focusing the hidden field", a
 test("keeps the form inside the viewport width", async ({ page }) => {
   await openRegistrationForm(page);
 
-  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - window.innerWidth,
+  );
   expect(overflow).toBeLessThanOrEqual(1);
 });
