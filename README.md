@@ -1,8 +1,10 @@
 # Activity Registration
 
-Publiczny system zapisów na zajęcia dla projektów 3SM Studio.
+Publiczny system zapisów na zajęcia dla projektów 3SM Studio, obecnie wdrażany dla Pracowni Twórczej Pozytywka.
 
-Status: MVP implementation, development-first. Produkcja wymaga skonfigurowania Google Sheets, OIDC/WIF oraz zatwierdzonej informacji o prywatności i retencji.
+Status: działający i zweryfikowany TEST/Preview MVP. Produkcja pozostaje celowo fail-closed do czasu zatwierdzenia prawdziwego katalogu, privacy notice, retencji oraz osobnej konfiguracji PROD identity/WIF.
+
+Repozytorium jest świadomie publiczne. Sekrety, tokeny, credentials i PII nie mogą trafiać do Git.
 
 ## Stack
 
@@ -16,7 +18,8 @@ Status: MVP implementation, development-first. Produkcja wymaga skonfigurowania 
 - Vitest 4.1.10
 - Playwright 1.62.1
 - Google Sheets API
-- Vercel OIDC + Google Workload Identity Federation w produkcji
+- Vercel OIDC + Google Workload Identity Federation
+- Resend
 
 ## Architektura
 
@@ -33,12 +36,14 @@ Browser
 
 Google Sheets jest adapterem storage, a nie domeną aplikacji.
 
+Po skutecznym zapisie aplikacja planuje best-effort powiadomienia e-mail. Błąd e-maila nie cofa Registration.
+
 ## Wymagania lokalne
 
 - Node.js 24.19.0 LTS
 - pnpm 11.20.0
 
-Używaj dokładnych wersji przypiętych w `package.json`, `.nvmrc` i `docs/DEPENDENCIES.md`.
+Używaj dokładnych wersji przypiętych w `package.json`, `.nvmrc`, `pnpm-lock.yaml` i `docs/DEPENDENCIES.md`.
 
 ## Lokalny start bez Google
 
@@ -77,6 +82,14 @@ APP_ENV=test DATA_BACKEND=google-sheets ALLOW_TEST_SEED=true pnpm seed:test
 
 `seed:test` nie czyści istniejących rekordów `ZAPISY`.
 
+Jawny test integracyjny realnego TEST Sheet:
+
+```bash
+APP_ENV=test DATA_BACKEND=google-sheets pnpm test:integration:sheets
+```
+
+Ta komenda ma twardą blokadę przed `APP_ENV=production` i używa wyłącznie danych syntetycznych.
+
 ## Quality gate
 
 Przed merge:
@@ -91,9 +104,26 @@ Przed wdrożeniem Google-backed środowiska:
 ```bash
 APP_ENV=test DATA_BACKEND=google-sheets pnpm sheet:validate
 APP_ENV=test DATA_BACKEND=google-sheets pnpm diagnostics
+APP_ENV=test DATA_BACKEND=google-sheets pnpm test:integration:sheets
 ```
 
 `pnpm-lock.yaml` jest obowiązkowy przed merge i release.
+
+## TEST / Preview
+
+Zweryfikowany flow:
+
+```text
+Vercel Preview
+-> Vercel OIDC
+-> Google WIF
+-> TEST service account
+-> TEST Google Sheet read/write
+-> Registration API
+-> Resend
+```
+
+Preview nie może korzystać z tożsamości mającej dostęp do PROD Sheet.
 
 ## Dokumentacja
 
@@ -111,6 +141,8 @@ Przed większą zmianą przeczytaj:
 - `docs/IMPLEMENTATION_STATUS.md`
 - `docs/RELEASE_CHECKLIST.md`
 
+`PROJECT_BLUEPRINT.md` jest planem bazowym sprzed implementacji. Późniejsze jawne decyzje w `DECISIONS.md` i zweryfikowany stan w `IMPLEMENTATION_STATUS.md` zastępują sprzeczne założenia planu.
+
 ## Zasady niepodlegające negocjacji
 
 - brak realnych PII w TEST fixtures,
@@ -119,5 +151,7 @@ Przed większą zmianą przeczytaj:
 - wartości użytkownika do Sheets są zapisywane jako `RAW`,
 - mapowanie kolumn odbywa się po nazwach nagłówków,
 - nie logujemy payloadu formularza ani PII,
-- preview nie używa produkcyjnego arkusza,
-- produkcja nie korzysta z długowiecznego private key service account.
+- preview nie używa produkcyjnego arkusza ani produkcyjnej identity,
+- produkcja nie korzysta z długowiecznego private key service account,
+- sekrety nie trafiają do publicznego repo,
+- PROD pozostaje zamknięty, dopóki release checklist nie jest kompletna.
