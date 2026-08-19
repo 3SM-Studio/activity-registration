@@ -94,7 +94,6 @@ select {
   }
 }
 
-
 .pozytywka-phone-input {
   --PhoneInputCountryFlag-height: 1rem;
   --PhoneInputCountrySelectArrow-color: var(--foreground);
@@ -106,7 +105,9 @@ select {
   border-radius: 1rem;
   background: #ffffff;
   box-shadow: 0 1px 0 rgb(41 23 45 / 0.04);
-  transition: border-color 150ms ease, box-shadow 150ms ease;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
 }
 
 .pozytywka-phone-input:focus-within {

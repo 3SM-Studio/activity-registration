@@ -39,10 +39,7 @@ export function PhoneNumberInput({
       ref={inputRef}
       id={id}
       name={name}
-      className={cn(
-        "pozytywka-phone-input",
-        invalid && "pozytywka-phone-input--invalid",
-      )}
+      className={cn("pozytywka-phone-input", invalid && "pozytywka-phone-input--invalid")}
       defaultCountry="PL"
       international
       countryCallingCodeEditable={false}
