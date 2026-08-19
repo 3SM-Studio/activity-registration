@@ -28,11 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  PUBLIC_INTAKE_STATUS,
-  type PublicCatalog,
-  type PublicOffering,
-} from "@/domain/catalog";
+import { PUBLIC_INTAKE_STATUS, type PublicCatalog, type PublicOffering } from "@/domain/catalog";
 import type { PublicSettings } from "@/domain/settings";
 import { calculateAgeToday } from "@/lib/birth-date";
 import {
