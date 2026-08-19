@@ -49,6 +49,53 @@ jobs:
           printf '%s' "$LOGO_PAYLOAD" | base64 -d > public/pozytywka-logo.webp
           printf '%s' "$PATCH_PAYLOAD" | base64 -d | gzip -d > /tmp/apply-ui.sh
           bash /tmp/apply-ui.sh
+      - name: Align validation focus with React ref rules
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          p = Path("src/components/registration/registration-form.tsx")
+          text = p.read_text()
+          text = text.replace(
+              'import { useMemo, useRef, useState, type ChangeEventHandler } from "react";',
+              'import { useEffect, useMemo, useRef, useState, type ChangeEventHandler } from "react";',
+              1,
+          )
+          old = '''  const invalid = () => {
+            setGlobalError(null);
+            setShowValidationSummary(true);
+
+            requestAnimationFrame(() => {
+              validationSummaryRef.current?.focus({ preventScroll: true });
+              validationSummaryRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+            });
+          };
+
+          '''
+          new = '''  useEffect(() => {
+            if (!showValidationSummary) {
+              return;
+            }
+
+            const frame = requestAnimationFrame(() => {
+              validationSummaryRef.current?.focus({ preventScroll: true });
+              validationSummaryRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+            });
+
+            return () => cancelAnimationFrame(frame);
+          }, [showValidationSummary]);
+
+          const invalid = () => {
+            setGlobalError(null);
+            setShowValidationSummary(true);
+          };
+
+          '''
+          if old not in text:
+              raise SystemExit("validation callback block not found")
+          p.write_text(text.replace(old, new, 1))
+          PY
       - name: Format
         run: pnpm format
       - name: Quality gate
