@@ -4,8 +4,39 @@ import {
   bootstrapSheetStructure,
   validateSheetStructure,
 } from "@/infrastructure/google/sheet-admin";
-import { SHEET, SHEET_SCHEMA } from "@/infrastructure/google/sheets-contracts";
-import type { ProtectedRangeMetadata, SheetsClient } from "@/infrastructure/google/sheets-client";
+import {
+  REGISTRATION_HEADERS,
+  REGISTRATION_TABLE_COLUMNS,
+  REGISTRATIONS_TABLE_ID,
+  REGISTRATIONS_TABLE_NAME,
+  SHEET,
+  SHEET_SCHEMA,
+  SYSTEM_SCHEMA_VERSION,
+} from "@/infrastructure/google/sheets-contracts";
+import type {
+  ProtectedRangeMetadata,
+  SheetsClient,
+  TableMetadata,
+} from "@/infrastructure/google/sheets-client";
+
+function registrationTable(): TableMetadata {
+  return {
+    tableId: REGISTRATIONS_TABLE_ID,
+    name: REGISTRATIONS_TABLE_NAME,
+    startRowIndex: 0,
+    endRowIndex: 2,
+    startColumnIndex: 0,
+    endColumnIndex: REGISTRATION_HEADERS.length,
+    columnProperties: REGISTRATION_TABLE_COLUMNS.map((column) => ({
+      columnIndex: column.columnIndex,
+      columnName: column.columnName,
+      columnType: column.columnType,
+      ...(column.columnName === "STATUS"
+        ? { dropdownValues: ["NEW", "IN_PROGRESS", "ACCEPTED", "CANCELLED"] }
+        : {}),
+    })),
+  };
+}
 
 function createValidationClient(): SheetsClient {
   const rowsByRange = new Map<string, readonly (readonly unknown[])[]>([
@@ -17,12 +48,12 @@ function createValidationClient(): SheetsClient {
       `${SHEET.settings}!A:ZZ`,
       [
         SHEET_SCHEMA[SHEET.settings],
-        ["SYSTEM_SCHEMA_VERSION", "1"],
+        ["SYSTEM_SCHEMA_VERSION", String(SYSTEM_SCHEMA_VERSION)],
         ["REGISTRATIONS_OPEN", "TAK"],
         ["PUBLIC_FORM_TITLE", "Zapisy"],
         ["SUCCESS_MESSAGE", "Dziękujemy"],
         ["PRIVACY_NOTICE_URL", "/privacy"],
-        ["PRIVACY_NOTICE_VERSION", "test-v1"],
+        ["PRIVACY_NOTICE_VERSION", "test-v2"],
       ],
     ],
     [
@@ -46,11 +77,13 @@ function createValidationClient(): SheetsClient {
     },
     async updateValues() {},
     async appendValues() {},
+    async appendTableRow() {},
     async clearValues() {},
     async getSheetMetadata() {
       return Object.keys(SHEET_SCHEMA).map((title, index) => ({
         title,
         sheetId: index + 1,
+        ...(title === SHEET.registrations ? { tables: [registrationTable()] } : {}),
       }));
     },
     async batchUpdate() {},
@@ -64,10 +97,11 @@ function createBootstrapClient(protectedRanges: readonly ProtectedRangeMetadata[
   for (const [title, headers] of Object.entries(SHEET_SCHEMA)) {
     rowsByRange.set(`${title}!1:1`, [headers]);
   }
+  rowsByRange.set(`${SHEET.registrations}!A:ZZ`, [SHEET_SCHEMA[SHEET.registrations]]);
 
   rowsByRange.set(`${SHEET.settings}!A:ZZ`, [
     SHEET_SCHEMA[SHEET.settings],
-    ["SYSTEM_SCHEMA_VERSION", "1"],
+    ["SYSTEM_SCHEMA_VERSION", String(SYSTEM_SCHEMA_VERSION)],
     ["REGISTRATIONS_OPEN", "NIE"],
     ["PUBLIC_FORM_TITLE", "Zapisy"],
     ["SUCCESS_MESSAGE", "Dziękujemy"],
@@ -81,6 +115,7 @@ function createBootstrapClient(protectedRanges: readonly ProtectedRangeMetadata[
     },
     async updateValues() {},
     async appendValues() {},
+    async appendTableRow() {},
     async clearValues() {},
     async getSheetMetadata() {
       return Object.keys(SHEET_SCHEMA).map((title, index) => ({
@@ -115,11 +150,11 @@ describe("validateSheetStructure", () => {
   it("warns about invalid registration toggle and incomplete privacy configuration", async () => {
     const client = createValidationClient();
     const originalGetValues = client.getValues.bind(client);
-    client.getValues = async (range) => {
+    client.getValues = async (range, options) => {
       if (range === `${SHEET.settings}!A:ZZ`) {
         return [
           SHEET_SCHEMA[SHEET.settings],
-          ["SYSTEM_SCHEMA_VERSION", "1"],
+          ["SYSTEM_SCHEMA_VERSION", String(SYSTEM_SCHEMA_VERSION)],
           ["REGISTRATIONS_OPEN", "MAYBE"],
           ["PUBLIC_FORM_TITLE", "Zapisy"],
           ["SUCCESS_MESSAGE", "Dziękujemy"],
@@ -127,7 +162,7 @@ describe("validateSheetStructure", () => {
           ["PRIVACY_NOTICE_VERSION", ""],
         ];
       }
-      return originalGetValues(range);
+      return originalGetValues(range, options);
     };
 
     const report = await validateSheetStructure(client);
@@ -142,7 +177,7 @@ describe("validateSheetStructure", () => {
 });
 
 describe("bootstrapSheetStructure", () => {
-  it("adds warning protections for system registration columns", async () => {
+  it("adds warning protections with STATUS and NOTES left editable", async () => {
     const { client, batchRequests } = createBootstrapClient();
 
     await bootstrapSheetStructure(client);
@@ -158,18 +193,44 @@ describe("bootstrapSheetStructure", () => {
         expect.objectContaining({
           description: "activity-registration:system-columns:identity-and-pii",
           warningOnly: true,
-          range: expect.objectContaining({ startColumnIndex: 0, endColumnIndex: 14 }),
+          range: expect.objectContaining({ startColumnIndex: 0, endColumnIndex: 15 }),
         }),
         expect.objectContaining({
           description: "activity-registration:system-columns:metadata",
           warningOnly: true,
-          range: expect.objectContaining({ startColumnIndex: 16, endColumnIndex: 21 }),
+          range: expect.objectContaining({ startColumnIndex: 17, endColumnIndex: 22 }),
         }),
       ]),
     );
   });
 
-  it("does not duplicate existing registration protections", async () => {
+  it("creates a native registrations table with typed columns", async () => {
+    const { client, batchRequests } = createBootstrapClient();
+
+    await bootstrapSheetStructure(client);
+
+    const addTable = batchRequests.find((request) => "addTable" in request)?.addTable as
+      | { table?: Record<string, unknown> }
+      | undefined;
+
+    expect(addTable?.table).toEqual(
+      expect.objectContaining({
+        tableId: REGISTRATIONS_TABLE_ID,
+        name: REGISTRATIONS_TABLE_NAME,
+        range: expect.objectContaining({
+          startRowIndex: 0,
+          startColumnIndex: 0,
+          endColumnIndex: REGISTRATION_HEADERS.length,
+        }),
+        columnProperties: expect.arrayContaining([
+          expect.objectContaining({ columnName: "BIRTH_DATE", columnType: "DATE" }),
+          expect.objectContaining({ columnName: "STATUS", columnType: "DROPDOWN" }),
+        ]),
+      }),
+    );
+  });
+
+  it("updates stale registration protections instead of duplicating them", async () => {
     const existing: readonly ProtectedRangeMetadata[] = [
       {
         protectedRangeId: 101,
@@ -190,6 +251,6 @@ describe("bootstrapSheetStructure", () => {
 
     await bootstrapSheetStructure(client);
 
-    expect(batchRequests.some((request) => "addProtectedRange" in request)).toBe(false);
+    expect(batchRequests.filter((request) => "updateProtectedRange" in request)).toHaveLength(2);
   });
 });
