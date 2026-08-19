@@ -58,8 +58,8 @@ class RecordingSender implements EmailSender {
 }
 
 describe("registration notifications", () => {
-  it("builds separate participant and admin emails with stable idempotency keys", () => {
-    const messages = buildRegistrationNotificationMessages(registration(), {
+  it("builds separate participant and admin emails with stable idempotency keys", async () => {
+    const messages = await buildRegistrationNotificationMessages(registration(), {
       from: "Pozytywka <zapisy@example.com>",
       adminEmails: ["biuro@example.com"],
     });
@@ -69,17 +69,19 @@ describe("registration notifications", () => {
       to: ["anna@example.com"],
       idempotencyKey: "registration-confirmation/reg_11111111-1111-4111-8111-111111111111",
     });
+    expect(messages[0]?.html).toContain("<!DOCTYPE");
     expect(messages[0]?.text).toContain("nie potwierdzenie miejsca na zajęciach");
     expect(messages[1]).toMatchObject({
       to: ["biuro@example.com"],
       replyTo: "anna@example.com",
       idempotencyKey: "registration-admin/reg_11111111-1111-4111-8111-111111111111",
     });
-    expect(messages[1]?.text).toContain("Rodzic/opiekun: Anna Kowalska");
+    expect(messages[1]?.text).toContain("Rodzic/opiekun");
+    expect(messages[1]?.text).toContain("Anna Kowalska");
   });
 
-  it("escapes participant-controlled values in HTML", () => {
-    const messages = buildRegistrationNotificationMessages(
+  it("escapes participant-controlled values in rendered HTML", async () => {
+    const messages = await buildRegistrationNotificationMessages(
       registration({ participantFirstName: "<script>alert(1)</script>" }),
       {
         from: "Pozytywka <zapisy@example.com>",
