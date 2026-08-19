@@ -166,6 +166,21 @@ export async function submitRegistration(
     );
   }
 
+  if (!settings.currentSeasonId) {
+    throw new ApplicationError(
+      APPLICATION_ERROR_CODE.systemNotReady,
+      "System zapisów nie ma skonfigurowanego bieżącego sezonu.",
+    );
+  }
+
+  const season = await dependencies.repositories.catalog.findSeasonById(settings.currentSeasonId);
+  if (!season || !season.active) {
+    throw new ApplicationError(
+      APPLICATION_ERROR_CODE.systemNotReady,
+      "Skonfigurowany sezon zapisów nie jest dostępny.",
+    );
+  }
+
   const city = findCity(catalog.cities, normalized.cityId);
   if (!city) {
     throw new ApplicationError(
@@ -194,6 +209,8 @@ export async function submitRegistration(
     id: createRegistrationId(),
     requestId,
     submittedAt: now,
+    seasonId: season.id,
+    seasonNameSnapshot: season.name,
     offeringId: asOfferingId(offering.id),
     cityIdSnapshot: asCityId(city.id),
     cityNameSnapshot: city.name,
@@ -207,6 +224,10 @@ export async function submitRegistration(
     phone: normalized.phone,
     email: normalized.email,
     status: REGISTRATION_STATUS.new,
+    assignedGroupId: null,
+    contactedAt: null,
+    confirmedAt: null,
+    possibleDuplicateOf: null,
     notes: "",
     privacyNoticeVersion: settings.privacyNoticeVersion ?? "unconfigured",
     source: REGISTRATION_SOURCE.web,
