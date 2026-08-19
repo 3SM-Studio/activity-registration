@@ -36,6 +36,28 @@ type SpreadsheetMetadataResponse = Readonly<{
         endColumnIndex?: number;
       };
     }[];
+    tables?: readonly {
+      tableId?: string;
+      name?: string;
+      range?: {
+        sheetId?: number;
+        startRowIndex?: number;
+        endRowIndex?: number;
+        startColumnIndex?: number;
+        endColumnIndex?: number;
+      };
+      columnProperties?: readonly {
+        columnIndex?: number;
+        columnName?: string;
+        columnType?: string;
+        dataValidationRule?: {
+          condition?: {
+            type?: string;
+            values?: readonly { userEnteredValue?: string }[];
+          };
+        };
+      }[];
+    }[];
   }[];
 }>;
 
@@ -47,18 +69,51 @@ export type ProtectedRangeMetadata = Readonly<{
   endColumnIndex?: number;
 }>;
 
+export type TableColumnMetadata = Readonly<{
+  columnIndex: number;
+  columnName: string;
+  columnType: string;
+  dropdownValues?: readonly string[];
+}>;
+
+export type TableMetadata = Readonly<{
+  tableId: string;
+  name: string;
+  startRowIndex?: number;
+  endRowIndex?: number;
+  startColumnIndex?: number;
+  endColumnIndex?: number;
+  columnProperties: readonly TableColumnMetadata[];
+}>;
+
 export type SheetMetadata = Readonly<{
   sheetId: number;
   title: string;
   protectedRanges?: readonly ProtectedRangeMetadata[];
+  tables?: readonly TableMetadata[];
 }>;
+
+export type ValueRenderOption = "FORMATTED_VALUE" | "UNFORMATTED_VALUE" | "FORMULA";
 
 function isRetryableSheetsError(error: unknown): boolean {
   return error instanceof SheetsApiError && [429, 500, 502, 503, 504].includes(error.status);
 }
 
+function toCellData(value: string | number | boolean): Readonly<Record<string, unknown>> {
+  if (typeof value === "number") {
+    return { userEnteredValue: { numberValue: value } };
+  }
+  if (typeof value === "boolean") {
+    return { userEnteredValue: { boolValue: value } };
+  }
+  return { userEnteredValue: { stringValue: value } };
+}
+
 export interface SheetsClient {
-  getValues(range: string): Promise<readonly (readonly unknown[])[]>;
+  getValues(
+    range: string,
+    options?: Readonly<{ valueRenderOption?: ValueRenderOption }>,
+  ): Promise<readonly (readonly unknown[])[]>;
   updateValues(
     range: string,
     values: readonly (readonly (string | number | boolean)[])[],
@@ -66,6 +121,10 @@ export interface SheetsClient {
   appendValues(
     range: string,
     values: readonly (readonly (string | number | boolean)[])[],
+  ): Promise<void>;
+  appendTableRow(
+    tableId: string,
+    row: readonly (string | number | boolean)[],
   ): Promise<void>;
   clearValues(range: string): Promise<void>;
   getSheetMetadata(): Promise<readonly SheetMetadata[]>;
@@ -107,9 +166,17 @@ export class GoogleSheetsClient implements SheetsClient {
     return retry ? withRetry(() => performRequest(), isRetryableSheetsError) : performRequest();
   }
 
-  async getValues(range: string): Promise<readonly (readonly unknown[])[]> {
+  async getValues(
+    range: string,
+    options: Readonly<{ valueRenderOption?: ValueRenderOption }> = {},
+  ): Promise<readonly (readonly unknown[])[]> {
+    const query = new URLSearchParams({ majorDimension: "ROWS" });
+    if (options.valueRenderOption) {
+      query.set("valueRenderOption", options.valueRenderOption);
+    }
+
     const response = await this.request<ValuesResponse>(
-      `/values/${encodeURIComponent(range)}?majorDimension=ROWS`,
+      `/values/${encodeURIComponent(range)}?${query.toString()}`,
     );
     return response.values ?? [];
   }
@@ -146,6 +213,30 @@ export class GoogleSheetsClient implements SheetsClient {
     );
   }
 
+  async appendTableRow(
+    tableId: string,
+    row: readonly (string | number | boolean)[],
+  ): Promise<void> {
+    await this.request(
+      ":batchUpdate",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          requests: [
+            {
+              appendCells: {
+                tableId,
+                rows: [{ values: row.map(toCellData) }],
+                fields: "userEnteredValue",
+              },
+            },
+          ],
+        }),
+      },
+      false,
+    );
+  }
+
   async clearValues(range: string): Promise<void> {
     await this.request(`/values/${encodeURIComponent(range)}:clear`, {
       method: "POST",
@@ -155,7 +246,7 @@ export class GoogleSheetsClient implements SheetsClient {
 
   async getSheetMetadata(): Promise<readonly SheetMetadata[]> {
     const data = await this.request<SpreadsheetMetadataResponse>(
-      "?fields=sheets(properties(sheetId,title),protectedRanges(protectedRangeId,description,warningOnly,range(sheetId,startColumnIndex,endColumnIndex)))",
+      "?fields=sheets(properties(sheetId,title),protectedRanges(protectedRangeId,description,warningOnly,range(sheetId,startColumnIndex,endColumnIndex)),tables(tableId,name,range(sheetId,startRowIndex,endRowIndex,startColumnIndex,endColumnIndex),columnProperties(columnIndex,columnName,columnType,dataValidationRule(condition(type,values(userEnteredValue))))))",
     );
 
     return (data.sheets ?? []).flatMap((sheet) => {
@@ -186,7 +277,56 @@ export class GoogleSheetsClient implements SheetsClient {
         ];
       });
 
-      return [{ sheetId, title, protectedRanges } satisfies SheetMetadata];
+      const tables = (sheet.tables ?? []).flatMap((table) => {
+        if (!table.tableId || !table.name) {
+          return [];
+        }
+
+        const columnProperties = (table.columnProperties ?? []).flatMap((column) => {
+          if (
+            typeof column.columnIndex !== "number" ||
+            !column.columnName ||
+            !column.columnType
+          ) {
+            return [];
+          }
+
+          const dropdownValues = (column.dataValidationRule?.condition?.values ?? []).flatMap(
+            (value) => (value.userEnteredValue ? [value.userEnteredValue] : []),
+          );
+
+          return [
+            {
+              columnIndex: column.columnIndex,
+              columnName: column.columnName,
+              columnType: column.columnType,
+              ...(dropdownValues.length > 0 ? { dropdownValues } : {}),
+            } satisfies TableColumnMetadata,
+          ];
+        });
+
+        return [
+          {
+            tableId: table.tableId,
+            name: table.name,
+            ...(typeof table.range?.startRowIndex === "number"
+              ? { startRowIndex: table.range.startRowIndex }
+              : {}),
+            ...(typeof table.range?.endRowIndex === "number"
+              ? { endRowIndex: table.range.endRowIndex }
+              : {}),
+            ...(typeof table.range?.startColumnIndex === "number"
+              ? { startColumnIndex: table.range.startColumnIndex }
+              : {}),
+            ...(typeof table.range?.endColumnIndex === "number"
+              ? { endColumnIndex: table.range.endColumnIndex }
+              : {}),
+            columnProperties,
+          } satisfies TableMetadata,
+        ];
+      });
+
+      return [{ sheetId, title, protectedRanges, tables } satisfies SheetMetadata];
     });
   }
 
