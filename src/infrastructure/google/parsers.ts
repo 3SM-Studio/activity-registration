@@ -17,23 +17,23 @@ import {
 } from "@/domain/offering-intake";
 import type { Registration } from "@/domain/registration";
 import {
-  asRegistrationId,
-  asRequestId,
   BIRTH_DATE_REGISTRATION_SCHEMA_VERSION,
-  isRegistrationId,
-  isRequestId,
   LEGACY_REGISTRATION_SCHEMA_VERSION,
   REGISTRATION_SCHEMA_VERSION,
   REGISTRATION_SOURCE,
-  REGISTRATION_STATUS,
+  asRegistrationId,
+  asRequestId,
+  isRegistrationId,
+  isRequestId,
+  normalizeStoredRegistrationStatus,
   type RegistrationSchemaVersion,
 } from "@/domain/registration";
 import { googleSerialToIsoDate } from "@/infrastructure/google/google-date";
 import {
+  SheetSchemaError,
   cell,
   rawCell,
   type HeaderMap,
-  SheetSchemaError,
 } from "@/infrastructure/google/header-map";
 import { calculateAgeAtDate, dateOnlyInPoland, isValidIsoDateOnly } from "@/lib/birth-date";
 
@@ -325,8 +325,8 @@ export function parseRegistrationRow(
   }
 
   const rawStatus = cell(row, headers, "STATUS");
-  const allowedStatuses = new Set<string>(Object.values(REGISTRATION_STATUS));
-  if (!allowedStatuses.has(rawStatus)) {
+  const status = normalizeStoredRegistrationStatus(rawStatus);
+  if (!status) {
     throw new SheetSchemaError(`Unknown registration status for ${id}: ${rawStatus}`);
   }
 
@@ -417,7 +417,7 @@ export function parseRegistrationRow(
     guardianLastName: cell(row, headers, "GUARDIAN_LAST_NAME") || null,
     phone: cell(row, headers, "PHONE"),
     email: cell(row, headers, "EMAIL"),
-    status: rawStatus as Registration["status"],
+    status,
     assignedGroupId,
     contactedAt,
     confirmedAt,
