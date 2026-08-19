@@ -1,10 +1,10 @@
 "use client";
 
 import PhoneInput, { type Value } from "react-phone-number-input";
-import flags from "react-phone-number-input/flags";
 import pl from "react-phone-number-input/locale/pl";
 
 import { cn } from "@/lib/cn";
+import { PhoneCountrySelect } from "@/components/ui/phone-country-select";
 
 type PhoneNumberInputProps = Readonly<{
   id: string;
@@ -46,11 +46,11 @@ export function PhoneNumberInput({
       name={name}
       className={cn("pozytywka-phone-input", invalid && "pozytywka-phone-input--invalid")}
       defaultCountry="PL"
-      international
-      countryCallingCodeEditable={false}
+      international={false}
       addInternationalOption={false}
       labels={pl}
-      flags={flags}
+      countrySelectComponent={PhoneCountrySelect}
+      smartCaret={false}
       onChange={(nextValue) => onChange(nextValue ?? "")}
       onBlur={onBlur}
       {...optionalProps}
