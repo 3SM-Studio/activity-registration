@@ -17,6 +17,10 @@ import type {
   RegistrationRepository,
   SettingsRepository,
 } from "@/domain/repositories";
+import {
+  isPotentialDuplicateCandidate,
+  type RegistrationDuplicateCriteria,
+} from "@/domain/registration-duplicates";
 import type { Registration, RequestId } from "@/domain/registration";
 import type { PublicSettings } from "@/domain/settings";
 
@@ -66,6 +70,10 @@ class FakeRegistrationRepository implements RegistrationRepository {
 
   async findByRequestId(requestId: RequestId) {
     return this.records.find((record) => record.requestId === requestId) ?? null;
+  }
+
+  async findPotentialDuplicates(criteria: RegistrationDuplicateCriteria) {
+    return this.records.filter((record) => isPotentialDuplicateCandidate(record, criteria));
   }
 
   async create(registration: Registration) {
@@ -119,6 +127,7 @@ describe("submitRegistration", () => {
     });
 
     expect(result.idempotentReplay).toBe(false);
+    expect(result.businessDuplicate).toBe(false);
     expect(result.registration).toBe(registrations.records[0]);
     expect(registrations.records).toHaveLength(1);
     expect(registrations.records[0]).toMatchObject({
@@ -151,6 +160,7 @@ describe("submitRegistration", () => {
     expect(second).toEqual({
       registrationId: first.registrationId,
       idempotentReplay: true,
+      businessDuplicate: false,
       registration: first.registration,
     });
     expect(registrations.records).toHaveLength(1);
@@ -167,10 +177,10 @@ describe("submitRegistration", () => {
     });
   });
 
-  it("allows a separate business registration when requestId differs", async () => {
+  it("returns a safe exact business duplicate without appending another record", async () => {
     const repositories = createRepositories(registrations);
-    await submitRegistration(baseRequest, { repositories });
-    await submitRegistration(
+    const first = await submitRegistration(baseRequest, { repositories });
+    const duplicate = await submitRegistration(
       {
         ...baseRequest,
         requestId: "22222222-2222-4222-8222-222222222222",
@@ -178,6 +188,48 @@ describe("submitRegistration", () => {
       { repositories },
     );
 
+    expect(duplicate).toMatchObject({
+      registrationId: first.registrationId,
+      idempotentReplay: false,
+      businessDuplicate: true,
+    });
+    expect(registrations.records).toHaveLength(1);
+  });
+
+  it("appends a probable duplicate with a link to the earlier registration", async () => {
+    const repositories = createRepositories(registrations);
+    const first = await submitRegistration(baseRequest, { repositories });
+    const probable = await submitRegistration(
+      {
+        ...baseRequest,
+        requestId: "22222222-2222-4222-8222-222222222222",
+        phone: "511 111 111",
+      },
+      { repositories },
+    );
+
+    expect(probable.businessDuplicate).toBe(false);
+    expect(registrations.records).toHaveLength(2);
+    expect(registrations.records[1]).toMatchObject({
+      possibleDuplicateOf: first.registrationId,
+      phone: "+48511111111",
+    });
+  });
+
+  it("allows a fresh submission when a previous exact request was cancelled", async () => {
+    const repositories = createRepositories(registrations);
+    await submitRegistration(baseRequest, { repositories });
+    registrations.records[0]!.status = "CANCELLED";
+
+    const next = await submitRegistration(
+      {
+        ...baseRequest,
+        requestId: "22222222-2222-4222-8222-222222222222",
+      },
+      { repositories },
+    );
+
+    expect(next.businessDuplicate).toBe(false);
     expect(registrations.records).toHaveLength(2);
   });
 
@@ -302,6 +354,7 @@ describe("submitRegistration", () => {
 
     await expect(submitRegistration(baseRequest, { repositories })).resolves.toMatchObject({
       idempotentReplay: false,
+      businessDuplicate: false,
     });
     expect(registrations.records).toHaveLength(1);
   });
