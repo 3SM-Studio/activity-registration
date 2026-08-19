@@ -8,7 +8,6 @@ import { isoDateToGoogleSerial } from "@/infrastructure/google/google-date";
 import {
   SheetSchemaError,
   buildRowByHeaders,
-  cell,
   createHeaderMap,
 } from "@/infrastructure/google/header-map";
 import { parseRegistrationRow } from "@/infrastructure/google/parsers";
