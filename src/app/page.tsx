@@ -3,7 +3,11 @@ import { LuCircleAlert } from "react-icons/lu";
 import { getPublicFormConfig } from "@/application/get-public-form-config";
 import { RegistrationForm } from "@/components/registration/registration-form";
 import { createApplicationRepositories } from "@/infrastructure/repositories";
-import { getServerEnv, isUnconfiguredVercelProduction } from "@/lib/env";
+import {
+  getServerEnv,
+  isUnconfiguredVercelPreview,
+  isUnconfiguredVercelProduction,
+} from "@/lib/env";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +24,10 @@ function PozytywkaMark() {
   );
 }
 
-function ProductionClosedState() {
+function ClosedState({
+  title,
+  description,
+}: Readonly<{ title: string; description: string }>) {
   return (
     <main className="min-h-screen px-4 py-10 sm:px-6 sm:py-16">
       <div className="mx-auto flex min-h-[70vh] w-full max-w-2xl items-center">
@@ -41,12 +48,9 @@ function ProductionClosedState() {
             <span>Zapisy online</span>
           </div>
           <h1 className="mt-3 text-balance text-4xl font-extrabold tracking-[-0.04em] text-neutral-950 sm:text-5xl">
-            Zapisy są obecnie zamknięte
+            {title}
           </h1>
-          <p className="mt-5 max-w-xl text-base leading-7 text-neutral-600">
-            Formularz produkcyjny nie został jeszcze uruchomiony. Wróć później, gdy zapisy będą
-            gotowe do przyjmowania zgłoszeń.
-          </p>
+          <p className="mt-5 max-w-xl text-base leading-7 text-neutral-600">{description}</p>
         </section>
       </div>
     </main>
@@ -55,7 +59,21 @@ function ProductionClosedState() {
 
 export default async function HomePage() {
   if (isUnconfiguredVercelProduction()) {
-    return <ProductionClosedState />;
+    return (
+      <ClosedState
+        title="Zapisy są obecnie zamknięte"
+        description="Formularz produkcyjny nie został jeszcze uruchomiony. Wróć później, gdy zapisy będą gotowe do przyjmowania zgłoszeń."
+      />
+    );
+  }
+
+  if (isUnconfiguredVercelPreview()) {
+    return (
+      <ClosedState
+        title="Ten podgląd nie przyjmuje zapisów"
+        description="Pełne środowisko testowe działa wyłącznie na stałej gałęzi preview."
+      />
+    );
   }
 
   const env = getServerEnv();
