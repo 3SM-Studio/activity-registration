@@ -9,6 +9,7 @@ import {
   asRequestId,
   type Registration,
 } from "@/domain/registration";
+import { calculateAgeAtDate, dateOnlyInPoland } from "@/lib/birth-date";
 import { normalizeEmail } from "@/lib/email";
 import { createRegistrationId } from "@/lib/ids";
 import { InvalidPhoneError, normalizePhone } from "@/lib/phone";
@@ -39,7 +40,8 @@ function sameLogicalRequest(
     offeringId: string;
     participantFirstName: string;
     participantLastName: string;
-    age: number;
+    birthDate: string;
+    ageAtSubmission: number;
     guardianFirstName: string | null;
     guardianLastName: string | null;
     phone: string;
@@ -51,7 +53,8 @@ function sameLogicalRequest(
     existing.offeringId === input.offeringId &&
     existing.participantFirstName === input.participantFirstName &&
     existing.participantLastName === input.participantLastName &&
-    existing.age === input.age &&
+    existing.birthDate === input.birthDate &&
+    existing.ageAtSubmission === input.ageAtSubmission &&
     existing.guardianFirstName === input.guardianFirstName &&
     existing.guardianLastName === input.guardianLastName &&
     existing.phone === input.phone &&
@@ -86,8 +89,9 @@ export async function submitRegistration(
   }
 
   const input = parsed.data;
+  const nowDate = (dependencies.now ?? (() => new Date()))();
 
-  const elapsedSinceRender = Date.now() - input.renderedAt;
+  const elapsedSinceRender = nowDate.getTime() - input.renderedAt;
   if (elapsedSinceRender >= 0 && elapsedSinceRender < MINIMUM_FORM_FILL_TIME_MS) {
     throw new ApplicationError(
       APPLICATION_ERROR_CODE.validation,
@@ -107,14 +111,18 @@ export async function submitRegistration(
     throw error;
   }
 
+  const birthDate = input.birthDate.trim();
+  const ageAtSubmission = calculateAgeAtDate(birthDate, dateOnlyInPoland(nowDate));
   const normalized = {
     cityId: input.cityId,
     offeringId: input.offeringId,
     participantFirstName: input.participantFirstName.trim(),
     participantLastName: input.participantLastName.trim(),
-    age: input.age,
-    guardianFirstName: input.age < 18 ? normalizeOptionalName(input.guardianFirstName) : null,
-    guardianLastName: input.age < 18 ? normalizeOptionalName(input.guardianLastName) : null,
+    birthDate,
+    ageAtSubmission,
+    guardianFirstName:
+      ageAtSubmission < 18 ? normalizeOptionalName(input.guardianFirstName) : null,
+    guardianLastName: ageAtSubmission < 18 ? normalizeOptionalName(input.guardianLastName) : null,
     phone,
     email: normalizeEmail(input.email),
   };
@@ -182,7 +190,7 @@ export async function submitRegistration(
     );
   }
 
-  const now = (dependencies.now ?? (() => new Date()))().toISOString();
+  const now = nowDate.toISOString();
   const registration: Registration = {
     id: createRegistrationId(),
     requestId,
@@ -193,7 +201,8 @@ export async function submitRegistration(
     offeringNameSnapshot: offering.name,
     participantFirstName: normalized.participantFirstName,
     participantLastName: normalized.participantLastName,
-    age: normalized.age,
+    birthDate: normalized.birthDate,
+    ageAtSubmission: normalized.ageAtSubmission,
     guardianFirstName: normalized.guardianFirstName,
     guardianLastName: normalized.guardianLastName,
     phone: normalized.phone,
