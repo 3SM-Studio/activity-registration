@@ -8,21 +8,18 @@ on:
       - preview
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  migrate-shadcn-form:
-    if: github.event_name == 'pull_request' && github.head_ref == 'feat/full-shadcn-form'
+  check:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
-        with:
-          ref: feat/full-shadcn-form
       - uses: pnpm/action-setup@v6
         with:
           version: 11.20.0
@@ -31,189 +28,13 @@ jobs:
         with:
           node-version: 24.19.0
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - name: Migrate registration form
-        shell: bash
-        run: |
-          python3 <<'PY'
-          from pathlib import Path
-          import re
-
-          p = Path('src/components/registration/registration-form.tsx')
-          text = p.read_text()
-
-          text = text.replace(
-              'import { Input } from "@/components/ui/input";\nimport { Label } from "@/components/ui/label";\nimport { NativeSelect } from "@/components/ui/native-select";\nimport { PhoneNumberInput } from "@/components/ui/phone-number-input";\nimport { FieldError } from "@/components/registration/field-error";\n',
-              'import {\n  Field,\n  FieldDescription,\n  FieldError,\n  FieldLabel,\n  FieldLegend,\n  FieldSet,\n} from "@/components/ui/field";\nimport { Input } from "@/components/ui/input";\nimport { PhoneNumberInput } from "@/components/ui/phone-number-input";\nimport {\n  Select,\n  SelectContent,\n  SelectItem,\n  SelectTrigger,\n  SelectValue,\n} from "@/components/ui/select";\n',
-          )
-          text = text.replace('  const cityRegistration = register("cityId");\n', '')
-          text = re.sub(r'\n  const onCityChange: ChangeEventHandler<HTMLSelectElement> = \(event\) => \{.*?\n  \};\n', '\n', text, flags=re.S)
-
-          start = text.index('        <div className="grid gap-5 sm:grid-cols-2">\n          <div>\n            <Label htmlFor="cityId">')
-          marker = '        </div>\n\n        <fieldset className="space-y-5">'
-          end = text.index(marker, start)
-          replacement = '''        <div className="grid gap-5 sm:grid-cols-2">
-          <Controller
-            name="cityId"
-            control={control}
-            render={({ field, fieldState }) => (
-              <Field data-invalid={fieldState.invalid}>
-                <FieldLabel htmlFor="cityId">
-                  Miasto <span aria-hidden="true">*</span>
-                </FieldLabel>
-                <Select
-                  name={field.name}
-                  value={field.value ?? ""}
-                  onValueChange={(nextCityId) => {
-                    field.onChange(nextCityId);
-                    setValue("offeringId", "", { shouldDirty: true, shouldValidate: false });
-                    clearErrors("offeringId");
-                  }}
-                >
-                  <SelectTrigger
-                    id="cityId"
-                    aria-invalid={fieldState.invalid}
-                    aria-describedby={fieldState.invalid ? "cityId-error" : undefined}
-                  >
-                    <SelectValue placeholder="Wybierz miasto" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {catalog.cities.map((city) => (
-                      <SelectItem key={city.id} value={city.id}>{city.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FieldError id="cityId-error" errors={[fieldState.error]} />
-              </Field>
-            )}
-          />
-
-          <Controller
-            name="offeringId"
-            control={control}
-            render={({ field, fieldState }) => (
-              <Field data-invalid={fieldState.invalid} data-disabled={!cityId || undefined}>
-                <FieldLabel htmlFor="offeringId">
-                  Zajęcia <span aria-hidden="true">*</span>
-                </FieldLabel>
-                <Select
-                  name={field.name}
-                  value={field.value ?? ""}
-                  onValueChange={field.onChange}
-                  disabled={!cityId}
-                >
-                  <SelectTrigger
-                    id="offeringId"
-                    aria-invalid={fieldState.invalid}
-                    aria-describedby={fieldState.invalid ? "offeringId-error" : undefined}
-                  >
-                    <SelectValue placeholder={cityId ? "Wybierz zajęcia" : "Najpierw wybierz miasto"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableOfferings.map((offering) => (
-                      <SelectItem key={offering.id} value={offering.id}>{offering.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FieldError id="offeringId-error" errors={[fieldState.error]} />
-              </Field>
-            )}
-          />
-        </div>
-
-        <FieldSet className="space-y-5">'''
-          text = text[:start] + replacement + text[end + len(marker):]
-
-          text = text.replace('<fieldset className="space-y-5">', '<FieldSet className="space-y-5">')
-          text = text.replace('<fieldset className="space-y-5 rounded-2xl bg-neutral-50 p-4 sm:p-5">', '<FieldSet className="space-y-5 rounded-2xl bg-muted/45 p-4 sm:p-5">')
-          text = text.replace('</fieldset>', '</FieldSet>')
-          text = text.replace('<legend className="text-base font-semibold text-neutral-950">', '<FieldLegend>')
-          text = text.replace('<legend className="px-1 text-base font-semibold text-neutral-950">', '<FieldLegend className="px-1">')
-          text = text.replace('</legend>', '</FieldLegend>')
-          text = text.replace('<Label ', '<FieldLabel ')
-          text = text.replace('</Label>', '</FieldLabel>')
-          text = re.sub(r'<FieldError\s+id="([^"]+)"\s+message=\{([^}]+)\}\s*/>', r'<FieldError id="\1" errors={[\2]} />', text, flags=re.S)
-          text = text.replace('<p className="text-sm text-neutral-600">\n              Uczestnik jest niepełnoletni, dlatego potrzebujemy danych osoby odpowiedzialnej za\n              zgłoszenie.\n            </p>', '<FieldDescription>\n              Uczestnik jest niepełnoletni, dlatego potrzebujemy danych osoby odpowiedzialnej za\n              zgłoszenie.\n            </FieldDescription>')
-          text = text.replace('<p className="text-sm text-neutral-600">\n            {isMinor\n              ? "Podaj telefon i e-mail rodzica lub opiekuna odpowiedzialnego za zgłoszenie."\n              : "Podaj telefon i e-mail uczestnika."}\n          </p>', '<FieldDescription>\n            {isMinor\n              ? "Podaj telefon i e-mail rodzica lub opiekuna odpowiedzialnego za zgłoszenie."\n              : "Podaj telefon i e-mail uczestnika."}\n          </FieldDescription>')
-          p.write_text(text)
-          PY
-      - run: pnpm format
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
       - name: Quality gate
         run: pnpm check
+      - name: Verify system Chrome
+        run: google-chrome --version
       - name: Critical E2E
         run: pnpm test:e2e
-        env:
-          PLAYWRIGHT_USE_SYSTEM_CHROME: "1"
-      - name: Restore normal CI and clean bootstrap
-        run: |
-          cat > .github/workflows/ci.yml <<'YAML'
-          name: CI
-
-          on:
-            pull_request:
-            push:
-              branches:
-                - main
-                - preview
-
-          permissions:
-            contents: read
-
-          concurrency:
-            group: ci-${{ github.workflow }}-${{ github.ref }}
-            cancel-in-progress: true
-
-          jobs:
-            check:
-              runs-on: ubuntu-latest
-              timeout-minutes: 25
-              steps:
-                - uses: actions/checkout@v7
-                - uses: pnpm/action-setup@v6
-                  with:
-                    version: 11.20.0
-                    run_install: false
-                - uses: actions/setup-node@v7
-                  with:
-                    node-version: 24.19.0
-                    cache: pnpm
-                - name: Install dependencies
-                  run: pnpm install --frozen-lockfile
-                - name: Quality gate
-                  run: pnpm check
-                - name: Verify system Chrome
-                  run: google-chrome --version
-                - name: Critical E2E
-                  run: pnpm test:e2e
-                  env:
-                    PLAYWRIGHT_USE_SYSTEM_CHROME: "1"
-          YAML
-          rm -f .github/workflows/apply-full-shadcn-form.yml
-      - name: Commit verified migration
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -m "feat: migrate registration form to shadcn fields and selects"
-          git push origin HEAD:feat/full-shadcn-form
-
-  check:
-    if: github.event_name != 'pull_request' || github.head_ref != 'feat/full-shadcn-form'
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
-    steps:
-      - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-        with:
-          version: 11.20.0
-          run_install: false
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 24.19.0
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm check
-      - run: google-chrome --version
-      - run: pnpm test:e2e
         env:
           PLAYWRIGHT_USE_SYSTEM_CHROME: "1"
