@@ -34,7 +34,9 @@ function participantName(registration: Registration): string {
   return `${registration.participantFirstName} ${registration.participantLastName}`;
 }
 
-async function renderTemplate(template: ReactElement): Promise<Readonly<{ html: string; text: string }>> {
+async function renderTemplate(
+  template: ReactElement,
+): Promise<Readonly<{ html: string; text: string }>> {
   const html = await render(template);
   return {
     html,
@@ -42,7 +44,10 @@ async function renderTemplate(template: ReactElement): Promise<Readonly<{ html: 
   };
 }
 
-async function confirmationMessage(registration: Registration, from: string): Promise<EmailMessage> {
+async function confirmationMessage(
+  registration: Registration,
+  from: string,
+): Promise<EmailMessage> {
   const rendered = await renderTemplate(
     createElement(RegistrationConfirmationEmail, { registration }),
   );
