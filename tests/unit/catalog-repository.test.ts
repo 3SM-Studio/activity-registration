@@ -11,19 +11,7 @@ function offeringRow(
   active: string,
   sortOrder: number,
 ): readonly unknown[] {
-  return [
-    id,
-    cityId,
-    name,
-    "",
-    active,
-    sortOrder,
-    "ROLLING",
-    "CLOSED",
-    "",
-    "",
-    "FALSE",
-  ];
+  return [id, cityId, name, "", active, sortOrder, "ROLLING", "CLOSED", "", "", "FALSE"];
 }
 
 function createClient(): SheetsClient {
@@ -44,13 +32,7 @@ function createClient(): SheetsClient {
         SHEET_SCHEMA[SHEET.offerings],
         offeringRow("gdynia-hiphop", "gdynia", "Hip-hop", "TAK", 10),
         offeringRow("sopot-hidden", "sopot", "Ukryte", "NIE", 10),
-        offeringRow(
-          "inactive-city-class",
-          "inactive-city",
-          "Ukryte",
-          "TAK",
-          10,
-        ),
+        offeringRow("inactive-city-class", "inactive-city", "Ukryte", "TAK", 10),
       ],
     ],
   ]);
