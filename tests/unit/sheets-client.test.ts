@@ -40,10 +40,7 @@ const tableMetadataResponse = {
               dataValidationRule: {
                 condition: {
                   type: "ONE_OF_LIST",
-                  values: [
-                    { userEnteredValue: "NEW" },
-                    { userEnteredValue: "IN_PROGRESS" },
-                  ],
+                  values: [{ userEnteredValue: "NEW" }, { userEnteredValue: "IN_PROGRESS" }],
                 },
               },
             },
