@@ -73,14 +73,17 @@ async function main() {
   const catalogRepository = new GoogleSheetsCatalogRepository(client);
   const settingsRepository = new GoogleSheetsSettingsRepository(client);
   const registrationRepository = new GoogleSheetsRegistrationRepository(client);
+  const nowDate = new Date();
   const [catalog, settings] = await Promise.all([
-    catalogRepository.getPublicCatalog(),
+    catalogRepository.getPublicCatalog(dateOnlyInPoland(nowDate)),
     settingsRepository.getPublicSettings(),
   ]);
-  const offering = catalog.offerings[0];
+  const offering = catalog.offerings.find(
+    (candidate) => candidate.intakeStatus === "OPEN" || candidate.intakeStatus === "WAITLIST_ONLY",
+  );
 
   if (!offering) {
-    throw new Error("TEST catalog has no active offering for the integration test.");
+    throw new Error("TEST catalog has no offering accepting registrations for the integration test.");
   }
 
   const city = catalog.cities.find((candidate) => candidate.id === offering.cityId);
@@ -97,7 +100,6 @@ async function main() {
     throw new Error("TEST CURRENT_SEASON_ID does not resolve to an active season.");
   }
 
-  const nowDate = new Date();
   const now = nowDate.toISOString();
   const birthDate = "2000-01-15";
   const ageAtSubmission = calculateAgeAtDate(birthDate, dateOnlyInPoland(nowDate));
