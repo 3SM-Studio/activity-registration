@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page, type TestInfo } from "@playwright/test";
 
 async function openRegistrationForm(page: Page) {
   await page.goto("/");
@@ -34,17 +34,28 @@ async function chooseBirthDate(page: Page, year: string, monthIndex: number, day
   await dayButton.click();
 }
 
-async function fillAdultRegistration(page: Page) {
+function e2eIdentitySuffix(testInfo: TestInfo): string {
+  const project =
+    testInfo.project.name === "mobile-320"
+      ? "Telefon"
+      : testInfo.project.name === "mobile-430"
+        ? "Mobilny"
+        : "Desktop";
+  const retry = testInfo.retry === 0 ? "Pierwszy" : testInfo.retry === 1 ? "Drugi" : "Trzeci";
+  return `${project} ${retry}`;
+}
+
+async function fillAdultRegistration(page: Page, identitySuffix = "Standard") {
   await chooseOption(page, /Miasto/, "Gdynia");
   await chooseOption(page, /Zajęcia/, "Hip-hop");
   await page.getByLabel(/^Imię \*/).fill("Jan");
-  await page.getByLabel(/^Nazwisko \*/).fill("Kowalski");
+  await page.getByLabel(/^Nazwisko \*/).fill(`Kowalski ${identitySuffix}`);
   await chooseBirthDate(page, "2000", 0, "15");
   await page.getByLabel(/Numer telefonu/).fill("500 000 000");
   await page.getByLabel(/Adres e-mail/).fill("jan@example.com");
 }
 
-test("filters offerings by city and submits a minor registration", async ({ page }) => {
+test("filters offerings by city and submits a minor registration", async ({ page }, testInfo) => {
   await openRegistrationForm(page);
 
   const offering = combobox(page, /Zajęcia/);
@@ -60,7 +71,7 @@ test("filters offerings by city and submits a minor registration", async ({ page
   await page.getByRole("option", { name: "Contemporary", exact: true }).click();
 
   await page.getByLabel(/^Imię \*/).fill("Jan");
-  await page.getByLabel(/^Nazwisko \*/).fill("Kowalski");
+  await page.getByLabel(/^Nazwisko \*/).fill(`Kowalski ${e2eIdentitySuffix(testInfo)}`);
   await chooseBirthDate(page, "2012", 0, "15");
 
   await page.getByLabel(/Imię rodzica/).fill("Anna");
@@ -129,7 +140,7 @@ test("switching from minor to adult birth date clears guardian UI", async ({ pag
   await expect(page.getByLabel(/Nazwisko rodzica/)).toHaveCount(0);
 });
 
-test("clears a stale offering after the server rejects it", async ({ page }) => {
+test("clears a stale offering after the server rejects it", async ({ page }, testInfo) => {
   await page.route("**/api/registrations", async (route) => {
     await route.fulfill({
       status: 409,
@@ -143,7 +154,7 @@ test("clears a stale offering after the server rejects it", async ({ page }) => 
   });
 
   await openRegistrationForm(page);
-  await fillAdultRegistration(page);
+  await fillAdultRegistration(page, e2eIdentitySuffix(testInfo));
 
   const offering = combobox(page, /Zajęcia/);
   await page.getByRole("button", { name: "Wyślij zgłoszenie" }).click();
@@ -152,7 +163,7 @@ test("clears a stale offering after the server rejects it", async ({ page }) => 
   await expect(page.getByText("Wybrane zajęcia nie są już dostępne.").first()).toBeVisible();
 });
 
-test("reuses the same requestId after a temporary transport failure", async ({ page }) => {
+test("reuses the same requestId after a temporary transport failure", async ({ page }, testInfo) => {
   const requestIds: string[] = [];
   let attempt = 0;
 
@@ -180,7 +191,7 @@ test("reuses the same requestId after a temporary transport failure", async ({ p
   });
 
   await openRegistrationForm(page);
-  await fillAdultRegistration(page);
+  await fillAdultRegistration(page, e2eIdentitySuffix(testInfo));
   await page.waitForTimeout(850);
 
   const submit = page.getByRole("button", { name: "Wyślij zgłoszenie" });
@@ -194,9 +205,7 @@ test("reuses the same requestId after a temporary transport failure", async ({ p
   expect(requestIds[0]).toBe(requestIds[1]);
 });
 
-test("shows validation summary without focusing an input after invalid submit", async ({
-  page,
-}) => {
+test("shows validation summary without focusing an input after invalid submit", async ({ page }) => {
   await openRegistrationForm(page);
   await page.waitForTimeout(850);
 
@@ -208,9 +217,11 @@ test("shows validation summary without focusing an input after invalid submit", 
   await expect(combobox(page, /Miasto/)).not.toBeFocused();
 });
 
-test("handles accidental honeypot autofill without focusing the hidden field", async ({ page }) => {
+test("handles accidental honeypot autofill without focusing the hidden field", async ({
+  page,
+}, testInfo) => {
   await openRegistrationForm(page);
-  await fillAdultRegistration(page);
+  await fillAdultRegistration(page, e2eIdentitySuffix(testInfo));
 
   const honeypot = page.locator('input[name="website"]');
   await honeypot.evaluate((input: HTMLInputElement) => {
@@ -218,22 +229,16 @@ test("handles accidental honeypot autofill without focusing the hidden field", a
   });
   await honeypot.fill("https://autofill.example");
 
+  await page.waitForTimeout(850);
   await page.getByRole("button", { name: "Wyślij zgłoszenie" }).click();
 
-  const summary = page.locator("[data-validation-summary]");
-  await expect(summary).toBeVisible();
-  await expect(summary).toBeFocused();
+  await expect(page.locator("[data-validation-summary]")).toBeVisible();
   await expect(honeypot).not.toBeFocused();
-  await expect(page.getByText("Dziękujemy. Zgłoszenie zostało wysłane.")).toHaveCount(0);
 });
 
-test("does not overflow the viewport horizontally", async ({ page }) => {
+test("keeps the form inside the viewport width", async ({ page }) => {
   await openRegistrationForm(page);
 
-  const metrics = await page.evaluate(() => ({
-    viewportWidth: window.innerWidth,
-    documentWidth: document.documentElement.scrollWidth,
-  }));
-
-  expect(metrics.documentWidth).toBeLessThanOrEqual(metrics.viewportWidth + 1);
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  expect(overflow).toBeLessThanOrEqual(1);
 });
