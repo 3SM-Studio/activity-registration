@@ -333,10 +333,7 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
                 }
                 {...register("participantFirstName")}
               />
-              <FieldError
-                id="participantFirstName-error"
-                errors={[errors.participantFirstName]}
-              />
+              <FieldError id="participantFirstName-error" errors={[errors.participantFirstName]} />
             </Field>
 
             <Field data-invalid={Boolean(errors.participantLastName)}>
@@ -354,10 +351,7 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
                 }
                 {...register("participantLastName")}
               />
-              <FieldError
-                id="participantLastName-error"
-                errors={[errors.participantLastName]}
-              />
+              <FieldError id="participantLastName-error" errors={[errors.participantLastName]} />
             </Field>
           </div>
 
@@ -406,10 +400,7 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
                   }
                   {...register("guardianFirstName")}
                 />
-                <FieldError
-                  id="guardianFirstName-error"
-                  errors={[errors.guardianFirstName]}
-                />
+                <FieldError id="guardianFirstName-error" errors={[errors.guardianFirstName]} />
               </Field>
 
               <Field data-invalid={Boolean(errors.guardianLastName)}>
@@ -422,9 +413,7 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
                   autoComplete="family-name"
                   maxLength={100}
                   aria-invalid={Boolean(errors.guardianLastName)}
-                  aria-describedby={
-                    errors.guardianLastName ? "guardianLastName-error" : undefined
-                  }
+                  aria-describedby={errors.guardianLastName ? "guardianLastName-error" : undefined}
                   {...register("guardianLastName")}
                 />
                 <FieldError id="guardianLastName-error" errors={[errors.guardianLastName]} />
