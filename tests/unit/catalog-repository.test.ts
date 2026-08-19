@@ -44,7 +44,13 @@ function createClient(): SheetsClient {
         SHEET_SCHEMA[SHEET.offerings],
         offeringRow("gdynia-hiphop", "gdynia", "Hip-hop", "TAK", 10),
         offeringRow("sopot-hidden", "sopot", "Ukryte", "NIE", 10),
-        offeringRow("inactive-city-class", "inactive-city", "Ukryte", "TAK", 10),
+        offeringRow(
+          "inactive-city-class",
+          "inactive-city",
+          "Ukryte",
+          "TAK",
+          10,
+        ),
       ],
     ],
   ]);
