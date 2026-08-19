@@ -5,10 +5,7 @@ import {
   validateSheetStructure,
 } from "@/infrastructure/google/sheet-admin";
 import { SHEET, SHEET_SCHEMA } from "@/infrastructure/google/sheets-contracts";
-import type {
-  ProtectedRangeMetadata,
-  SheetsClient,
-} from "@/infrastructure/google/sheets-client";
+import type { ProtectedRangeMetadata, SheetsClient } from "@/infrastructure/google/sheets-client";
 
 function createValidationClient(): SheetsClient {
   const rowsByRange = new Map<string, readonly (readonly unknown[])[]>([
