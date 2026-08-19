@@ -56,7 +56,9 @@ test("shows a safe success state for an exact business duplicate", async ({ page
   await page.waitForTimeout(850);
   await page.getByRole("button", { name: "Wyślij zgłoszenie" }).click();
 
-  await expect(page.getByRole("heading", { name: "Takie zgłoszenie jest już w systemie" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Takie zgłoszenie jest już w systemie" }),
+  ).toBeVisible();
   await expect(page.getByText("Nie musisz wysyłać go ponownie.")).toBeVisible();
   await expect(page.getByText(/status|grup|opiekun|notat/i)).toHaveCount(0);
   expect(submittedRequestId).toMatch(/^[0-9a-f-]{36}$/i);
