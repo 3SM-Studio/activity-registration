@@ -20,12 +20,17 @@ type ValuesResponse = Readonly<{
   values?: readonly (readonly unknown[])[];
 }>;
 
+type GridRangeResponse = Readonly<{
+  sheetId?: number;
+  startRowIndex?: number;
+  endRowIndex?: number;
+  startColumnIndex?: number;
+  endColumnIndex?: number;
+}>;
+
 type SpreadsheetMetadataResponse = Readonly<{
   sheets?: readonly {
-    properties?: {
-      sheetId?: number;
-      title?: string;
-    };
+    properties?: { sheetId?: number; title?: string };
     protectedRanges?: readonly {
       protectedRangeId?: number;
       description?: string;
@@ -39,13 +44,7 @@ type SpreadsheetMetadataResponse = Readonly<{
     tables?: readonly {
       tableId?: string;
       name?: string;
-      range?: {
-        sheetId?: number;
-        startRowIndex?: number;
-        endRowIndex?: number;
-        startColumnIndex?: number;
-        endColumnIndex?: number;
-      };
+      range?: GridRangeResponse;
       columnProperties?: readonly {
         columnIndex?: number;
         columnName?: string;
@@ -57,6 +56,15 @@ type SpreadsheetMetadataResponse = Readonly<{
           };
         };
       }[];
+    }[];
+    filterViews?: readonly { filterViewId?: number; title?: string }[];
+    conditionalFormats?: readonly {
+      booleanRule?: {
+        condition?: {
+          type?: string;
+          values?: readonly { userEnteredValue?: string }[];
+        };
+      };
     }[];
   }[];
 }>;
@@ -86,11 +94,23 @@ export type TableMetadata = Readonly<{
   columnProperties: readonly TableColumnMetadata[];
 }>;
 
+export type FilterViewMetadata = Readonly<{
+  filterViewId: number;
+  title: string;
+}>;
+
+export type ConditionalFormatMetadata = Readonly<{
+  index: number;
+  customFormula: string | null;
+}>;
+
 export type SheetMetadata = Readonly<{
   sheetId: number;
   title: string;
   protectedRanges?: readonly ProtectedRangeMetadata[];
   tables?: readonly TableMetadata[];
+  filterViews?: readonly FilterViewMetadata[];
+  conditionalFormats?: readonly ConditionalFormatMetadata[];
 }>;
 
 export type ValueRenderOption = "FORMATTED_VALUE" | "UNFORMATTED_VALUE" | "FORMULA";
@@ -186,11 +206,7 @@ export class GoogleSheetsClient implements SheetsClient {
   ): Promise<void> {
     await this.request(`/values/${encodeURIComponent(range)}?valueInputOption=RAW`, {
       method: "PUT",
-      body: JSON.stringify({
-        range,
-        majorDimension: "ROWS",
-        values,
-      }),
+      body: JSON.stringify({ range, majorDimension: "ROWS", values }),
     });
   }
 
@@ -202,11 +218,7 @@ export class GoogleSheetsClient implements SheetsClient {
       `/values/${encodeURIComponent(range)}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,
       {
         method: "POST",
-        body: JSON.stringify({
-          range,
-          majorDimension: "ROWS",
-          values,
-        }),
+        body: JSON.stringify({ range, majorDimension: "ROWS", values }),
       },
       false,
     );
@@ -267,7 +279,7 @@ export class GoogleSheetsClient implements SheetsClient {
 
   async getSheetMetadata(): Promise<readonly SheetMetadata[]> {
     const data = await this.request<SpreadsheetMetadataResponse>(
-      "?fields=sheets(properties(sheetId,title),protectedRanges(protectedRangeId,description,warningOnly,range(sheetId,startColumnIndex,endColumnIndex)),tables(tableId,name,range(sheetId,startRowIndex,endRowIndex,startColumnIndex,endColumnIndex),columnProperties(columnIndex,columnName,columnType,dataValidationRule(condition(type,values(userEnteredValue))))))",
+      "?fields=sheets(properties(sheetId,title),protectedRanges(protectedRangeId,description,warningOnly,range(sheetId,startColumnIndex,endColumnIndex)),tables(tableId,name,range(sheetId,startRowIndex,endRowIndex,startColumnIndex,endColumnIndex),columnProperties(columnIndex,columnName,columnType,dataValidationRule(condition(type,values(userEnteredValue))))),filterViews(filterViewId,title),conditionalFormats(booleanRule(condition(type,values(userEnteredValue)))))",
     );
 
     return (data.sheets ?? []).flatMap((sheet) => {
@@ -278,14 +290,13 @@ export class GoogleSheetsClient implements SheetsClient {
       }
 
       const protectedRanges = (sheet.protectedRanges ?? []).flatMap((range) => {
-        const protectedRangeId = range.protectedRangeId;
-        if (typeof protectedRangeId !== "number") {
+        if (typeof range.protectedRangeId !== "number") {
           return [];
         }
 
         return [
           {
-            protectedRangeId,
+            protectedRangeId: range.protectedRangeId,
             description: range.description ?? "",
             warningOnly: Boolean(range.warningOnly),
             ...(typeof range.range?.startColumnIndex === "number"
@@ -343,7 +354,22 @@ export class GoogleSheetsClient implements SheetsClient {
         ];
       });
 
-      return [{ sheetId, title, protectedRanges, tables } satisfies SheetMetadata];
+      const filterViews = (sheet.filterViews ?? []).flatMap((filterView) => {
+        if (typeof filterView.filterViewId !== "number" || !filterView.title) {
+          return [];
+        }
+        return [{ filterViewId: filterView.filterViewId, title: filterView.title }];
+      });
+
+      const conditionalFormats = (sheet.conditionalFormats ?? []).map((rule, index) => ({
+        index,
+        customFormula:
+          rule.booleanRule?.condition?.type === "CUSTOM_FORMULA"
+            ? (rule.booleanRule.condition.values?.[0]?.userEnteredValue ?? null)
+            : null,
+      }));
+
+      return [{ sheetId, title, protectedRanges, tables, filterViews, conditionalFormats }];
     });
   }
 
