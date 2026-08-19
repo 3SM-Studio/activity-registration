@@ -80,7 +80,7 @@ Na branchu zawierającym finalne zmiany runtime zweryfikowano:
 - Playwright: 21/21 testów na desktop + 320 px + 430 px,
 - GitHub Actions CI zakończone sukcesem.
 
-Po synchronizacji dokumentacji CI #53 również zakończyło się sukcesem wraz z pełnym `pnpm check` i Critical E2E.
+Po synchronizacji dokumentacji pełny `pnpm check` i Critical E2E również zakończyły się sukcesem.
 
 Dodatkowo zweryfikowano:
 
