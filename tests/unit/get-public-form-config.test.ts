@@ -36,6 +36,9 @@ function createRepositories(
       async findByRequestId() {
         return null;
       },
+      async findPotentialDuplicates() {
+        return [];
+      },
       async create() {},
     },
   };
