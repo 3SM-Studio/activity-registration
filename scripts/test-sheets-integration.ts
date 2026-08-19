@@ -13,11 +13,12 @@ import { cell, createHeaderMap } from "../src/infrastructure/google/header-map";
 import { GoogleSheetsRegistrationRepository } from "../src/infrastructure/google/registration.repository";
 import { validateSheetStructure } from "../src/infrastructure/google/sheet-admin";
 import { REGISTRATION_HEADERS, SHEET } from "../src/infrastructure/google/sheets-contracts";
+import { calculateAgeAtDate, dateOnlyInPoland } from "../src/lib/birth-date";
 import { getServerEnv } from "../src/lib/env";
 import { createRegistrationId } from "../src/lib/ids";
 import { createAdminSheetsClient } from "./_google-admin";
 
-async function clearOwnRegistration(
+async function deleteOwnRegistrationRow(
   client: ReturnType<typeof createAdminSheetsClient>,
   requestId: string,
 ): Promise<void> {
@@ -32,10 +33,24 @@ async function clearOwnRegistration(
     return;
   }
 
-  const spreadsheetRowNumber = rowIndex + 1;
-  await client.clearValues(
-    `${SHEET.registrations}!${spreadsheetRowNumber}:${spreadsheetRowNumber}`,
-  );
+  const metadata = await client.getSheetMetadata();
+  const registrationSheet = metadata.find((sheet) => sheet.title === SHEET.registrations);
+  if (!registrationSheet) {
+    throw new Error("Cannot clean integration row because ZAPISY metadata is missing.");
+  }
+
+  await client.batchUpdate([
+    {
+      deleteDimension: {
+        range: {
+          sheetId: registrationSheet.sheetId,
+          dimension: "ROWS",
+          startIndex: rowIndex,
+          endIndex: rowIndex + 1,
+        },
+      },
+    },
+  ]);
 }
 
 async function main() {
@@ -68,7 +83,10 @@ async function main() {
     throw new Error("TEST catalog offering references a city that is not public.");
   }
 
-  const now = new Date().toISOString();
+  const nowDate = new Date();
+  const now = nowDate.toISOString();
+  const birthDate = "2000-01-15";
+  const ageAtSubmission = calculateAgeAtDate(birthDate, dateOnlyInPoland(nowDate));
   const requestId = asRequestId(randomUUID());
   const registration: Registration = {
     id: createRegistrationId(),
@@ -80,7 +98,8 @@ async function main() {
     offeringNameSnapshot: offering.name,
     participantFirstName: "Integration",
     participantLastName: "Test",
-    age: 18,
+    birthDate,
+    ageAtSubmission,
     guardianFirstName: null,
     guardianLastName: null,
     phone: "+48500000000",
@@ -101,20 +120,22 @@ async function main() {
     created = true;
 
     const stored = await registrationRepository.findByRequestId(requestId);
-    assert(stored, "Synthetic Registration was not readable after append.");
+    assert(stored, "Synthetic Registration was not readable after native table append.");
     assert.equal(stored.id, registration.id);
     assert.equal(stored.requestId, registration.requestId);
     assert.equal(stored.offeringId, registration.offeringId);
     assert.equal(stored.cityIdSnapshot, registration.cityIdSnapshot);
     assert.equal(stored.participantFirstName, "Integration");
     assert.equal(stored.participantLastName, "Test");
+    assert.equal(stored.birthDate, birthDate);
+    assert.equal(stored.ageAtSubmission, ageAtSubmission);
     assert.equal(stored.schemaVersion, REGISTRATION_SCHEMA_VERSION);
 
     console.info(
       JSON.stringify(
         {
           ok: true,
-          test: "real-google-sheets-registration-roundtrip",
+          test: "real-google-sheets-native-table-registration-roundtrip",
           requestId,
           registrationId: registration.id,
         },
@@ -124,7 +145,7 @@ async function main() {
     );
   } finally {
     if (created) {
-      await clearOwnRegistration(client, requestId);
+      await deleteOwnRegistrationRow(client, requestId);
     }
   }
 }

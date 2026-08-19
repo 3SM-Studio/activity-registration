@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { GoogleSheetsSettingsRepository } from "@/infrastructure/google/settings.repository";
 import { SheetSchemaError } from "@/infrastructure/google/header-map";
+import { GoogleSheetsSettingsRepository } from "@/infrastructure/google/settings.repository";
 import type { SheetsClient } from "@/infrastructure/google/sheets-client";
 
 function createClient(values: readonly (readonly unknown[])[]): SheetsClient {
@@ -11,6 +11,7 @@ function createClient(values: readonly (readonly unknown[])[]): SheetsClient {
     },
     async updateValues() {},
     async appendValues() {},
+    async appendTableRow() {},
     async clearValues() {},
     async getSheetMetadata() {
       return [];
@@ -24,7 +25,7 @@ describe("GoogleSheetsSettingsRepository", () => {
     const repository = new GoogleSheetsSettingsRepository(
       createClient([
         ["KEY", "VALUE"],
-        ["SYSTEM_SCHEMA_VERSION", "1"],
+        ["SYSTEM_SCHEMA_VERSION", "2"],
         ["REGISTRATIONS_OPEN", "TAK"],
         ["PUBLIC_FORM_TITLE", "Zapisy 2026"],
         ["SUCCESS_MESSAGE", "Gotowe"],
@@ -46,7 +47,7 @@ describe("GoogleSheetsSettingsRepository", () => {
     const repository = new GoogleSheetsSettingsRepository(
       createClient([
         ["KEY", "VALUE"],
-        ["SYSTEM_SCHEMA_VERSION", "1"],
+        ["SYSTEM_SCHEMA_VERSION", "2"],
         ["REGISTRATIONS_OPEN", "TAK"],
         ["REGISTRATIONS_OPEN", "NIE"],
       ]),
@@ -59,7 +60,7 @@ describe("GoogleSheetsSettingsRepository", () => {
     const repository = new GoogleSheetsSettingsRepository(
       createClient([
         ["KEY", "VALUE"],
-        ["SYSTEM_SCHEMA_VERSION", "2"],
+        ["SYSTEM_SCHEMA_VERSION", "3"],
         ["REGISTRATIONS_OPEN", "TAK"],
         ["PUBLIC_FORM_TITLE", "Zapisy"],
         ["SUCCESS_MESSAGE", "Gotowe"],

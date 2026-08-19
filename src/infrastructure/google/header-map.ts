@@ -50,13 +50,17 @@ export function createHeaderMap(
   return map;
 }
 
-export function cell(row: readonly unknown[], headers: HeaderMap, name: string): string {
+export function rawCell(row: readonly unknown[], headers: HeaderMap, name: string): unknown {
   const index = headers.get(name);
   if (index === undefined) {
     throw new SheetSchemaError(`Header is not available: ${name}`);
   }
 
-  return String(row[index] ?? "").trim();
+  return row[index];
+}
+
+export function cell(row: readonly unknown[], headers: HeaderMap, name: string): string {
+  return String(rawCell(row, headers, name) ?? "").trim();
 }
 
 export function buildRowByHeaders(

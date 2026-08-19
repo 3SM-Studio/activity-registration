@@ -8,7 +8,7 @@ const base = {
   offeringId: "gdynia-hiphop",
   participantFirstName: "Jan",
   participantLastName: "Kowalski",
-  age: 18,
+  birthDate: "2000-01-15",
   phone: "500 000 000",
   email: "jan@example.com",
   renderedAt: Date.now() - 2_000,
@@ -22,7 +22,7 @@ describe("registrationRequestSchema", () => {
   });
 
   it("requires guardian data for a minor", () => {
-    const result = registrationRequestSchema.safeParse({ ...base, age: 17 });
+    const result = registrationRequestSchema.safeParse({ ...base, birthDate: "2010-01-15" });
     expect(result.success).toBe(false);
 
     if (!result.success) {
@@ -35,7 +35,7 @@ describe("registrationRequestSchema", () => {
   it("accepts a minor with guardian data", () => {
     const result = registrationRequestSchema.safeParse({
       ...base,
-      age: 17,
+      birthDate: "2010-01-15",
       guardianFirstName: "Anna",
       guardianLastName: "Kowalska",
     });
@@ -43,8 +43,16 @@ describe("registrationRequestSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("rejects a non-integer age", () => {
-    expect(registrationRequestSchema.safeParse({ ...base, age: 17.5 }).success).toBe(false);
+  it("rejects an invalid calendar date", () => {
+    expect(registrationRequestSchema.safeParse({ ...base, birthDate: "2010-02-31" }).success).toBe(
+      false,
+    );
+  });
+
+  it("rejects a future birth date", () => {
+    expect(registrationRequestSchema.safeParse({ ...base, birthDate: "2999-01-01" }).success).toBe(
+      false,
+    );
   });
 
   it("rejects invalid email", () => {

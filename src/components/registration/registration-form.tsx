@@ -2,12 +2,13 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState, type ChangeEventHandler } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CircleAlert } from "lucide-react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 
 import { APPLICATION_ERROR_CODE } from "@/application/errors";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { BirthDatePicker } from "@/components/ui/birth-date-picker";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -29,6 +30,7 @@ import {
 } from "@/components/ui/select";
 import type { PublicCatalog } from "@/domain/catalog";
 import type { PublicSettings } from "@/domain/settings";
+import { calculateAgeToday } from "@/lib/birth-date";
 import {
   registrationRequestSchema,
   type RegistrationRequest,
@@ -82,6 +84,7 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
       offeringId: "",
       participantFirstName: "",
       participantLastName: "",
+      birthDate: "",
       guardianFirstName: "",
       guardianLastName: "",
       phone: "",
@@ -92,26 +95,14 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
   });
 
   const cityId = useWatch({ control, name: "cityId" });
-  const age = useWatch({ control, name: "age" });
-  const isMinor = typeof age === "number" && Number.isFinite(age) && age < 18;
+  const birthDate = useWatch({ control, name: "birthDate" });
+  const age = birthDate ? calculateAgeToday(birthDate) : null;
+  const isMinor = typeof age === "number" && age >= 0 && age < 18;
 
   const availableOfferings = useMemo(
     () => catalog.offerings.filter((offering) => offering.cityId === cityId),
     [catalog.offerings, cityId],
   );
-
-  const ageRegistration = register("age", { valueAsNumber: true });
-
-  const onAgeChange: ChangeEventHandler<HTMLInputElement> = (event) => {
-    ageRegistration.onChange(event);
-    const numericAge = event.currentTarget.valueAsNumber;
-
-    if (Number.isFinite(numericAge) && numericAge >= 18) {
-      setValue("guardianFirstName", "", { shouldDirty: true });
-      setValue("guardianLastName", "", { shouldDirty: true });
-      clearErrors(["guardianFirstName", "guardianLastName"]);
-    }
-  };
 
   useEffect(() => {
     if (!showValidationSummary) {
@@ -355,25 +346,36 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
             </Field>
           </div>
 
-          <Field className="max-w-48" data-invalid={Boolean(errors.age)}>
-            <FieldLabel htmlFor="age">
-              Wiek <span aria-hidden="true">*</span>
-            </FieldLabel>
-            <Input
-              id="age"
-              required
-              type="number"
-              inputMode="numeric"
-              min={0}
-              max={120}
-              step={1}
-              aria-invalid={Boolean(errors.age)}
-              aria-describedby={errors.age ? "age-error" : undefined}
-              {...ageRegistration}
-              onChange={onAgeChange}
-            />
-            <FieldError id="age-error" errors={[errors.age]} />
-          </Field>
+          <Controller
+            name="birthDate"
+            control={control}
+            render={({ field, fieldState }) => (
+              <Field className="max-w-sm" data-invalid={fieldState.invalid}>
+                <FieldLabel htmlFor="birthDate">
+                  Data urodzenia <span aria-hidden="true">*</span>
+                </FieldLabel>
+                <BirthDatePicker
+                  id="birthDate"
+                  value={field.value ?? ""}
+                  onChange={(nextBirthDate) => {
+                    field.onChange(nextBirthDate);
+                    if (calculateAgeToday(nextBirthDate) >= 18) {
+                      setValue("guardianFirstName", "", { shouldDirty: true });
+                      setValue("guardianLastName", "", { shouldDirty: true });
+                      clearErrors(["guardianFirstName", "guardianLastName"]);
+                    }
+                  }}
+                  onBlur={field.onBlur}
+                  invalid={fieldState.invalid}
+                  describedBy={fieldState.invalid ? "birthDate-error" : "birthDate-description"}
+                />
+                <FieldDescription id="birthDate-description">
+                  Na tej podstawie ustalamy wiek uczestnika i czy potrzebne są dane opiekuna.
+                </FieldDescription>
+                <FieldError id="birthDate-error" errors={[fieldState.error]} />
+              </Field>
+            )}
+          />
         </FieldSet>
 
         {isMinor ? (

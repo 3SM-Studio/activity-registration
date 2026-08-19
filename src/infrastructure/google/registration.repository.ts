@@ -1,5 +1,6 @@
 import type { RegistrationRepository } from "@/domain/repositories";
 import type { Registration, RequestId } from "@/domain/registration";
+import { isoDateToGoogleSerial } from "@/infrastructure/google/google-date";
 import {
   SheetSchemaError,
   buildRowByHeaders,
@@ -7,7 +8,11 @@ import {
   createHeaderMap,
 } from "@/infrastructure/google/header-map";
 import { parseRegistrationRow } from "@/infrastructure/google/parsers";
-import { REGISTRATION_HEADERS, SHEET } from "@/infrastructure/google/sheets-contracts";
+import {
+  REGISTRATION_HEADERS,
+  REGISTRATIONS_TABLE_ID,
+  SHEET,
+} from "@/infrastructure/google/sheets-contracts";
 import type { SheetsClient } from "@/infrastructure/google/sheets-client";
 
 function registrationToCells(
@@ -23,7 +28,8 @@ function registrationToCells(
     OFFERING_NAME_SNAPSHOT: registration.offeringNameSnapshot,
     PARTICIPANT_FIRST_NAME: registration.participantFirstName,
     PARTICIPANT_LAST_NAME: registration.participantLastName,
-    AGE: registration.age,
+    BIRTH_DATE: registration.birthDate ? isoDateToGoogleSerial(registration.birthDate) : "",
+    AGE_AT_SUBMISSION: registration.ageAtSubmission,
     GUARDIAN_FIRST_NAME: registration.guardianFirstName ?? "",
     GUARDIAN_LAST_NAME: registration.guardianLastName ?? "",
     PHONE: registration.phone,
@@ -42,7 +48,9 @@ export class GoogleSheetsRegistrationRepository implements RegistrationRepositor
   constructor(private readonly client: SheetsClient) {}
 
   async findByRequestId(requestId: RequestId): Promise<Registration | null> {
-    const rows = await this.client.getValues(`${SHEET.registrations}!A:ZZ`);
+    const rows = await this.client.getValues(`${SHEET.registrations}!A:ZZ`, {
+      valueRenderOption: "UNFORMATTED_VALUE",
+    });
     const headerRow = rows[0] ?? [];
     const headers = createHeaderMap(headerRow, REGISTRATION_HEADERS);
 
@@ -64,7 +72,6 @@ export class GoogleSheetsRegistrationRepository implements RegistrationRepositor
     createHeaderMap(headerRow, REGISTRATION_HEADERS);
 
     const row = buildRowByHeaders(headerRow, registrationToCells(registration));
-
-    await this.client.appendValues(`${SHEET.registrations}!A:ZZ`, [row]);
+    await this.client.appendTableRow(REGISTRATIONS_TABLE_ID, row);
   }
 }

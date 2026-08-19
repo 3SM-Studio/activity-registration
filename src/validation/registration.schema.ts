@@ -1,4 +1,5 @@
 import { TECHNICAL_ID_PATTERN } from "@/domain/catalog";
+import { calculateAgeToday, isValidIsoDateOnly } from "@/lib/birth-date";
 import { z } from "zod";
 
 const nonEmptyText = (label: string, maxLength = 100) =>
@@ -19,10 +20,9 @@ export const registrationRequestSchema = z
     ),
     participantFirstName: nonEmptyText("Imię", 100),
     participantLastName: nonEmptyText("Nazwisko", 100),
-    age: z
-      .int({ error: "Wiek musi być liczbą całkowitą." })
-      .min(0, { error: "Wiek nie może być ujemny." })
-      .max(120, { error: "Podaj poprawny wiek." }),
+    birthDate: nonEmptyText("Data urodzenia", 10).refine(isValidIsoDateOnly, {
+      message: "Podaj poprawną datę urodzenia.",
+    }),
     guardianFirstName: optionalPersonName,
     guardianLastName: optionalPersonName,
     phone: nonEmptyText("Numer telefonu", 40),
@@ -38,7 +38,30 @@ export const registrationRequestSchema = z
     website: z.string().max(0, "Nieprawidłowe zgłoszenie.").optional().default(""),
   })
   .superRefine((data, context) => {
-    if (data.age < 18 && !data.guardianFirstName) {
+    if (!isValidIsoDateOnly(data.birthDate)) {
+      return;
+    }
+
+    const age = calculateAgeToday(data.birthDate);
+    if (age < 0) {
+      context.addIssue({
+        code: "custom",
+        path: ["birthDate"],
+        message: "Data urodzenia nie może być w przyszłości.",
+      });
+      return;
+    }
+
+    if (age > 120) {
+      context.addIssue({
+        code: "custom",
+        path: ["birthDate"],
+        message: "Podaj poprawną datę urodzenia.",
+      });
+      return;
+    }
+
+    if (age < 18 && !data.guardianFirstName) {
       context.addIssue({
         code: "custom",
         path: ["guardianFirstName"],
@@ -46,7 +69,7 @@ export const registrationRequestSchema = z
       });
     }
 
-    if (data.age < 18 && !data.guardianLastName) {
+    if (age < 18 && !data.guardianLastName) {
       context.addIssue({
         code: "custom",
         path: ["guardianLastName"],

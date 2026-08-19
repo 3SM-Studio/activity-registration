@@ -1,4 +1,5 @@
 import type { City, ClassOffering } from "@/domain/catalog";
+import { REGISTRATION_STATUS } from "@/domain/registration";
 import { DEFAULT_FORM_TITLE, DEFAULT_SUCCESS_MESSAGE } from "@/domain/settings";
 import {
   SheetSchemaError,
@@ -8,13 +9,21 @@ import {
 } from "@/infrastructure/google/header-map";
 import { assertUniqueIds, parseCityRow, parseOfferingRow } from "@/infrastructure/google/parsers";
 import {
+  REGISTRATION_HEADERS,
+  REGISTRATION_TABLE_COLUMNS,
+  REGISTRATIONS_TABLE_ID,
+  REGISTRATIONS_TABLE_NAME,
   SETTING_KEY,
   SETTINGS_HEADERS,
   SHEET,
   SHEET_SCHEMA,
   SYSTEM_SCHEMA_VERSION,
 } from "@/infrastructure/google/sheets-contracts";
-import type { SheetMetadata, SheetsClient } from "@/infrastructure/google/sheets-client";
+import type {
+  SheetMetadata,
+  SheetsClient,
+  TableMetadata,
+} from "@/infrastructure/google/sheets-client";
 
 export type SheetValidationReport = Readonly<{
   sheets: readonly string[];
@@ -39,12 +48,12 @@ const REGISTRATION_PROTECTION_SPECS = [
   {
     description: "activity-registration:system-columns:identity-and-pii",
     startColumnIndex: 0,
-    endColumnIndex: 14,
+    endColumnIndex: 15,
   },
   {
     description: "activity-registration:system-columns:metadata",
-    startColumnIndex: 16,
-    endColumnIndex: 21,
+    startColumnIndex: 17,
+    endColumnIndex: 22,
   },
 ] as const;
 
@@ -113,28 +122,118 @@ async function ensureRegistrationProtections(
     return;
   }
 
-  const existingDescriptions = new Set(
-    (registrationSheet.protectedRanges ?? []).map((range) => range.description),
-  );
-  const requests = REGISTRATION_PROTECTION_SPECS.filter(
-    (spec) => !existingDescriptions.has(spec.description),
-  ).map((spec) => ({
-    addProtectedRange: {
-      protectedRange: {
-        description: spec.description,
-        warningOnly: true,
-        range: {
-          sheetId: registrationSheet.sheetId,
-          startColumnIndex: spec.startColumnIndex,
-          endColumnIndex: spec.endColumnIndex,
+  const requests: Record<string, unknown>[] = [];
+
+  for (const spec of REGISTRATION_PROTECTION_SPECS) {
+    const existing = (registrationSheet.protectedRanges ?? []).find(
+      (range) => range.description === spec.description,
+    );
+
+    if (!existing) {
+      requests.push({
+        addProtectedRange: {
+          protectedRange: {
+            description: spec.description,
+            warningOnly: true,
+            range: {
+              sheetId: registrationSheet.sheetId,
+              startColumnIndex: spec.startColumnIndex,
+              endColumnIndex: spec.endColumnIndex,
+            },
+          },
         },
-      },
-    },
-  }));
+      });
+      continue;
+    }
+
+    if (
+      !existing.warningOnly ||
+      existing.startColumnIndex !== spec.startColumnIndex ||
+      existing.endColumnIndex !== spec.endColumnIndex
+    ) {
+      requests.push({
+        updateProtectedRange: {
+          protectedRange: {
+            protectedRangeId: existing.protectedRangeId,
+            description: spec.description,
+            warningOnly: true,
+            range: {
+              sheetId: registrationSheet.sheetId,
+              startColumnIndex: spec.startColumnIndex,
+              endColumnIndex: spec.endColumnIndex,
+            },
+          },
+          fields: "description,warningOnly,range",
+        },
+      });
+    }
+  }
 
   if (requests.length > 0) {
     await client.batchUpdate(requests);
   }
+}
+
+function registrationTableRange(sheetId: number, rowCount: number) {
+  return {
+    sheetId,
+    startRowIndex: 0,
+    endRowIndex: Math.max(rowCount, 2),
+    startColumnIndex: 0,
+    endColumnIndex: REGISTRATION_HEADERS.length,
+  } as const;
+}
+
+const REGISTRATION_TABLE_ROWS_PROPERTIES = {
+  headerColorStyle: { rgbColor: { red: 0.188, green: 0.122, blue: 0.188 } },
+  firstBandColorStyle: { rgbColor: { red: 1, green: 0.988, blue: 0.969 } },
+  secondBandColorStyle: { rgbColor: { red: 1, green: 0.973, blue: 0.949 } },
+} as const;
+
+async function ensureRegistrationTable(
+  client: SheetsClient,
+  metadata: readonly SheetMetadata[],
+): Promise<void> {
+  const registrationSheet = metadata.find((sheet) => sheet.title === SHEET.registrations);
+  if (!registrationSheet) {
+    return;
+  }
+
+  const rows = await client.getValues(`${SHEET.registrations}!A:ZZ`);
+  const table = (registrationSheet.tables ?? []).find(
+    (candidate) => candidate.tableId === REGISTRATIONS_TABLE_ID,
+  );
+
+  const tableDefinition = {
+    tableId: REGISTRATIONS_TABLE_ID,
+    name: REGISTRATIONS_TABLE_NAME,
+    range: registrationTableRange(registrationSheet.sheetId, rows.length),
+    rowsProperties: REGISTRATION_TABLE_ROWS_PROPERTIES,
+    columnProperties: REGISTRATION_TABLE_COLUMNS,
+  } as const;
+
+  if (!table) {
+    const conflictingTable = (registrationSheet.tables ?? []).find(
+      (candidate) => candidate.name === REGISTRATIONS_TABLE_NAME,
+    );
+    if (conflictingTable) {
+      throw new SheetSchemaError(
+        `ZAPISY table name ${REGISTRATIONS_TABLE_NAME} already exists with an unexpected table ID.`,
+      );
+    }
+
+    await client.batchUpdate([{ addTable: { table: tableDefinition } }]);
+    return;
+  }
+
+  await client.batchUpdate([
+    {
+      updateTable: {
+        table: tableDefinition,
+        fields: "name,range,rowsProperties,columnProperties",
+      },
+    },
+  ]);
 }
 
 function warnAboutRegistrationProtections(
@@ -162,6 +261,51 @@ function warnAboutRegistrationProtections(
       protection.endColumnIndex !== spec.endColumnIndex
     ) {
       warnings.push(`ZAPISY protection is inconsistent: ${spec.description}. Run sheet:bootstrap.`);
+    }
+  }
+}
+
+function assertRegistrationTable(table: TableMetadata | undefined): void {
+  if (!table) {
+    throw new SheetSchemaError(
+      `Missing native ZAPISY table ${REGISTRATIONS_TABLE_NAME}. Run sheet:bootstrap.`,
+    );
+  }
+
+  if (
+    table.name !== REGISTRATIONS_TABLE_NAME ||
+    table.startRowIndex !== 0 ||
+    table.startColumnIndex !== 0 ||
+    table.endColumnIndex !== REGISTRATION_HEADERS.length
+  ) {
+    throw new SheetSchemaError(
+      `Native ZAPISY table ${REGISTRATIONS_TABLE_NAME} has an invalid range.`,
+    );
+  }
+
+  for (const expected of REGISTRATION_TABLE_COLUMNS) {
+    const actual = table.columnProperties.find(
+      (column) => column.columnIndex === expected.columnIndex,
+    );
+    if (
+      !actual ||
+      actual.columnName !== expected.columnName ||
+      actual.columnType !== expected.columnType
+    ) {
+      throw new SheetSchemaError(
+        `Native ZAPISY table column ${expected.columnName} has an invalid contract.`,
+      );
+    }
+
+    if (expected.columnName === "STATUS") {
+      const actualValues = new Set(actual.dropdownValues ?? []);
+      const expectedValues = Object.values(REGISTRATION_STATUS);
+      if (
+        actualValues.size !== expectedValues.length ||
+        expectedValues.some((value) => !actualValues.has(value))
+      ) {
+        throw new SheetSchemaError("Native ZAPISY STATUS dropdown has invalid values.");
+      }
     }
   }
 }
@@ -206,6 +350,7 @@ export async function bootstrapSheetStructure(client: SheetsClient): Promise<voi
 
   await ensureDefaultSettings(client);
   await ensureRegistrationProtections(client, metadata);
+  await ensureRegistrationTable(client, metadata);
 }
 
 export async function validateSheetStructure(client: SheetsClient): Promise<SheetValidationReport> {
@@ -221,6 +366,11 @@ export async function validateSheetStructure(client: SheetsClient): Promise<Shee
     const headerRows = await client.getValues(`${title}!1:1`);
     createHeaderMap(headerRows[0] ?? [], requiredHeaders);
   }
+
+  const registrationSheet = metadata.find((sheet) => sheet.title === SHEET.registrations);
+  assertRegistrationTable(
+    registrationSheet?.tables?.find((table) => table.tableId === REGISTRATIONS_TABLE_ID),
+  );
 
   const [cityRows, offeringRows, settingsRows] = await Promise.all([
     client.getValues(`${SHEET.cities}!A:ZZ`),

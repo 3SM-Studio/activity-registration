@@ -27,7 +27,8 @@ function registration(overrides: Partial<Registration> = {}): Registration {
     offeringNameSnapshot: "Teatr muzyczny",
     participantFirstName: "Jan",
     participantLastName: "Kowalski",
-    age: 14,
+    birthDate: "2012-01-15",
+    ageAtSubmission: 14,
     guardianFirstName: "Anna",
     guardianLastName: "Kowalska",
     phone: "+48500000000",
@@ -78,6 +79,7 @@ describe("registration notifications", () => {
     });
     expect(messages[1]?.text).toContain("Rodzic/opiekun");
     expect(messages[1]?.text).toContain("Anna Kowalska");
+    expect(messages[1]?.text).toContain("2012-01-15");
   });
 
   it("escapes participant-controlled values in rendered HTML", async () => {
