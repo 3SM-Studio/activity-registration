@@ -1,0 +1,73 @@
+name: Verify phone E2E
+
+on:
+  push:
+    branches:
+      - feat/phone-input
+    paths:
+      - .github/workflows/verify-phone-e2e.yml
+
+permissions:
+  contents: read
+
+jobs:
+  phone-e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: feat/phone-input
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11.20.0
+          run_install: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24.19.0
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Verify hosted Chrome
+        run: google-chrome --version
+      - name: Create targeted Playwright config
+        run: |
+          cat > playwright.phone-ci.config.ts <<'EOF'
+          import { defineConfig, devices } from "@playwright/test";
+
+          export default defineConfig({
+            testDir: "./tests/e2e",
+            fullyParallel: false,
+            forbidOnly: true,
+            retries: 0,
+            workers: 1,
+            reporter: "line",
+            use: {
+              baseURL: "http://localhost:3000",
+              channel: "chrome",
+            },
+            webServer: {
+              command: "pnpm dev",
+              url: "http://localhost:3000",
+              reuseExistingServer: false,
+              env: {
+                APP_ENV: "test",
+                DATA_BACKEND: "memory",
+              },
+            },
+            projects: [
+              {
+                name: "hosted-chrome",
+                use: {
+                  ...devices["Desktop Chrome"],
+                  channel: "chrome",
+                },
+              },
+            ],
+          });
+          EOF
+      - name: Verify phone country selector and formatting
+        run: >-
+          pnpm exec playwright test
+          tests/e2e/registration.spec.ts
+          --config=playwright.phone-ci.config.ts
+          --grep="formats a Polish phone number and exposes the country selector"
