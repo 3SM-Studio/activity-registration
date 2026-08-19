@@ -56,7 +56,7 @@ const baseRequest = {
   offeringId: "gdynia-hiphop",
   participantFirstName: "Jan",
   participantLastName: "Kowalski",
-  age: 18,
+  birthDate: "2000-01-15",
   phone: "500 000 000",
   email: "JAN@EXAMPLE.COM",
   renderedAt: Date.now() - 2_000,
@@ -88,7 +88,7 @@ describe("submitRegistration", () => {
     registrations = new FakeRegistrationRepository();
   });
 
-  it("creates a normalized registration with snapshots", async () => {
+  it("creates a normalized registration with birth date and snapshots", async () => {
     const result = await submitRegistration(baseRequest, {
       repositories: createRepositories(registrations),
       now: () => new Date("2026-08-18T12:00:00.000Z"),
@@ -102,11 +102,13 @@ describe("submitRegistration", () => {
       cityIdSnapshot: "gdynia",
       cityNameSnapshot: "Gdynia",
       offeringNameSnapshot: "Hip-hop",
+      birthDate: "2000-01-15",
+      ageAtSubmission: 26,
       phone: "+48500000000",
       email: "jan@example.com",
       guardianFirstName: null,
       guardianLastName: null,
-      schemaVersion: 1,
+      schemaVersion: 2,
     });
   });
 
@@ -149,7 +151,7 @@ describe("submitRegistration", () => {
     expect(registrations.records).toHaveLength(2);
   });
 
-  it("drops guardian data when age is adult", async () => {
+  it("drops guardian data when birth date resolves to an adult", async () => {
     await submitRegistration(
       {
         ...baseRequest,
