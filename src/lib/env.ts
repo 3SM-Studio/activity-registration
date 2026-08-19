@@ -69,10 +69,7 @@ const serverEnvSchema = z
       });
     }
 
-    if (
-      env.DATA_BACKEND === "google-sheets" &&
-      (env.VERCEL || env.VERCEL_OIDC_TOKEN)
-    ) {
+    if (env.DATA_BACKEND === "google-sheets" && (env.VERCEL || env.VERCEL_OIDC_TOKEN)) {
       for (const key of oidcKeys) {
         if (!env[key]) {
           context.addIssue({
