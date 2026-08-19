@@ -11,7 +11,19 @@ function offeringRow(
   active: string,
   sortOrder: number,
 ): readonly unknown[] {
-  return [id, cityId, name, "", active, sortOrder, "ROLLING", "CLOSED", "", "", "FALSE"];
+  return [
+    id,
+    cityId,
+    name,
+    "",
+    active,
+    sortOrder,
+    "ROLLING",
+    "CLOSED",
+    "",
+    "",
+    "FALSE",
+  ];
 }
 
 function createClient(): SheetsClient {
