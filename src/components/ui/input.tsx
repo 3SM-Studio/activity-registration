@@ -13,7 +13,7 @@ function Input({
   const sanitizeAsPersonName = autoComplete === "given-name" || autoComplete === "family-name";
   const sanitizeAsEmail = type === "email";
 
-  const handleInput: React.FormEventHandler<HTMLInputElement> = (event) => {
+  const handleInput: React.InputEventHandler<HTMLInputElement> = (event) => {
     if (sanitizeAsPersonName) {
       event.currentTarget.value = sanitizePersonNameWhileTyping(event.currentTarget.value);
     } else if (sanitizeAsEmail) {
