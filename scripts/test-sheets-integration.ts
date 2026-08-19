@@ -200,7 +200,8 @@ async function main() {
       "Exact duplicate detection must not append another row.",
     );
 
-    const probableCandidates = await registrationRepository.findPotentialDuplicates(probableCriteria);
+    const probableCandidates =
+      await registrationRepository.findPotentialDuplicates(probableCriteria);
     const probableMatch = classifyRegistrationDuplicates(probableCandidates, probableCriteria);
     assert.equal(probableMatch.kind, "probable");
     if (probableMatch.kind !== "probable") {
