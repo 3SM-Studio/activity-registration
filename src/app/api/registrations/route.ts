@@ -138,9 +138,10 @@ export async function POST(request: Request) {
       ...(requestId ? { requestId } : {}),
       registrationId: result.registrationId,
       idempotentReplay: result.idempotentReplay,
+      businessDuplicate: result.businessDuplicate,
     });
 
-    if (notificationDependencies && !result.idempotentReplay) {
+    if (notificationDependencies && !result.idempotentReplay && !result.businessDuplicate) {
       after(async () => {
         try {
           const notificationResult = await sendRegistrationNotifications(
@@ -174,8 +175,9 @@ export async function POST(request: Request) {
       {
         ok: true,
         registrationId: result.registrationId,
+        duplicate: result.businessDuplicate,
       },
-      { status: result.idempotentReplay ? 200 : 201 },
+      { status: result.idempotentReplay || result.businessDuplicate ? 200 : 201 },
     );
   } catch (error) {
     if (error instanceof ApplicationError) {
