@@ -1,6 +1,12 @@
 import { APPLICATION_ERROR_CODE, ApplicationError } from "@/application/errors";
-import type { City, ClassOffering } from "@/domain/catalog";
-import { asCityId, asOfferingId } from "@/domain/catalog";
+import {
+  PUBLIC_INTAKE_STATUS,
+  asCityId,
+  asOfferingId,
+  type City,
+  type PublicOffering,
+} from "@/domain/catalog";
+import { offeringAcceptsRegistration } from "@/domain/offering-intake";
 import type { ApplicationRepositories } from "@/domain/repositories";
 import {
   REGISTRATION_SCHEMA_VERSION,
@@ -70,10 +76,18 @@ function findCity(
 }
 
 function findOffering(
-  offerings: readonly Pick<ClassOffering, "id" | "cityId" | "name">[],
+  offerings: readonly PublicOffering[],
   offeringId: string,
-): Pick<ClassOffering, "id" | "cityId" | "name"> | null {
+): PublicOffering | null {
   return offerings.find((offering) => offering.id === offeringId) ?? null;
+}
+
+function unavailableOfferingMessage(offering: PublicOffering): string {
+  if (offering.intakeStatus === PUBLIC_INTAKE_STATUS.upcoming) {
+    return "Zapisy na wybrane zajęcia jeszcze się nie rozpoczęły.";
+  }
+
+  return "Zapisy na wybrane zajęcia są obecnie zamknięte.";
 }
 
 export async function submitRegistration(
@@ -144,8 +158,9 @@ export async function submitRegistration(
     };
   }
 
+  const currentDate = dateOnlyInPoland(nowDate);
   const [catalog, settings] = await Promise.all([
-    dependencies.repositories.catalog.getPublicCatalog(),
+    dependencies.repositories.catalog.getPublicCatalog(currentDate),
     dependencies.repositories.settings.getPublicSettings(),
   ]);
 
@@ -201,6 +216,13 @@ export async function submitRegistration(
     throw new ApplicationError(
       APPLICATION_ERROR_CODE.offeringCityMismatch,
       "Wybrane zajęcia nie należą do wybranego miasta.",
+    );
+  }
+
+  if (!offeringAcceptsRegistration(offering.intakeStatus)) {
+    throw new ApplicationError(
+      APPLICATION_ERROR_CODE.offeringNotAvailable,
+      unavailableOfferingMessage(offering),
     );
   }
 
