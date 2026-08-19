@@ -46,22 +46,22 @@ describe("GoogleSheetsClient", () => {
   });
 
   it("appends a registration through AppendCellsRequest tableId", async () => {
-    const fetchMock = vi.fn(
-      async () =>
-        new Response(JSON.stringify({ replies: [] }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        }),
-    );
-    vi.stubGlobal("fetch", fetchMock);
+    const calls: Array<Readonly<{ input: RequestInfo | URL; init?: RequestInit }>> = [];
+    const fetchStub = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      calls.push({ input, ...(init ? { init } : {}) });
+      return new Response(JSON.stringify({ replies: [] }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }) as typeof fetch;
+    vi.stubGlobal("fetch", fetchStub);
 
     const client = new GoogleSheetsClient(env, "sheet-id");
     await client.appendTableRow("900001", ["reg_1", 42, true]);
 
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    const [, init] = fetchMock.mock.calls[0] ?? [];
-    expect(init).toEqual(expect.objectContaining({ method: "POST" }));
-    expect(JSON.parse(String(init?.body))).toEqual({
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.init).toEqual(expect.objectContaining({ method: "POST" }));
+    expect(JSON.parse(String(calls[0]?.init?.body))).toEqual({
       requests: [
         {
           appendCells: {
