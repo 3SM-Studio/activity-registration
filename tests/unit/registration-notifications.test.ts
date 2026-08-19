@@ -6,7 +6,7 @@ import {
   type EmailMessage,
   type EmailSender,
 } from "@/application/registration-notifications";
-import { asCityId, asOfferingId } from "@/domain/catalog";
+import { asCityId, asOfferingId, asSeasonId } from "@/domain/catalog";
 import {
   REGISTRATION_SCHEMA_VERSION,
   REGISTRATION_SOURCE,
@@ -21,6 +21,8 @@ function registration(overrides: Partial<Registration> = {}): Registration {
     id: asRegistrationId("reg_11111111-1111-4111-8111-111111111111"),
     requestId: asRequestId("22222222-2222-4222-8222-222222222222"),
     submittedAt: "2026-08-18T18:00:00.000Z",
+    seasonId: asSeasonId("test-2026-2027"),
+    seasonNameSnapshot: "2026/2027",
     offeringId: asOfferingId("gdynia-musical"),
     cityIdSnapshot: asCityId("gdynia"),
     cityNameSnapshot: "Gdynia",
@@ -34,6 +36,10 @@ function registration(overrides: Partial<Registration> = {}): Registration {
     phone: "+48500000000",
     email: "anna@example.com",
     status: REGISTRATION_STATUS.new,
+    assignedGroupId: null,
+    contactedAt: null,
+    confirmedAt: null,
+    possibleDuplicateOf: null,
     notes: "",
     privacyNoticeVersion: "v1",
     source: REGISTRATION_SOURCE.web,
