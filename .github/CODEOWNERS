@@ -1,0 +1,8 @@
+# Default maintainer for this repository.
+* @michal-szwindowski
+
+# Explicitly keep sensitive project surfaces owned by the maintainer.
+/.github/ @michal-szwindowski
+/docs/ @michal-szwindowski
+/src/app/api/ @michal-szwindowski
+/src/infrastructure/ @michal-szwindowski
