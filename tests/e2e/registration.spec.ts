@@ -26,7 +26,12 @@ async function chooseBirthDate(page: Page, year: string, monthIndex: number, day
   await expect(dropdowns).toHaveCount(2);
   await dropdowns.nth(1).selectOption({ label: year });
   await dropdowns.nth(0).selectOption({ index: monthIndex });
-  await calendar.getByRole("button", { name: day, exact: true }).click();
+
+  const dayButton = calendar.locator("button[data-day]").filter({
+    hasText: new RegExp(`^${day}$`),
+  });
+  await expect(dayButton).toHaveCount(1);
+  await dayButton.click();
 }
 
 async function fillAdultRegistration(page: Page) {
