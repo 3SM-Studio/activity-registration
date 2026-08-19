@@ -2,10 +2,12 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, type ChangeEventHandler } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEventHandler } from "react";
+import { CircleAlert } from "lucide-react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 
 import { APPLICATION_ERROR_CODE } from "@/application/errors";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -48,6 +50,8 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
   const [initialRequestId] = useState(newRequestId);
   const [success, setSuccess] = useState(false);
   const [globalError, setGlobalError] = useState<string | null>(null);
+  const [showValidationSummary, setShowValidationSummary] = useState(false);
+  const validationSummaryRef = useRef<HTMLDivElement>(null);
 
   const {
     register,
@@ -59,6 +63,7 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
     formState: { errors, isSubmitting },
   } = useForm<RegistrationRequestInput, unknown, RegistrationRequest>({
     resolver: zodResolver(registrationRequestSchema),
+    shouldFocusError: false,
     defaultValues: {
       requestId: initialRequestId,
       cityId: "",
@@ -106,8 +111,27 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
     }
   };
 
+  useEffect(() => {
+    if (!showValidationSummary) {
+      return;
+    }
+
+    const frame = requestAnimationFrame(() => {
+      validationSummaryRef.current?.focus({ preventScroll: true });
+      validationSummaryRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [showValidationSummary]);
+
+  const invalid = () => {
+    setGlobalError(null);
+    setShowValidationSummary(true);
+  };
+
   const submit = async (data: RegistrationRequest) => {
     setGlobalError(null);
+    setShowValidationSummary(false);
 
     try {
       const response = await fetch("/api/registrations", {
@@ -208,7 +232,7 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
           }
         }}
         noValidate
-        onSubmit={handleSubmit(submit)}
+        onSubmit={handleSubmit(submit, invalid)}
         className="space-y-7"
       >
         <div className="grid gap-5 sm:grid-cols-2">
@@ -436,9 +460,16 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
         <input
           type="text"
           tabIndex={-1}
+          inputMode="none"
           autoComplete="off"
+          readOnly
+          data-lpignore="true"
+          data-1p-ignore="true"
           className="absolute left-[-9999px] h-px w-px opacity-0"
           aria-hidden="true"
+          onFocus={(event) => {
+            event.currentTarget.readOnly = false;
+          }}
           {...register("website")}
         />
         <input type="hidden" {...register("requestId")} />
@@ -459,6 +490,24 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
           </p>
         ) : null}
 
+        {showValidationSummary ? (
+          <div
+            ref={validationSummaryRef}
+            tabIndex={-1}
+            data-validation-summary
+            className="scroll-m-6 outline-none"
+          >
+            <Alert variant="destructive">
+              <CircleAlert aria-hidden="true" />
+              <AlertTitle>Sprawdź formularz</AlertTitle>
+              <AlertDescription>
+                Co najmniej jedno pole wymaga poprawy. Błędy są zaznaczone bezpośrednio przy
+                odpowiednich polach.
+              </AlertDescription>
+            </Alert>
+          </div>
+        ) : null}
+
         {globalError ? (
           <div
             role="alert"
@@ -468,7 +517,12 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
           </div>
         ) : null}
 
-        <Button type="submit" disabled={isSubmitting || !settings.registrationsOpen}>
+        <Button
+          type="submit"
+          size="lg"
+          className="w-full"
+          disabled={isSubmitting || !settings.registrationsOpen}
+        >
           {isSubmitting
             ? "Wysyłanie..."
             : settings.registrationsOpen
