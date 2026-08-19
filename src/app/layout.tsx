@@ -4,8 +4,8 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Zapisy na zajęcia",
-  description: "Formularz zapisów na zajęcia.",
+  title: "Zapisy na zajęcia | Pracownia Twórcza Pozytywka",
+  description: "Formularz zapisów na zajęcia Pracowni Twórczej Pozytywka.",
   robots: {
     index: false,
     follow: false,
