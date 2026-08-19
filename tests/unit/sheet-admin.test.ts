@@ -1,8 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { validateSheetStructure } from "@/infrastructure/google/sheet-admin";
+import {
+  bootstrapSheetStructure,
+  validateSheetStructure,
+} from "@/infrastructure/google/sheet-admin";
 import { SHEET, SHEET_SCHEMA } from "@/infrastructure/google/sheets-contracts";
-import type { SheetsClient } from "@/infrastructure/google/sheets-client";
+import type {
+  ProtectedRangeMetadata,
+  SheetsClient,
+} from "@/infrastructure/google/sheets-client";
 
 function createValidationClient(): SheetsClient {
   const rowsByRange = new Map<string, readonly (readonly unknown[])[]>([
@@ -24,7 +30,11 @@ function createValidationClient(): SheetsClient {
     ],
     [
       `${SHEET.cities}!A:ZZ`,
-      [SHEET_SCHEMA[SHEET.cities], ["gdynia", "Gdynia", "TAK", 10], ["broken-city", "", "TAK", 20]],
+      [
+        SHEET_SCHEMA[SHEET.cities],
+        ["gdynia", "Gdynia", "TAK", 10],
+        ["broken-city", "", "TAK", 20],
+      ],
     ],
     [
       `${SHEET.offerings}!A:ZZ`,
@@ -54,6 +64,46 @@ function createValidationClient(): SheetsClient {
   };
 }
 
+function createBootstrapClient(protectedRanges: readonly ProtectedRangeMetadata[] = []) {
+  const batchRequests: Record<string, unknown>[] = [];
+  const rowsByRange = new Map<string, readonly (readonly unknown[])[]>();
+
+  for (const [title, headers] of Object.entries(SHEET_SCHEMA)) {
+    rowsByRange.set(`${title}!1:1`, [headers]);
+  }
+
+  rowsByRange.set(`${SHEET.settings}!A:ZZ`, [
+    SHEET_SCHEMA[SHEET.settings],
+    ["SYSTEM_SCHEMA_VERSION", "1"],
+    ["REGISTRATIONS_OPEN", "NIE"],
+    ["PUBLIC_FORM_TITLE", "Zapisy"],
+    ["SUCCESS_MESSAGE", "Dziękujemy"],
+    ["PRIVACY_NOTICE_URL", ""],
+    ["PRIVACY_NOTICE_VERSION", ""],
+  ]);
+
+  const client: SheetsClient = {
+    async getValues(range) {
+      return rowsByRange.get(range) ?? [];
+    },
+    async updateValues() {},
+    async appendValues() {},
+    async clearValues() {},
+    async getSheetMetadata() {
+      return Object.keys(SHEET_SCHEMA).map((title, index) => ({
+        title,
+        sheetId: index + 1,
+        ...(title === SHEET.registrations ? { protectedRanges } : {}),
+      }));
+    },
+    async batchUpdate(requests) {
+      batchRequests.push(...requests);
+    },
+  };
+
+  return { client, batchRequests };
+}
+
 describe("validateSheetStructure", () => {
   it("reports malformed catalog rows and dangling city references", async () => {
     const report = await validateSheetStructure(createValidationClient());
@@ -68,6 +118,7 @@ describe("validateSheetStructure", () => {
       ]),
     );
   });
+
   it("warns about invalid registration toggle and incomplete privacy configuration", async () => {
     const client = createValidationClient();
     const originalGetValues = client.getValues.bind(client);
@@ -94,5 +145,59 @@ describe("validateSheetStructure", () => {
         expect.stringContaining("privacy notice URL and version"),
       ]),
     );
+  });
+});
+
+describe("bootstrapSheetStructure", () => {
+  it("adds warning protections for system registration columns", async () => {
+    const { client, batchRequests } = createBootstrapClient();
+
+    await bootstrapSheetStructure(client);
+
+    const protectedRanges = batchRequests.flatMap((request) => {
+      const addProtectedRange = request.addProtectedRange as
+        | { protectedRange?: Record<string, unknown> }
+        | undefined;
+      return addProtectedRange?.protectedRange ? [addProtectedRange.protectedRange] : [];
+    });
+
+    expect(protectedRanges).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          description: "activity-registration:system-columns:identity-and-pii",
+          warningOnly: true,
+          range: expect.objectContaining({ startColumnIndex: 0, endColumnIndex: 14 }),
+        }),
+        expect.objectContaining({
+          description: "activity-registration:system-columns:metadata",
+          warningOnly: true,
+          range: expect.objectContaining({ startColumnIndex: 16, endColumnIndex: 21 }),
+        }),
+      ]),
+    );
+  });
+
+  it("does not duplicate existing registration protections", async () => {
+    const existing: readonly ProtectedRangeMetadata[] = [
+      {
+        protectedRangeId: 101,
+        description: "activity-registration:system-columns:identity-and-pii",
+        warningOnly: true,
+        startColumnIndex: 0,
+        endColumnIndex: 14,
+      },
+      {
+        protectedRangeId: 102,
+        description: "activity-registration:system-columns:metadata",
+        warningOnly: true,
+        startColumnIndex: 16,
+        endColumnIndex: 21,
+      },
+    ];
+    const { client, batchRequests } = createBootstrapClient(existing);
+
+    await bootstrapSheetStructure(client);
+
+    expect(batchRequests.some((request) => "addProtectedRange" in request)).toBe(false);
   });
 });
