@@ -52,7 +52,10 @@ type ApiErrorResponse = Readonly<{
 type ApiSuccessResponse = Readonly<{
   ok: true;
   registrationId: string;
+  duplicate: boolean;
 }>;
+
+type SuccessState = "created" | "duplicate" | null;
 
 function newRequestId(): string {
   return crypto.randomUUID();
@@ -82,7 +85,7 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
   const router = useRouter();
   const [renderedAt] = useState(() => Date.now());
   const [initialRequestId] = useState(newRequestId);
-  const [success, setSuccess] = useState(false);
+  const [successState, setSuccessState] = useState<SuccessState>(null);
   const [globalError, setGlobalError] = useState<string | null>(null);
   const [showValidationSummary, setShowValidationSummary] = useState(false);
   const validationSummaryRef = useRef<HTMLDivElement>(null);
@@ -199,7 +202,7 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
         return;
       }
 
-      setSuccess(true);
+      setSuccessState(payload.duplicate ? "duplicate" : "created");
     } catch {
       setGlobalError(
         "Nie udało się połączyć z systemem zapisów. Twoje dane pozostały w formularzu. Spróbuj ponownie.",
@@ -225,7 +228,7 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
     );
   }
 
-  if (success) {
+  if (successState) {
     return (
       <Card className="text-center" aria-live="polite">
         <div
@@ -234,8 +237,14 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
         >
           ✓
         </div>
-        <h2 className="text-xl font-semibold text-foreground">Zgłoszenie przyjęte</h2>
-        <p className="mt-2 text-muted-foreground">{settings.successMessage}</p>
+        <h2 className="text-xl font-semibold text-foreground">
+          {successState === "duplicate" ? "Takie zgłoszenie jest już w systemie" : "Zgłoszenie przyjęte"}
+        </h2>
+        <p className="mt-2 text-muted-foreground">
+          {successState === "duplicate"
+            ? "Nie musisz wysyłać go ponownie. Pozytywka skontaktuje się z Tobą po jego weryfikacji."
+            : settings.successMessage}
+        </p>
       </Card>
     );
   }
