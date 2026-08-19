@@ -1,87 +1,209 @@
 # Release checklist
 
-## Product
+This checklist reflects the approved v3 direction. Items marked complete describe already verified v2 foundations. v3 runtime work remains staged and must not be treated as complete because documentation exists.
 
-- [ ] miasta zatwierdzone przez Pozytywkę
-- [ ] oferty zatwierdzone przez Pozytywkę
-- [ ] success copy zatwierdzone
-- [ ] finalny publiczny adres/domena formularza zatwierdzona
-- [ ] warstwa wizualna zaakceptowana
+## Product truth
 
-## Google Sheets
+- [x] canonical v3 product definition written
+- [x] request is explicitly defined as requiring Pozytywka review/contact before place confirmation
+- [x] public Offering is separated conceptually from internal Group
+- [x] waiting-list workflow approved as product requirement
+- [x] adult participant support remains required
+- [x] full DOB has documented business purpose
+- [ ] real city list approved by Iwona
+- [ ] real offering list approved by Iwona
+- [ ] real internal group catalog provided by Iwona
+- [ ] exact theatre/window/casting rules confirmed
+- [ ] prices/payment rules confirmed where relevant to later public copy
+- [ ] contract-conclusion process confirmed
+- [ ] resignation rules confirmed
+- [ ] final success copy approved
+- [ ] final public address/domain approved
+- [ ] final visual layer approved by Pozytywka
 
-- [x] osobne TEST i PROD
-- [x] TEST Sheet działa z Vercel Preview przez WIF
-- [ ] `sheet:validate` przechodzi na finalnym PROD
-- [ ] `diagnostics` przechodzi na finalnym PROD
-- [x] techniczne kolumny `ZAPISY` mają warning-only protection; `STATUS` i `NOTES` pozostają operacyjne
-- [ ] dostęp do PROD ograniczony do zatwierdzonych operatorów i PROD service accountu
-- [x] TEST service account nie ma dostępu do PROD Sheet
-- [x] PROD `REGISTRATIONS_OPEN` jest obecnie `FALSE` i pozostaje zamknięte do ostatniego gate
+## v3 domain/schema
 
-## Privacy
+- [ ] `SEZONY` implemented and validated
+- [ ] `CURRENT_SEASON_ID` implemented
+- [ ] `GRUPY` implemented as internal catalog
+- [ ] Offering supports `ROLLING` / `WINDOWED`
+- [ ] Offering supports `OPEN` / `WAITLIST_ONLY` / `CLOSED`
+- [ ] window-date validation implemented
+- [ ] v3 status enum implemented
+- [ ] `ASSIGNED_GROUP_ID` implemented
+- [ ] `CONTACTED_AT` implemented
+- [ ] `CONFIRMED_AT` implemented
+- [ ] `POSSIBLE_DUPLICATE_OF` implemented
+- [ ] schema v2 -> v3 migration implemented and idempotent
+- [ ] `SYSTEM_SCHEMA_VERSION=3` only after successful migration
+- [ ] historical v1/v2 values preserved without fabrication
 
-- [ ] privacy notice zatwierdzona
-- [ ] `PRIVACY_NOTICE_URL` ustawione w PROD
-- [ ] `PRIVACY_NOTICE_VERSION` ustawione w PROD
-- [ ] retencja zatwierdzona
-- [ ] procedura retencji zapisana operacyjnie
+## Business deduplication
+
+- [x] same-request `requestId` transport idempotency exists
+- [ ] exact active business duplicate does not append a second row
+- [ ] probable duplicate with changed contact is accepted and internally flagged
+- [ ] different offering remains a valid separate request
+- [ ] different season remains a valid separate request
+- [ ] `REJECTED`/`CANCELLED` previous request may be resubmitted
+- [ ] legacy row without DOB never hard-blocks using guessed identity
+- [ ] reconciliation reports business duplicate candidates without logging PII
+- [ ] concurrency limitation of Sheets dedupe is documented and accepted
+
+## Public UX
+
+- [x] shadcn/Radix form foundation
+- [x] international phone input + country flags + E.164 storage
+- [x] shadcn DOB picker
+- [x] name/email whitespace hygiene
+- [x] minor/adult conditional guardian flow
+- [x] E2E desktop/mobile coverage exists
+- [ ] fake stepper removed/redesigned
+- [ ] page explains mandatory review/contact before submit
+- [ ] DOB description explains age-group matching purpose
+- [ ] pre-submit copy says request is not place confirmation
+- [ ] normal success screen explains what happens next
+- [ ] exact-duplicate success screen is privacy-safe
+- [ ] participant email explains mandatory review/contact
+- [ ] admin email prioritizes operator data and probable-duplicate warning
+- [ ] `Zapisz kolejne dziecko` flow implemented
+- [ ] `Wyślij zgłoszenie na inne zajęcia` flow implemented
+- [ ] no old request ID reuse in repeat flow
+
+## Google Sheets / operator experience
+
+- [x] separate TEST and PROD spreadsheets
+- [x] TEST Sheet works from Vercel Preview through WIF
+- [x] `ZAPISY` is a native Google Sheets Table
+- [x] technical columns have warning-only protection in current schema
+- [x] current `STATUS` and `NOTES` are operator-editable
+- [ ] TEST backup created immediately before v3 migration
+- [ ] TEST v3 migration verified on scratch/copy first
+- [ ] `sheet:validate` green on migrated TEST
+- [ ] `diagnostics` green on migrated TEST
+- [ ] real-Google integration roundtrip green on migrated TEST
+- [ ] operator-first column order/visibility implemented
+- [ ] technical columns moved right or hidden for normal operator work
+- [ ] v3 native status dropdown installed
+- [ ] useful operator filter views documented/created
+- [ ] probable duplicate visually visible to Iwona
+- [ ] group assignment operator flow reviewed by Iwona
+- [ ] PROD `sheet:validate` green
+- [ ] PROD `diagnostics` green
+- [ ] PROD access limited to approved operators + PROD service account
+- [x] TEST service account has no PROD Sheet access
+
+## TEST hygiene
+
+- [ ] TEST registrations default to `FALSE` outside controlled QA
+- [ ] pre-cleanup backup created
+- [ ] manual/real-looking PII QA rows removed from TEST
+- [ ] routine QA uses synthetic fixtures only
+- [ ] routine E2E does not send to real external participant mailboxes
+- [ ] canonical preview deployment SHA is verified against GitHub `preview` before QA
+- [ ] unintended feature-branch Vercel deployments diagnosed and stopped
+
+## Privacy / RODO
+
+- [ ] controller legal details verified directly with Iwona/current official registry
+- [ ] registered/contact address confirmed before legal copy
+- [ ] privacy-contact e-mail confirmed
+- [ ] final privacy notice approved
+- [ ] `PRIVACY_NOTICE_URL` configured in PROD
+- [ ] `PRIVACY_NOTICE_VERSION` configured in PROD
+- [ ] processing purposes documented
+- [ ] legal bases reviewed/approved
+- [ ] processor/recipient inventory documented, including Vercel, Google/Sheets, Resend and authorized humans
+- [ ] access list approved
+- [ ] retention periods/criteria approved for relevant outcomes
+- [ ] retention procedure documented operationally
+- [ ] data-subject request procedure documented
+- [ ] `NOTES` sensitive-data policy documented for operators
+- [x] no generic `Wyrażam zgodę na RODO` checkbox is required by product design
+- [x] production remains fail-closed without privacy configuration
+
+## Child protection / organization
+
+- [ ] existence of applicable Standardy Ochrony Małoletnich confirmed
+- [ ] full standard location/publication recorded
+- [ ] child-friendly/shortened version status recorded where applicable
+- [ ] instructor/personnel verification procedure confirmed
+- [ ] required personnel checks confirmed operationally
+- [ ] responsibility for responding to child-protection concerns is defined
+- [x] child-protection personnel records are explicitly out of scope for `ZAPISY`
 
 ## Security
 
-- [x] brak private key service account w repo/env flow
-- [x] Preview OIDC/WIF działa
-- [x] repo jest świadomie publiczne
-- [x] `.env*` jest ignorowane z wyjątkiem `.env.example`
-- [x] input/select boundary contrast został wzmocniony
-- [x] focus ring ma kontrastowy wariant zamiast niskiej alpha
-- [x] select zachowuje natywny affordance
-- [ ] osobny PROD service account utworzony
-- [ ] production WIF subject bindnięty wyłącznie do PROD service accountu
-- [ ] preview nie ma dostępu do PROD identity
-- [ ] finalny log review nie wykazuje PII
-- [ ] wcześniej ujawniony/testowy Resend key jest unieważniony i PROD używa aktualnego sekretu
+- [x] no private service-account key in repo/env flow
+- [x] Preview OIDC/WIF works
+- [x] public repo is intentional
+- [x] `.env*` ignored except safe `.env.example`
+- [x] PII-safe logging policy exists
+- [x] JSON-only API / body limit / honeypot / minimum fill time exist
+- [x] security headers exist
+- [ ] separate PROD service account created
+- [ ] production WIF subject bound only to PROD service account
+- [ ] Preview identity cannot access PROD identity/resources
+- [ ] final log review shows no PII leakage
+- [ ] any previously exposed/test Resend key is revoked
+- [ ] abuse-protection decision made before broad campaign/public launch
+- [ ] rate limiting and/or Turnstile implemented if approved
 
-## Email
+## E-mail
 
-- [x] participant confirmation działa na TEST
-- [x] admin notification request działa na TEST
-- [ ] mailbox delivery admin notification potwierdzona
-- [ ] produkcyjny sender Resend zatwierdzony
-- [ ] `REGISTRATION_ADMIN_EMAILS=pozytywka.boleslaw@gmail.com`
+- [x] participant confirmation transport works on TEST
+- [x] admin notification transport works on TEST
+- [x] e-mail failure does not roll back a persisted Registration
+- [x] same-request replay does not resend notifications
+- [ ] v3 participant copy approved and implemented
+- [ ] v3 admin copy implemented
+- [ ] admin mailbox delivery confirmed for final address
+- [ ] production Resend sender approved
+- [ ] final `REGISTRATION_ADMIN_EMAILS` configured
 
-## UX / accessibility
+## UX / accessibility verification
 
-- [x] E2E desktop przechodzi
-- [x] E2E 320 px przechodzi
-- [x] E2E 430 px przechodzi
-- [x] automatyczny test braku horizontal overflow przechodzi
-- [x] automatyczny test focusu pierwszego błędnego pola przechodzi
-- [x] same-requestId retry po temporary failure przechodzi w E2E
-- [ ] ręczny pełny flow klawiaturą przechodzi
-- [ ] widoczność focus ringów potwierdzona ręcznie
-- [ ] zoom/reflow i kontrast sprawdzone ręcznie w przeglądarce
-- [ ] real-device mobile smoke test przechodzi
+- [x] automated desktop E2E foundation
+- [x] automated 320 px coverage foundation
+- [x] automated 430 px coverage foundation
+- [x] Samsung-oriented regression coverage foundation
+- [x] automated no-horizontal-overflow coverage foundation
+- [ ] v3 full keyboard flow passes manually
+- [ ] focus rings verified manually
+- [ ] zoom/reflow and contrast checked manually
+- [ ] physical Samsung Chrome smoke passes on v3
+- [ ] iPhone Safari smoke passes on v3
+- [ ] screen-reader spot check completed if practical
 
 ## Engineering
 
-- [x] `pnpm-lock.yaml` istnieje
-- [x] `pnpm install --frozen-lockfile`
-- [x] `pnpm check`
-- [x] 14/14 Vitest files, 67/67 tests
-- [x] Next.js production build
-- [x] `pnpm test:e2e`, 21/21 Playwright tests
-- [x] CI #53 green dla branchu zawierającego finalne zmiany runtime; późniejsze commity są docs-only
-- [ ] `APP_ENV=test DATA_BACKEND=google-sheets ALLOW_TEST_SEED=true pnpm test:integration:sheets` uruchomione na realnym TEST
-- [x] dokumentacja zsynchronizowana z aktualnym zachowaniem i decyzją o publicznym repo
-- [ ] PR #1 zaakceptowany i zmergowany w poprawnej kolejności
-- [ ] PR #2 po retarget/rebase ma green CI
+- [x] `pnpm-lock.yaml` exists
+- [x] exact-pinned dependency policy
+- [x] strict TypeScript baseline
+- [x] `pnpm check` required before merge
+- [x] full Playwright E2E required before merge
+- [x] real-Google integration command is TEST-only
+- [ ] docs/v3-product-truth PR green and merged
+- [ ] test-hygiene-and-preview PR green and merged
+- [ ] schema-v3-foundation PR green and merged
+- [ ] offering-intake-rules PR green and merged
+- [ ] business-deduplication PR green and merged
+- [ ] workflow-statuses PR green and merged
+- [ ] operator-Sheets PR green and merged
+- [ ] copy-and-repeat-flow PR green and merged
+- [ ] group-catalog PR completed after real data exists
+- [ ] privacy-retention-readiness PR/gates complete
+- [ ] abuse-hardening decision/PR complete
+
+Do not use stale fixed test-count numbers as a release gate. The current CI run is the source of truth for exact test counts.
 
 ## Production
 
-- [ ] komplet Vercel Production env ustawiony
-- [ ] Production używa PROD Sheet i osobnej PROD identity
-- [ ] kontrolowany smoke test przy `REGISTRATIONS_OPEN=FALSE`
-- [ ] finalny test formularza bez zaśmiecania PROD
-- [ ] wszystkie powyższe gate'y są zamknięte
-- [ ] dopiero wtedy `REGISTRATIONS_OPEN=TRUE`
+- [ ] complete Vercel Production env configured
+- [ ] Production uses PROD Sheet and separate PROD identity
+- [ ] production catalog uses verified real data
+- [ ] production privacy/legal gates complete
+- [ ] controlled smoke test with `REGISTRATIONS_OPEN=FALSE`
+- [ ] final form test without uncontrolled PROD data pollution
+- [ ] all relevant gates above are closed
+- [ ] only then set `REGISTRATIONS_OPEN=TRUE`

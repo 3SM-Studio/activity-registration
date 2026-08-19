@@ -2,141 +2,191 @@
 
 Date: 2026-08-19
 
-## Current state
+## Current runtime generation
 
-MVP core działa na Vercel Preview z realnym TEST backendem Google Sheets.
+The currently implemented application is **schema v2**.
 
-Zweryfikowany flow:
+The v3 product/domain plan is approved as the next target, but v3 runtime/schema changes are not yet implemented on this docs-only branch.
+
+## Verified architecture
+
+Current Preview/TEST flow:
 
 ```text
 Browser
--> Vercel Preview
--> Next.js
+-> canonical Vercel Preview
+-> Next.js App Router
 -> Vercel OIDC
 -> Google Workload Identity Federation
 -> TEST service account
 -> TEST Google Sheet read/write
--> POST /api/registrations 201
--> Resend
+-> native Google Sheets Table `Rejestracje`
+-> Resend participant/admin notifications
 ```
 
-Potwierdzono również faktyczne dostarczenie maila uczestnika do Gmaila.
+TEST and PROD remain separated at spreadsheet/identity level.
 
-## Implemented
+## Implemented v2 product/runtime
 
-- Next.js App Router frontend i API.
-- Mobile-first publiczny formularz Pozytywki.
-- Dependent city -> offering flow.
-- Ukrywanie nieaktywnych miast/ofert i miast bez aktywnej oferty.
-- Minor/adult guardian rules wraz z czyszczeniem danych opiekuna po przejściu do 18+.
-- Dynamiczne wyjaśnienie, czy kontakt dotyczy uczestnika czy opiekuna.
-- Client i server validation.
-- Backendowa rewalidacja aktualnego city/offering przy submit.
-- Normalizacja telefonu i e-maila.
-- Stable request IDs i idempotent retry handling.
-- Request ID conflict detection dla zmienionego payloadu.
+- Next.js App Router frontend and API.
+- Mobile-first public Pozytywka registration form.
+- shadcn/Radix form foundation and visible controls.
+- shadcn Select for city/offering and phone-country selection.
+- International phone formatting with country flags and E.164 canonical storage.
+- Samsung-oriented phone/input hardening.
+- Full date-of-birth input with shadcn/Radix popover/calendar.
+- `BIRTH_DATE` source value and `AGE_AT_SUBMISSION` historical snapshot.
+- Minor/adult guardian flow with guardian data cleared when participant becomes adult.
+- Name/email whitespace hygiene and server-side normalization.
+- Client and server validation.
+- Server revalidation of current city/offering at submit.
+- Stable request IDs and same-request transport idempotency.
+- Request ID conflict detection when payload changes after an earlier attempt.
 - Application/domain/infrastructure boundaries.
-- Google Sheets REST adapter.
+- Google Sheets repository adapter.
 - Header-by-name mapping.
-- `RAW` writes.
-- Brak automatycznego retry nieidempotentnego append.
-- Snapshoty nazw city/offering.
-- TEST i PROD spreadsheets rozdzielone.
-- Vercel OIDC -> Google WIF dla Preview.
-- TEST service account ograniczony do TEST Sheet i bez dostępu do PROD Sheet.
-- Memory repositories dla lokalnego/E2E developmentu.
-- Sheet bootstrap, validation, migration, diagnostics, TEST seeding i registration reconciliation.
-- Warning-only protected ranges na technicznych kolumnach `ZAPISY` w TEST i PROD, z `STATUS` i `NOTES` pozostawionymi jako operacyjne.
-- Honeypot, minimalny czas od renderu do submit i limit payloadu API.
+- Native Google Sheets Table `Rejestracje` for `ZAPISY`.
+- Registration append via `AppendCellsRequest` to native table body with table metadata resolution.
+- No automatic retry of ambiguous non-idempotent append.
+- Snapshot names for city/offering.
+- Schema v1 -> v2 migration preserving old age values without inventing birth dates.
+- Native `BIRTH_DATE` date column and native `STATUS` dropdown.
+- Warning-only protections for technical columns while `STATUS` and `NOTES` remain operational.
+- TEST and PROD spreadsheets separated.
+- Vercel OIDC -> Google WIF for Preview.
+- TEST service account limited to TEST Sheet and not granted PROD access.
+- Memory repositories for local/E2E use.
+- Sheet bootstrap, validation, migration, diagnostics, TEST seeding and registration reconciliation.
+- Honeypot, minimum form-fill time and API body-size limit.
 - PII-safe structured logging.
 - Security headers.
-- Privacy version zapisywana z Registration.
-- Production fail-closed bez kompletnej privacy configuration.
-- E-mail confirmation + admin notification przez provider-agnostic layer i Resend.
-- E-mail wykonywany dopiero po skutecznym persistence przez Next.js `after()`.
-- Mail failure nie cofa Registration.
-- Transportowy replay nie wysyła maili ponownie.
-- Unit tests, Playwright E2E, repository validator, GitHub Actions CI i Dependabot.
-- Playwright na desktop, 320 px i 430 px.
-- E2E dla same-requestId retry po temporary failure.
-- E2E dla focusu pierwszego błędnego pola.
-- E2E dla braku horizontal overflow.
-- Wzmocniony kontrast obrysów input/select i focus ringów oraz przywrócony natywny affordance selecta.
-- Jawny, twardo blokowany do `APP_ENV=test` real-Google roundtrip command `test:integration:sheets`.
-- Exact-pinned dependencies i `pnpm-lock.yaml`.
-- Publiczne repo jest świadomą decyzją. Sekrety i lokalne env pozostają poza Git.
+- Privacy notice version stored with Registration.
+- Production fail-closed without complete privacy configuration.
+- Participant confirmation and admin notification through provider-agnostic e-mail layer + Resend.
+- E-mail runs only after persistence and does not roll back a successful Registration.
+- Transport replay does not send duplicate notifications.
+- Unit tests, Playwright E2E, repository contract validation and GitHub Actions CI.
+- Desktop and mobile viewport coverage, including 320 px / 430 px and Samsung-like regression scenarios.
+- Real-Google TEST-only integration roundtrip command.
+- Exact-pinned dependencies and `pnpm-lock.yaml`.
+- Public repository is intentional; secrets, credentials and participant PII stay outside Git.
 
-## Verified gates
+## Current known v2 product limitations
 
-Na branchu zawierającym finalne zmiany runtime zweryfikowano:
+- No `Season` model.
+- No internal `Group` model.
+- Offering only contains basic city/name/active/sort information.
+- No rolling/windowed intake rules.
+- No waitlist-only offering state.
+- Statuses remain `NEW`, `IN_PROGRESS`, `ACCEPTED`, `CANCELLED`.
+- No business duplicate detection beyond same-`requestId` replay.
+- Public success screen is too generic.
+- Participant e-mail currently implies contact only if additional information is needed, while the real business process requires contact after review.
+- The form still contains a visual stepper-like presentation even though it is one page.
+- `ZAPISY` is technically strong but not yet optimized as an operator-first view for Iwona.
+- Production privacy notice and retention policy are not finalized.
+- TEST contains manual/real-looking PII from earlier QA and must be cleaned in the dedicated hygiene step.
+- Canonical Preview has previously drifted behind GitHub `preview` due Vercel deployment rate limiting.
+- Feature-branch deployment filtering needs verification in Vercel despite repository configuration.
 
-- `pnpm install --frozen-lockfile` przechodzi,
-- repository contract validation przechodzi,
-- Prettier przechodzi,
-- ESLint przechodzi,
-- strict TypeScript przechodzi,
-- Vitest: 14/14 files, 67/67 tests,
-- Next.js 16.3.0 production build przechodzi,
-- Playwright: 21/21 testów na desktop + 320 px + 430 px,
-- GitHub Actions CI zakończone sukcesem.
+## Approved v3 target
 
-Po synchronizacji dokumentacji pełny `pnpm check` i Critical E2E również zakończyły się sukcesem.
+The approved v3 contract is in `docs/REGISTRATION_V3_PLAN.md`.
 
-Dodatkowo zweryfikowano:
+v3 introduces, in staged PRs:
 
-- Vercel Preview zawierający finalne zmiany runtime ma stan `READY`,
-- publiczny formularz renderuje realny TEST katalog z Google Sheets,
-- runtime nie raportował nowych błędów/fatal logs po weryfikacji,
-- realny TEST Sheet został odczytany i zapisany przez Vercel WIF,
-- realny publiczny Preview submit został zapisany w `ZAPISY` TEST,
-- Resend zaakceptował participant + admin notifications,
-- participant mailbox delivery została zweryfikowana.
+- `Season`,
+- internal `Group`,
+- richer Offering intake configuration,
+- `ROLLING` / `WINDOWED`,
+- `OPEN` / `WAITLIST_ONLY` / `CLOSED`,
+- workflow statuses `NEW`, `IN_REVIEW`, `CONTACTED`, `WAITLISTED`, `CONFIRMED`, `REJECTED`, `CANCELLED`,
+- business duplicate detection separate from `requestId`,
+- `POSSIBLE_DUPLICATE_OF`,
+- `ASSIGNED_GROUP_ID`,
+- `CONTACTED_AT`,
+- `CONFIRMED_AT`,
+- operator-first Sheets experience,
+- corrected public success/mail flow,
+- repeat-registration actions,
+- privacy/retention/child-protection release gates.
 
-Późniejsze commity są wyłącznie synchronizacją dokumentacji i checklisty; nie zmieniają runtime ani testów.
+## Immediate implementation sequence
 
-## Remaining work before PROD
+1. `docs/v3-product-truth` - current docs-only stage.
+2. `chore/test-hygiene-and-preview`.
+3. `feat/sheets-schema-v3-foundation`.
+4. `feat/offering-intake-rules`.
+5. `feat/registration-business-deduplication`.
+6. `feat/registration-workflow-statuses`.
+7. `feat/operator-sheets-experience`.
+8. `feat/registration-copy-and-repeat-flow`.
+9. `feat/group-catalog-operations` after real Iwona group data is available.
+10. `chore/privacy-retention-readiness`.
+11. `feat/abuse-hardening`.
+12. `chore/prod-readiness`.
 
-### External product/legal input
+Do not collapse all stages into one PR.
 
-- zatwierdzona rzeczywista lista miast,
-- zatwierdzona rzeczywista lista zajęć,
-- zatwierdzona privacy notice dla zapisów,
-- `PRIVACY_NOTICE_URL`,
-- `PRIVACY_NOTICE_VERSION`,
-- zatwierdzona retention policy i procedura retencji,
-- finalny publiczny adres/domena formularza,
-- finalne zatwierdzenie warstwy wizualnej przez Pozytywkę.
+## External input still required
 
-### Production infrastructure
+From Iwona / business audit:
 
-- utworzyć osobny PROD service account,
-- udostępnić PROD Sheet wyłącznie PROD service accountowi oraz zatwierdzonym operatorom,
-- dodać production WIF subject wyłącznie do PROD service accountu,
-- ustawić komplet Vercel Production env,
-- ustawić produkcyjnego nadawcę Resend,
-- ustawić `REGISTRATION_ADMIN_EMAILS=pozytywka.boleslaw@gmail.com`,
-- potwierdzić mailbox delivery admin notification,
-- potwierdzić unieważnienie wcześniej ujawnionego/testowego klucza Resend,
-- wykonać production smoke test przy `REGISTRATIONS_OPEN=FALSE`,
-- dopiero po przejściu release gate ustawić `REGISTRATIONS_OPEN=TRUE`.
+- verified real city/offering catalog,
+- real internal groups,
+- age ranges,
+- schedules,
+- instructors,
+- capacities,
+- prices,
+- payment process,
+- contract-conclusion point,
+- resignation rules,
+- exact theatre window/casting rules,
+- contact SLA if any,
+- whether guardian relationship is operationally useful,
+- confirmed legal/contact details,
+- approved retention periods.
 
-### Remaining verification gates
+Unknown values must not be invented.
 
-- uruchomić nowy `APP_ENV=test DATA_BACKEND=google-sheets ALLOW_TEST_SEED=true pnpm test:integration:sheets` na realnym TEST Sheet,
-- wykonać ręczny pełny flow klawiaturą,
-- ręcznie potwierdzić widoczność focus ringów i reflow/zoom,
-- wykonać real-device mobile smoke test,
-- zaakceptować PR #1, następnie merge/retarget PR #2 w poprawnej kolejności.
+## Remaining PROD gates
 
-## Deferred, not original MVP blockers
+- approved final catalog,
+- approved privacy notice,
+- final `PRIVACY_NOTICE_URL` / version,
+- approved retention policy and procedure,
+- processor/access inventory,
+- child-protection standards/personnel verification confirmation recorded,
+- final domain,
+- final visual/business acceptance,
+- separate PROD service account/WIF/access,
+- complete Vercel Production env,
+- production Resend sender,
+- admin mailbox delivery verification,
+- manual keyboard/focus/reflow/device QA,
+- PROD closed smoke test,
+- release checklist fully green before opening registrations.
 
-- durable email outbox/reconciliation, issue #3,
-- twarde limity miejsc,
-- waitlist,
-- panel administratora,
-- płatności,
-- PostgreSQL/Supabase migration.
+## Engineering gates
+
+For every normal PR:
+
+```text
+pnpm check
+pnpm test:e2e
+```
+
+For Google-backed PRs, additionally on TEST only:
+
+```text
+sheet:validate
+diagnostics
+test:integration:sheets
+```
+
+Do not rely on old hardcoded test-count numbers in documentation. The current CI run is the source of truth for exact counts.
 
 ## Release statement
 
-System jest działającym i zweryfikowanym TEST/Preview MVP. Wszystkie znane techniczne braki, które można było zamknąć bez danych biznesowych, decyzji prawnych, PROD IAM i ręcznej akceptacji UI, są zaimplementowane na branchu. PROD pozostaje celowo fail-closed do czasu zamknięcia pozostałych gate'ów.
+v2 is a working TEST/Preview registration MVP with strong technical foundations. v3 is now the approved product/domain direction required to align the software with Pozytywka's real review/contact/group-assignment workflow. PROD remains intentionally fail-closed until the remaining product, legal, infrastructure and manual QA gates are closed.
