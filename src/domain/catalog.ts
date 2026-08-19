@@ -31,8 +31,7 @@ export const PUBLIC_INTAKE_STATUS = {
   closed: "CLOSED",
 } as const;
 
-export type PublicIntakeStatus =
-  (typeof PUBLIC_INTAKE_STATUS)[keyof typeof PUBLIC_INTAKE_STATUS];
+export type PublicIntakeStatus = (typeof PUBLIC_INTAKE_STATUS)[keyof typeof PUBLIC_INTAKE_STATUS];
 
 export type City = Readonly<{
   id: CityId;
