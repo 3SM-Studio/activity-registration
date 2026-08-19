@@ -13,7 +13,7 @@ import { cell, createHeaderMap } from "../src/infrastructure/google/header-map";
 import { GoogleSheetsRegistrationRepository } from "../src/infrastructure/google/registration.repository";
 import { validateSheetStructure } from "../src/infrastructure/google/sheet-admin";
 import { REGISTRATION_HEADERS, SHEET } from "../src/infrastructure/google/sheets-contracts";
-import { dateOnlyInPoland } from "../src/lib/birth-date";
+import { calculateAgeAtDate, dateOnlyInPoland } from "../src/lib/birth-date";
 import { getServerEnv } from "../src/lib/env";
 import { createRegistrationId } from "../src/lib/ids";
 import { createAdminSheetsClient } from "./_google-admin";
@@ -85,6 +85,8 @@ async function main() {
 
   const nowDate = new Date();
   const now = nowDate.toISOString();
+  const birthDate = "2000-01-15";
+  const ageAtSubmission = calculateAgeAtDate(birthDate, dateOnlyInPoland(nowDate));
   const requestId = asRequestId(randomUUID());
   const registration: Registration = {
     id: createRegistrationId(),
@@ -96,8 +98,8 @@ async function main() {
     offeringNameSnapshot: offering.name,
     participantFirstName: "Integration",
     participantLastName: "Test",
-    birthDate: "2000-01-15",
-    ageAtSubmission: nowDate.getFullYear() - 2000,
+    birthDate,
+    ageAtSubmission,
     guardianFirstName: null,
     guardianLastName: null,
     phone: "+48500000000",
@@ -110,9 +112,6 @@ async function main() {
     updatedAt: now,
     schemaVersion: REGISTRATION_SCHEMA_VERSION,
   };
-
-  const birthdayHasPassed = dateOnlyInPoland(nowDate).slice(5) >= "01-15";
-  registration.ageAtSubmission = nowDate.getFullYear() - 2000 - (birthdayHasPassed ? 0 : 1);
 
   let created = false;
 
@@ -128,8 +127,8 @@ async function main() {
     assert.equal(stored.cityIdSnapshot, registration.cityIdSnapshot);
     assert.equal(stored.participantFirstName, "Integration");
     assert.equal(stored.participantLastName, "Test");
-    assert.equal(stored.birthDate, "2000-01-15");
-    assert.equal(stored.ageAtSubmission, registration.ageAtSubmission);
+    assert.equal(stored.birthDate, birthDate);
+    assert.equal(stored.ageAtSubmission, ageAtSubmission);
     assert.equal(stored.schemaVersion, REGISTRATION_SCHEMA_VERSION);
 
     console.info(
