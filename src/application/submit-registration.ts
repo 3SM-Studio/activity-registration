@@ -243,9 +243,8 @@ export async function submitRegistration(
     phone: normalized.phone,
     email: normalized.email,
   };
-  const candidates = await dependencies.repositories.registrations.findPotentialDuplicates(
-    duplicateCriteria,
-  );
+  const candidates =
+    await dependencies.repositories.registrations.findPotentialDuplicates(duplicateCriteria);
   const duplicateMatch = classifyRegistrationDuplicates(candidates, duplicateCriteria);
 
   if (duplicateMatch.kind === "exact") {
