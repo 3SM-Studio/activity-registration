@@ -129,6 +129,8 @@ export interface SheetsClient {
 }
 
 export class GoogleSheetsClient implements SheetsClient {
+  private readonly tableSheetIds = new Map<string, number>();
+
   constructor(
     private readonly env: ServerEnv,
     private readonly spreadsheetId: string,
@@ -210,10 +212,31 @@ export class GoogleSheetsClient implements SheetsClient {
     );
   }
 
+  private async resolveTableSheetId(tableId: string): Promise<number> {
+    const cached = this.tableSheetIds.get(tableId);
+    if (cached !== undefined) {
+      return cached;
+    }
+
+    const metadata = await this.getSheetMetadata();
+    const owner = metadata.find((sheet) =>
+      (sheet.tables ?? []).some((table) => table.tableId === tableId),
+    );
+
+    if (!owner) {
+      throw new SheetsApiError(400, `Google Sheets table ${tableId} was not found.`);
+    }
+
+    this.tableSheetIds.set(tableId, owner.sheetId);
+    return owner.sheetId;
+  }
+
   async appendTableRow(
     tableId: string,
     row: readonly (string | number | boolean)[],
   ): Promise<void> {
+    const sheetId = await this.resolveTableSheetId(tableId);
+
     await this.request(
       ":batchUpdate",
       {
@@ -222,6 +245,7 @@ export class GoogleSheetsClient implements SheetsClient {
           requests: [
             {
               appendCells: {
+                sheetId,
                 tableId,
                 rows: [{ values: row.map(toCellData) }],
                 fields: "userEnteredValue",
