@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { APPLICATION_ERROR_CODE, ApplicationError } from "@/application/errors";
 import { submitRegistration } from "@/application/submit-registration";
 import {
+  PUBLIC_INTAKE_STATUS,
   asCityId,
   asOfferingId,
   asSeasonId,
@@ -35,7 +36,9 @@ const publicCatalog: PublicCatalog = {
       id: asOfferingId("gdynia-hiphop"),
       cityId: asCityId("gdynia"),
       name: "Hip-hop",
+      publicDescription: null,
       sortOrder: 10,
+      intakeStatus: PUBLIC_INTAKE_STATUS.open,
     },
   ],
 };
@@ -251,6 +254,56 @@ describe("submitRegistration", () => {
     await expect(submitRegistration(baseRequest, { repositories })).rejects.toMatchObject({
       code: APPLICATION_ERROR_CODE.offeringNotAvailable,
     });
+  });
+
+  it("rejects direct submission to a CLOSED offering", async () => {
+    const repositories: ApplicationRepositories = {
+      ...createRepositories(registrations),
+      catalog: {
+        async getPublicCatalog() {
+          return {
+            cities: publicCatalog.cities,
+            offerings: publicCatalog.offerings.map((offering) => ({
+              ...offering,
+              intakeStatus: PUBLIC_INTAKE_STATUS.closed,
+            })),
+          };
+        },
+        async findSeasonById(seasonId) {
+          return seasonId === currentSeason.id ? currentSeason : null;
+        },
+      },
+    };
+
+    await expect(submitRegistration(baseRequest, { repositories })).rejects.toMatchObject({
+      code: APPLICATION_ERROR_CODE.offeringNotAvailable,
+    });
+    expect(registrations.records).toHaveLength(0);
+  });
+
+  it("allows direct submission to a WAITLIST_ONLY offering", async () => {
+    const repositories: ApplicationRepositories = {
+      ...createRepositories(registrations),
+      catalog: {
+        async getPublicCatalog() {
+          return {
+            cities: publicCatalog.cities,
+            offerings: publicCatalog.offerings.map((offering) => ({
+              ...offering,
+              intakeStatus: PUBLIC_INTAKE_STATUS.waitlistOnly,
+            })),
+          };
+        },
+        async findSeasonById(seasonId) {
+          return seasonId === currentSeason.id ? currentSeason : null;
+        },
+      },
+    };
+
+    await expect(submitRegistration(baseRequest, { repositories })).resolves.toMatchObject({
+      idempotentReplay: false,
+    });
+    expect(registrations.records).toHaveLength(1);
   });
 
   it("uses an application error for closed registrations before requiring a season", async () => {

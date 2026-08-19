@@ -1,4 +1,5 @@
 import type { PublicCatalog, Season, SeasonId } from "@/domain/catalog";
+import { computeOfferingIntakeStatus } from "@/domain/offering-intake";
 import type { CatalogRepository } from "@/domain/repositories";
 import { createHeaderMap } from "@/infrastructure/google/header-map";
 import {
@@ -57,7 +58,7 @@ export class GoogleSheetsCatalogRepository implements CatalogRepository {
     return seasons;
   }
 
-  async getPublicCatalog(): Promise<PublicCatalog> {
+  async getPublicCatalog(currentDate: string): Promise<PublicCatalog> {
     const { cities, offerings } = await this.readCatalog();
 
     const activeCities = cities.filter((city) => city.active);
@@ -65,6 +66,14 @@ export class GoogleSheetsCatalogRepository implements CatalogRepository {
 
     const publicOfferings = offerings
       .filter((offering) => offering.active && activeCityIds.has(offering.cityId))
+      .map((offering) => ({
+        id: offering.id,
+        cityId: offering.cityId,
+        name: offering.name,
+        publicDescription: offering.publicDescription,
+        sortOrder: offering.sortOrder,
+        intakeStatus: computeOfferingIntakeStatus(offering, currentDate),
+      }))
       .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, "pl"));
 
     const cityIdsWithOfferings = new Set(publicOfferings.map((offering) => offering.cityId));
@@ -78,12 +87,7 @@ export class GoogleSheetsCatalogRepository implements CatalogRepository {
         name,
         sortOrder,
       })),
-      offerings: publicOfferings.map(({ id, cityId, name, sortOrder }) => ({
-        id,
-        cityId,
-        name,
-        sortOrder,
-      })),
+      offerings: publicOfferings,
     };
   }
 

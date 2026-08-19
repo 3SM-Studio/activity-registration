@@ -1,9 +1,9 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { CircleAlert } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CircleAlert } from "lucide-react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 
 import { APPLICATION_ERROR_CODE } from "@/application/errors";
@@ -28,7 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { PublicCatalog } from "@/domain/catalog";
+import { PUBLIC_INTAKE_STATUS, type PublicCatalog, type PublicOffering } from "@/domain/catalog";
 import type { PublicSettings } from "@/domain/settings";
 import { calculateAgeToday } from "@/lib/birth-date";
 import {
@@ -56,6 +56,26 @@ type ApiSuccessResponse = Readonly<{
 
 function newRequestId(): string {
   return crypto.randomUUID();
+}
+
+function offeringLabel(offering: PublicOffering): string {
+  switch (offering.intakeStatus) {
+    case PUBLIC_INTAKE_STATUS.waitlistOnly:
+      return `${offering.name} - obecnie lista rezerwowa`;
+    case PUBLIC_INTAKE_STATUS.upcoming:
+      return `${offering.name} - zapisy wkrótce`;
+    case PUBLIC_INTAKE_STATUS.closed:
+      return `${offering.name} - zapisy zamknięte`;
+    default:
+      return offering.name;
+  }
+}
+
+function offeringIsSelectable(offering: PublicOffering): boolean {
+  return (
+    offering.intakeStatus === PUBLIC_INTAKE_STATUS.open ||
+    offering.intakeStatus === PUBLIC_INTAKE_STATUS.waitlistOnly
+  );
 }
 
 export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
@@ -95,6 +115,7 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
   });
 
   const cityId = useWatch({ control, name: "cityId" });
+  const offeringId = useWatch({ control, name: "offeringId" });
   const birthDate = useWatch({ control, name: "birthDate" });
   const age = birthDate ? calculateAgeToday(birthDate) : null;
   const isMinor = typeof age === "number" && age >= 0 && age < 18;
@@ -102,6 +123,10 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
   const availableOfferings = useMemo(
     () => catalog.offerings.filter((offering) => offering.cityId === cityId),
     [catalog.offerings, cityId],
+  );
+  const selectedOffering = useMemo(
+    () => availableOfferings.find((offering) => offering.id === offeringId) ?? null,
+    [availableOfferings, offeringId],
   );
 
   useEffect(() => {
@@ -293,12 +318,23 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
                   </SelectTrigger>
                   <SelectContent>
                     {availableOfferings.map((offering) => (
-                      <SelectItem key={offering.id} value={offering.id}>
-                        {offering.name}
+                      <SelectItem
+                        key={offering.id}
+                        value={offering.id}
+                        disabled={!offeringIsSelectable(offering)}
+                      >
+                        {offeringLabel(offering)}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                {selectedOffering?.intakeStatus === PUBLIC_INTAKE_STATUS.waitlistOnly ? (
+                  <FieldDescription>
+                    Na te zajęcia przyjmujemy teraz zgłoszenia na listę rezerwową.
+                  </FieldDescription>
+                ) : selectedOffering?.publicDescription ? (
+                  <FieldDescription>{selectedOffering.publicDescription}</FieldDescription>
+                ) : null}
                 <FieldError id="offeringId-error" errors={[fieldState.error]} />
               </Field>
             )}
