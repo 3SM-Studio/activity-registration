@@ -41,10 +41,7 @@ describe("offering intake", () => {
 
   it("honors manual CLOSED for rolling intake", () => {
     expect(
-      computeOfferingIntakeStatus(
-        offering({ intakeState: INTAKE_STATE.closed }),
-        "2026-08-19",
-      ),
+      computeOfferingIntakeStatus(offering({ intakeState: INTAKE_STATE.closed }), "2026-08-19"),
     ).toBe(PUBLIC_INTAKE_STATUS.closed);
   });
 
