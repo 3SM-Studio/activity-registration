@@ -1,0 +1,157 @@
+name: Implement phone input
+
+on:
+  push:
+    branches:
+      - feat/phone-input
+    paths:
+      - .github/workflows/implement-phone-input.yml
+
+permissions:
+  contents: write
+
+jobs:
+  implement:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: feat/phone-input
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.19.0
+          cache: pnpm
+
+      - name: Ensure phone dependencies are direct and locked
+        run: |
+          pnpm add react-phone-number-input@3.4.17 libphonenumber-js@1.13.11 --save-exact
+
+      - name: Implement phone input and validation
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          def replace_once(path: str, old: str, new: str) -> None:
+              p = Path(path)
+              text = p.read_text()
+              if old not in text:
+                  raise SystemExit(f"Expected fragment not found in {path}: {old[:120]!r}")
+              p.write_text(text.replace(old, new, 1))
+
+          Path("src/components/ui/phone-number-input.tsx").write_text('''"use client";\n\nimport type { Ref } from "react";\nimport PhoneInput, { type Value } from "react-phone-number-input";\nimport flags from "react-phone-number-input/flags";\nimport pl from "react-phone-number-input/locale/pl";\n\nimport { cn } from "@/lib/cn";\n\ntype PhoneNumberInputProps = Readonly<{\n  id: string;\n  name: string;\n  value: string;\n  onChange: (value: string) => void;\n  onBlur: () => void;\n  inputRef?: Ref<HTMLInputElement>;\n  required?: boolean;\n  disabled?: boolean;\n  autoComplete?: string;\n  invalid?: boolean;\n  describedBy?: string;\n  className?: string;\n}>;\n\nexport function PhoneNumberInput({\n  id,\n  name,\n  value,\n  onChange,\n  onBlur,\n  inputRef,\n  required,\n  disabled,\n  autoComplete,\n  invalid,\n  describedBy,\n  className,\n}: PhoneNumberInputProps) {\n  return (\n    <PhoneInput\n      ref={inputRef}\n      id={id}\n      name={name}\n      className={cn(\n        "pozytywka-phone-input",\n        invalid && "pozytywka-phone-input--invalid",\n        className,\n      )}\n      defaultCountry="PL"\n      international\n      countryCallingCodeEditable={false}\n      addInternationalOption={false}\n      labels={pl}\n      flags={flags}\n      value={value ? (value as Value) : undefined}\n      onChange={(nextValue) => onChange(nextValue ?? "")}\n      onBlur={onBlur}\n      required={required}\n      disabled={disabled}\n      autoComplete={autoComplete}\n      aria-invalid={invalid || undefined}\n      aria-describedby={describedBy}\n    />\n  );\n}\n''')
+
+          replace_once(
+              "src/app/layout.tsx",
+              'import "./globals.css";',
+              'import "react-phone-number-input/style.css";\n\nimport "./globals.css";',
+          )
+
+          globals_path = Path("src/app/globals.css")
+          globals = globals_path.read_text()
+          marker = ".pozytywka-phone-input {"
+          if marker not in globals:
+              globals += '''\n\n.pozytywka-phone-input {\n  --PhoneInputCountryFlag-height: 1rem;\n  --PhoneInputCountrySelectArrow-color: var(--foreground);\n  --PhoneInputCountrySelectArrow-opacity: 0.7;\n  --PhoneInput-color--focus: var(--brand);\n  height: 3rem;\n  width: 100%;\n  overflow: hidden;\n  border: 1px solid var(--color-neutral-400);\n  border-radius: 1rem;\n  background: #ffffff;\n  box-shadow: 0 1px 0 rgb(41 23 45 / 0.04);\n  transition:\n    border-color 150ms ease,\n    box-shadow 150ms ease;\n}\n\n.pozytywka-phone-input:focus-within {\n  border-color: var(--brand);\n  box-shadow: 0 0 0 4px var(--brand-ring);\n}\n\n.pozytywka-phone-input--invalid {\n  border-color: #b91c1c;\n}\n\n.pozytywka-phone-input .PhoneInputCountry {\n  align-self: stretch;\n  margin: 0;\n  padding: 0 0.75rem 0 1rem;\n  border-right: 1px solid var(--line);\n}\n\n.pozytywka-phone-input .PhoneInputCountrySelect {\n  cursor: pointer;\n}\n\n.pozytywka-phone-input .PhoneInputCountrySelect:disabled {\n  cursor: not-allowed;\n}\n\n.pozytywka-phone-input .PhoneInputCountrySelectArrow {\n  margin-left: 0.5rem;\n}\n\n.pozytywka-phone-input .PhoneInputInput {\n  min-width: 0;\n  height: 100%;\n  border: 0;\n  border-radius: 0 1rem 1rem 0;\n  background: transparent;\n  padding: 0 1rem;\n  color: var(--foreground);\n  font-size: 1rem;\n  outline: none;\n}\n\n.pozytywka-phone-input .PhoneInputInput::placeholder {\n  color: var(--color-neutral-500);\n}\n\n.pozytywka-phone-input:has(.PhoneInputInput:disabled) {\n  cursor: not-allowed;\n  background: var(--color-neutral-100);\n  color: var(--color-neutral-500);\n}\n'''
+              globals_path.write_text(globals)
+
+          Path("src/lib/phone.ts").write_text('''import { parsePhoneNumberFromString } from "libphonenumber-js";\n\nconst PHONE_CHARACTERS = /^[+\\d\\s().-]+$/;\n\nexport class InvalidPhoneError extends Error {\n  constructor() {\n    super("Podaj poprawny numer telefonu.");\n    this.name = "InvalidPhoneError";\n  }\n}\n\nexport function normalizePhone(input: string): string {\n  const trimmed = input.trim();\n\n  if (!trimmed || !PHONE_CHARACTERS.test(trimmed)) {\n    throw new InvalidPhoneError();\n  }\n\n  const normalizedPrefix = trimmed.startsWith("00") ? `+${trimmed.slice(2)}` : trimmed;\n  const phoneNumber = parsePhoneNumberFromString(normalizedPrefix, "PL");\n\n  if (!phoneNumber || phoneNumber.ext || !phoneNumber.isPossible()) {\n    throw new InvalidPhoneError();\n  }\n\n  return phoneNumber.number;\n}\n''')
+
+          replace_once(
+              "src/validation/registration.schema.ts",
+              'import { TECHNICAL_ID_PATTERN } from "@/domain/catalog";\nimport { z } from "zod";',
+              'import { TECHNICAL_ID_PATTERN } from "@/domain/catalog";\nimport { InvalidPhoneError, normalizePhone } from "@/lib/phone";\nimport { z } from "zod";',
+          )
+
+          replace_once(
+              "src/validation/registration.schema.ts",
+              'const optionalPersonName = z.string().trim().max(100).optional();\n',
+              '''const optionalPersonName = z.string().trim().max(100).optional();\n\nconst phoneNumber = z\n  .string()\n  .trim()\n  .min(1, "Numer telefonu jest wymagany.")\n  .max(40, "Numer telefonu jest zbyt długi.")\n  .transform((value, context) => {\n    try {\n      return normalizePhone(value);\n    } catch (error) {\n      if (error instanceof InvalidPhoneError) {\n        context.addIssue({\n          code: "custom",\n          message: error.message,\n        });\n        return z.NEVER;\n      }\n\n      throw error;\n    }\n  });\n''',
+          )
+
+          replace_once(
+              "src/validation/registration.schema.ts",
+              '    phone: nonEmptyText("Numer telefonu", 40),',
+              '    phone: phoneNumber,',
+          )
+
+          replace_once(
+              "src/application/submit-registration.ts",
+              'import { InvalidPhoneError, normalizePhone } from "@/lib/phone";\n',
+              '',
+          )
+
+          replace_once(
+              "src/application/submit-registration.ts",
+              '''  let phone: string;\n  try {\n    phone = normalizePhone(input.phone);\n  } catch (error) {\n    if (error instanceof InvalidPhoneError) {\n      throw new ApplicationError(APPLICATION_ERROR_CODE.validation, error.message, {\n        fieldErrors: { phone: [error.message] },\n      });\n    }\n    throw error;\n  }\n\n''',
+              '',
+          )
+
+          replace_once(
+              "src/application/submit-registration.ts",
+              '    phone,\n    email: normalizeEmail(input.email),',
+              '    phone: input.phone,\n    email: normalizeEmail(input.email),',
+          )
+
+          replace_once(
+              "src/components/registration/registration-form.tsx",
+              'import { useForm, useWatch } from "react-hook-form";',
+              'import { Controller, useForm, useWatch } from "react-hook-form";',
+          )
+
+          replace_once(
+              "src/components/registration/registration-form.tsx",
+              'import { Label } from "@/components/ui/label";\nimport { NativeSelect } from "@/components/ui/native-select";',
+              'import { Label } from "@/components/ui/label";\nimport { NativeSelect } from "@/components/ui/native-select";\nimport { PhoneNumberInput } from "@/components/ui/phone-number-input";',
+          )
+
+          replace_once(
+              "src/components/registration/registration-form.tsx",
+              '''              <Input\n                id="phone"\n                required\n                type="tel"\n                inputMode="tel"\n                autoComplete="tel"\n                maxLength={40}\n                placeholder="+48 500 000 000"\n                aria-invalid={Boolean(errors.phone)}\n                aria-describedby={errors.phone ? "phone-error" : undefined}\n                {...register("phone")}\n              />''',
+              '''              <Controller\n                name="phone"\n                control={control}\n                render={({ field }) => (\n                  <PhoneNumberInput\n                    id="phone"\n                    name={field.name}\n                    value={field.value ?? ""}\n                    onChange={field.onChange}\n                    onBlur={field.onBlur}\n                    inputRef={field.ref}\n                    required\n                    autoComplete="tel"\n                    invalid={Boolean(errors.phone)}\n                    describedBy={errors.phone ? "phone-error" : undefined}\n                  />\n                )}\n              />''',
+          )
+
+          Path("tests/unit/phone.test.ts").write_text('''import { describe, expect, it } from "vitest";\n\nimport { InvalidPhoneError, normalizePhone } from "@/lib/phone";\n\ndescribe("normalizePhone", () => {\n  it.each([\n    ["500000000", "+48500000000"],\n    ["500 000 000", "+48500000000"],\n    ["+48 500 000 000", "+48500000000"],\n    ["0048 500 000 000", "+48500000000"],\n    ["58 500 00 00", "+48585000000"],\n    ["+49 151 12345678", "+4915112345678"],\n    ["+1 (213) 373-4253", "+12133734253"],\n  ])("normalizes %s", (input, expected) => {\n    expect(normalizePhone(input)).toBe(expected);\n  });\n\n  it.each(["123", "abc500000000", "+48 123"])('rejects invalid input "%s"', (input) => {\n    expect(() => normalizePhone(input)).toThrow(InvalidPhoneError);\n  });\n});\n''')
+
+          replace_once(
+              "tests/unit/registration-schema.test.ts",
+              '''  it("rejects invalid email", () => {\n''',
+              '''  it("normalizes a possible phone number to E.164", () => {\n    const result = registrationRequestSchema.safeParse({ ...base, phone: "500 000 000" });\n\n    expect(result.success).toBe(true);\n    if (result.success) {\n      expect(result.data.phone).toBe("+48500000000");\n    }\n  });\n\n  it("rejects an impossible phone number", () => {\n    const result = registrationRequestSchema.safeParse({ ...base, phone: "123" });\n\n    expect(result.success).toBe(false);\n    if (!result.success) {\n      expect(result.error.flatten().fieldErrors.phone?.[0]).toBe("Podaj poprawny numer telefonu.");\n    }\n  });\n\n  it("rejects invalid email", () => {\n''',
+          )
+
+          replace_once(
+              "tests/e2e/registration.spec.ts",
+              '''test("changing city clears the previously selected offering", async ({ page }) => {\n''',
+              '''test("formats the default Polish phone number while typing", async ({ page }) => {\n  await openRegistrationForm(page);\n\n  const phone = page.getByLabel(/Numer telefonu/);\n  const country = page.locator(".PhoneInputCountrySelect");\n\n  await expect(country).toHaveValue("PL");\n  await phone.fill("500000000");\n  await expect(phone).toHaveValue("+48 500 000 000");\n});\n\ntest("changing city clears the previously selected offering", async ({ page }) => {\n''',
+          )
+          PY
+
+      - name: Remove temporary workflows before validation
+        run: |
+          rm -f .github/workflows/implement-phone-input.yml
+          rm -f .github/workflows/update-libphone-lock.yml
+
+      - name: Format
+        run: pnpm format
+
+      - name: Full repository check
+        run: pnpm check
+
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: End-to-end tests
+        run: pnpm test:e2e
+
+      - name: Commit verified implementation
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "feat: add international phone input"
+          git push origin HEAD:feat/phone-input
