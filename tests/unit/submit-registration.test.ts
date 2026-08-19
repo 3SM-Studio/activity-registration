@@ -79,6 +79,13 @@ class FakeRegistrationRepository implements RegistrationRepository {
   async create(registration: Registration) {
     this.records.push(registration);
   }
+
+  replaceFirstStatus(status: Registration["status"]) {
+    const current = this.records[0];
+    if (current) {
+      this.records[0] = { ...current, status };
+    }
+  }
 }
 
 const baseRequest = {
@@ -219,7 +226,7 @@ describe("submitRegistration", () => {
   it("allows a fresh submission when a previous exact request was cancelled", async () => {
     const repositories = createRepositories(registrations);
     await submitRegistration(baseRequest, { repositories });
-    registrations.records[0]!.status = "CANCELLED";
+    registrations.replaceFirstStatus("CANCELLED");
 
     const next = await submitRegistration(
       {
