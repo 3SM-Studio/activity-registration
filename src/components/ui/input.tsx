@@ -1,10 +1,7 @@
 import * as React from "react";
 
 import { cn } from "@/lib/cn";
-import {
-  sanitizeEmailWhileTyping,
-  sanitizePersonNameWhileTyping,
-} from "@/lib/text-normalization";
+import { sanitizeEmailWhileTyping, sanitizePersonNameWhileTyping } from "@/lib/text-normalization";
 
 function Input({
   className,
