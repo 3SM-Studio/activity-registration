@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { REGISTRATION_STATUS } from "@/domain/registration";
 import {
   bootstrapSheetStructure,
   validateSheetStructure,
@@ -32,7 +33,7 @@ function registrationTable(): TableMetadata {
       columnName: column.columnName,
       columnType: column.columnType,
       ...(column.columnName === "STATUS"
-        ? { dropdownValues: ["NEW", "IN_PROGRESS", "ACCEPTED", "CANCELLED"] }
+        ? { dropdownValues: Object.values(REGISTRATION_STATUS) }
         : {}),
     })),
   };
@@ -71,7 +72,11 @@ function createValidationClient(): SheetsClient {
     ],
     [
       `${SHEET.cities}!A:ZZ`,
-      [SHEET_SCHEMA[SHEET.cities], ["gdynia", "Gdynia", "TAK", 10], ["broken-city", "", "TAK", 20]],
+      [
+        SHEET_SCHEMA[SHEET.cities],
+        ["gdynia", "Gdynia", "TAK", 10],
+        ["broken-city", "", "TAK", 20],
+      ],
     ],
     [
       `${SHEET.seasons}!A:ZZ`,
