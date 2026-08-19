@@ -5,15 +5,32 @@ Ten plik opisuje docelowy model governance dla publicznego `3SM-Studio/activity-
 ## Branching i merge
 
 - `main` jest jedynym branchem release i źródłem Vercel Production.
-- Normalne zmiany trafiają do `main` przez Pull Request.
+- `preview` jest stałym branchem integracyjnym i jedynym źródłem pełnego Vercel Preview TEST.
+- Normalne zmiany zaczynają się na krótkotrwałym branchu i trafiają Pull Requestem do `preview`.
+- Po zielonym CI i realnym smoke/E2E na stałym Preview, `preview` jest promowany Pull Requestem do `main`.
 - Required approvals: `0`. Solo maintainer nie powinien wymagać własnego approval do merge.
 - Wymagany status check: job `check` z workflow `CI`.
-- Branch PR powinien być aktualny względem `main` przed merge.
+- Branch PR powinien być aktualny względem branchu docelowego przed merge.
 - Wszystkie nierozwiązane review conversations powinny blokować merge.
-- Force push i usuwanie `main` powinny być zablokowane.
-- Preferowany i docelowo jedyny standardowy merge method: squash.
-- Branch po merge może być automatycznie usuwany.
+- Force push i usuwanie `main` oraz `preview` powinny być zablokowane.
+- Preferowany i docelowo jedyny standardowy merge method: squash dla feature PR-ów.
+- Branch po merge może być automatycznie usuwany, z wyjątkiem stałego `preview`.
 - Auto-merge może być włączony, ale wyłącznie po spełnieniu wymaganych checks.
+
+Docelowy przepływ:
+
+```text
+feature/*
+-> PR do preview
+-> CI
+-> merge do preview
+-> Vercel Preview TEST
+-> realny smoke/E2E
+-> PR preview -> main
+-> CI
+-> merge do main
+-> Vercel Production
+```
 
 ## Bypass
 
@@ -23,12 +40,12 @@ Po bypassie trzeba:
 
 1. przywrócić bezpieczny stan Production,
 2. uruchomić pełne CI,
-3. przenieść hotfix do aktywnych branchy/PR,
+3. zsynchronizować hotfix z `preview`,
 4. zostawić czytelny ślad w historii lub PR.
 
 ## Public contributions
 
-Repo jest publiczne. Osoby zewnętrzne mogą forkować repo i otwierać Pull Requesty. Nie potrzebują bezpośredniego write access do `main`.
+Repo jest publiczne. Osoby zewnętrzne mogą forkować repo i otwierać Pull Requesty. Nie potrzebują bezpośredniego write access do `main` ani `preview`.
 
 `CODEOWNERS` wskazuje maintainer ownership, ale przy solo-development nie oznacza to obowiązkowego self-approval.
 
@@ -56,6 +73,12 @@ Docelowy stan repozytorium:
 - Auto-merge: ON
 - Automatically delete head branches: ON
 - Update branch: ON
+
+## Preview invariant
+
+Tylko Vercel deployment pochodzący z branchu `preview`, z pełną konfiguracją TEST, może przyjmować testowe zgłoszenia.
+
+Inne Vercel Preview deploymenty muszą działać fail-closed. Nie mogą używać `memory` jako cichego fallbacku i zwracać sukcesu dla nietrwałego zapisu.
 
 ## Production invariant
 

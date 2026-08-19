@@ -10,6 +10,25 @@ production  -> PROD Sheet przez osobny PROD service account
 
 Preview nie może dostać produkcyjnego `GOOGLE_SPREADSHEET_ID` ani tożsamości mającej dostęp do PROD.
 
+## Branch model
+
+```text
+feature/*
+-> Pull Request do preview
+-> CI
+-> merge do preview
+-> stały Vercel Preview TEST
+-> realny smoke/E2E
+-> Pull Request preview -> main
+-> CI
+-> merge do main
+-> Vercel Production
+```
+
+`preview` jest jedyną gałęzią, która może przyjmować testowe zgłoszenia na Vercelu. Zwykłe feature branche mogą mieć automatyczne deploymenty Vercel Preview, ale aplikacja musi na nich działać fail-closed i `POST /api/registrations` ma zwracać 503.
+
+Hotfix produkcyjny może wyjątkowo wejść bezpośrednio do `main`, ale po opanowaniu incydentu musi zostać zsynchronizowany z `preview`.
+
 ## Aktualny stan infrastruktury
 
 Zweryfikowane 2026-08-19:
@@ -18,9 +37,9 @@ Zweryfikowane 2026-08-19:
 Vercel project      pozytywka-activity-registration
 Vercel framework    nextjs
 Production branch   main
-Preview branch       feat/production-integrations
-GCP project          pozytywka-reg-3sm-260819
-GCP project number   656375661462
+Preview branch      preview
+GCP project         pozytywka-reg-3sm-260819
+GCP project number  656375661462
 ```
 
 Google Sheets:
@@ -95,6 +114,8 @@ Production subject, jeszcze nieprzyznany:
 owner:atypicalmichas:project:pozytywka-activity-registration:environment:production
 ```
 
+Vercel OIDC nie zawiera branch name w `sub`, dlatego izolacja gałęzi `preview` jest dodatkowo wymuszana w aplikacji przez `VERCEL_GIT_COMMIT_REF`.
+
 Szczegółowy runbook: `docs/GCP_WIF_SETUP.md`.
 
 ## E-mail przez Resend
@@ -110,7 +131,7 @@ To jest mechanizm best-effort. Trwały outbox/reconciliation pozostaje osobnym h
 
 ### Preview
 
-Aktualny Preview używa Resend do pełnego E2E:
+Stały branch `preview` używa Resend do pełnego E2E:
 
 ```text
 EMAIL_PROVIDER=resend
@@ -134,7 +155,7 @@ Nie kopiuj testowego odbiorcy administracyjnego do Production.
 
 ## Vercel Preview env
 
-Branch-specific Preview dla `feat/production-integrations`:
+Branch-specific Preview dla `preview`:
 
 ```text
 APP_ENV=test
@@ -155,6 +176,8 @@ ALLOW_TEST_SEED=false
 ```
 
 Nie ustawiaj ręcznie `VERCEL_OIDC_TOKEN` w Vercel Environment Variables.
+
+Jeśli stały `preview` nie ma pełnej konfiguracji powyżej, aplikacja ma pokazać zamknięty stan i odrzucić zapis 503. Nigdy nie może spaść do `memory` i zwrócić fałszywego sukcesu.
 
 ## Vercel Production env, przyszły stan
 
@@ -186,7 +209,7 @@ Lokalny `.env.local` nie powinien zawierać `VERCEL_OIDC_TOKEN`, bo wtedy kod pr
 
 ## Zweryfikowany Preview E2E
 
-2026-08-19 sprawdzono realny flow:
+2026-08-19 sprawdzono realny flow na wcześniejszym branchu integracyjnym:
 
 ```text
 Vercel Preview
@@ -198,20 +221,9 @@ Vercel Preview
 -> mail uczestnika dostarczony do Gmail
 ```
 
+Po utworzeniu stałego brancha `preview` ten sam gate musi być powtarzany na jego stabilnym URL przed promocją do `main`.
+
 `registration.notifications.succeeded` oznacza brak błędu obu requestów do providera e-mail. Nie traktuj tego jako niezależnego dowodu mailbox delivery wiadomości administracyjnej.
-
-## Flow
-
-```text
-feature branch
--> PR
--> CI
--> Vercel Preview z TEST
--> review
--> merge main
--> przygotowanie osobnej konfiguracji PROD
--> kontrolowany production release
-```
 
 ## Production gates
 

@@ -7,7 +7,11 @@ import { isRequestId } from "@/domain/registration";
 import { createRegistrationNotificationDependencies } from "@/infrastructure/email";
 import { SheetsApiError } from "@/infrastructure/google/sheets-client";
 import { createApplicationRepositories } from "@/infrastructure/repositories";
-import { getServerEnv, isUnconfiguredVercelProduction } from "@/lib/env";
+import {
+  getServerEnv,
+  isUnconfiguredVercelPreview,
+  isUnconfiguredVercelProduction,
+} from "@/lib/env";
 import { logger } from "@/lib/logger";
 
 const MAX_BODY_BYTES = 16_384;
@@ -44,20 +48,28 @@ function safeRequestId(value: unknown): string | undefined {
   return undefined;
 }
 
+function unavailableResponse() {
+  return NextResponse.json(
+    {
+      ok: false,
+      code: APPLICATION_ERROR_CODE.systemNotReady,
+      message: "Zapisy są obecnie niedostępne.",
+    },
+    { status: 503 },
+  );
+}
+
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   if (isUnconfiguredVercelProduction()) {
     logger.warn("registration.submit.production_not_configured");
+    return unavailableResponse();
+  }
 
-    return NextResponse.json(
-      {
-        ok: false,
-        code: APPLICATION_ERROR_CODE.systemNotReady,
-        message: "Zapisy są obecnie niedostępne.",
-      },
-      { status: 503 },
-    );
+  if (isUnconfiguredVercelPreview()) {
+    logger.warn("registration.submit.preview_not_configured");
+    return unavailableResponse();
   }
 
   const contentType = request.headers.get("content-type") ?? "";
