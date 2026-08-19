@@ -85,10 +85,13 @@ APP_ENV=test DATA_BACKEND=google-sheets ALLOW_TEST_SEED=true pnpm seed:test
 Jawny test integracyjny realnego TEST Sheet:
 
 ```bash
-APP_ENV=test DATA_BACKEND=google-sheets pnpm test:integration:sheets
+APP_ENV=test \
+DATA_BACKEND=google-sheets \
+ALLOW_TEST_SEED=true \
+pnpm test:integration:sheets
 ```
 
-Ta komenda ma twardą blokadę przed `APP_ENV=production` i używa wyłącznie danych syntetycznych.
+Ta komenda ma twardą blokadę przed `APP_ENV=production`, wymaga jawnej flagi zapisu TEST i używa wyłącznie danych syntetycznych.
 
 ## Quality gate
 
@@ -104,7 +107,7 @@ Przed wdrożeniem Google-backed środowiska:
 ```bash
 APP_ENV=test DATA_BACKEND=google-sheets pnpm sheet:validate
 APP_ENV=test DATA_BACKEND=google-sheets pnpm diagnostics
-APP_ENV=test DATA_BACKEND=google-sheets pnpm test:integration:sheets
+APP_ENV=test DATA_BACKEND=google-sheets ALLOW_TEST_SEED=true pnpm test:integration:sheets
 ```
 
 `pnpm-lock.yaml` jest obowiązkowy przed merge i release.
