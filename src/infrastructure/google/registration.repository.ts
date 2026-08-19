@@ -1,4 +1,8 @@
 import type { RegistrationRepository } from "@/domain/repositories";
+import {
+  isPotentialDuplicateCandidate,
+  type RegistrationDuplicateCriteria,
+} from "@/domain/registration-duplicates";
 import type { Registration, RequestId } from "@/domain/registration";
 import { isoDateToGoogleSerial } from "@/infrastructure/google/google-date";
 import {
@@ -53,23 +57,37 @@ function registrationToCells(
 export class GoogleSheetsRegistrationRepository implements RegistrationRepository {
   constructor(private readonly client: SheetsClient) {}
 
-  async findByRequestId(requestId: RequestId): Promise<Registration | null> {
+  private async readRegistrations(): Promise<readonly Registration[]> {
     const rows = await this.client.getValues(`${SHEET.registrations}!A:ZZ`, {
       valueRenderOption: "UNFORMATTED_VALUE",
     });
     const headerRow = rows[0] ?? [];
     const headers = createHeaderMap(headerRow, REGISTRATION_HEADERS);
 
-    const matchingRows = rows
+    return rows
       .slice(1)
-      .filter((row) => cell(row, headers, "REQUEST_ID") === requestId);
+      .map((row) => parseRegistrationRow(row, headers))
+      .filter((registration): registration is Registration => registration !== null);
+  }
 
-    if (matchingRows.length > 1) {
+  async findByRequestId(requestId: RequestId): Promise<Registration | null> {
+    const registrations = await this.readRegistrations();
+    const matching = registrations.filter((registration) => registration.requestId === requestId);
+
+    if (matching.length > 1) {
       throw new SheetSchemaError(`Duplicate request ID: ${requestId}`);
     }
 
-    const matchingRow = matchingRows[0];
-    return matchingRow ? parseRegistrationRow(matchingRow, headers) : null;
+    return matching[0] ?? null;
+  }
+
+  async findPotentialDuplicates(
+    criteria: RegistrationDuplicateCriteria,
+  ): Promise<readonly Registration[]> {
+    const registrations = await this.readRegistrations();
+    return registrations.filter((registration) =>
+      isPotentialDuplicateCandidate(registration, criteria),
+    );
   }
 
   async create(registration: Registration): Promise<void> {
