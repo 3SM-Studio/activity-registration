@@ -17,12 +17,24 @@ async function chooseOption(page: Page, fieldName: RegExp, optionName: string) {
   await option.click();
 }
 
+async function chooseBirthDate(page: Page, year: string, monthIndex: number, day: string) {
+  await page.getByRole("button", { name: /Data urodzenia/ }).click();
+  const calendar = page.locator('[data-slot="calendar"]');
+  await expect(calendar).toBeVisible();
+
+  const dropdowns = calendar.locator("select");
+  await expect(dropdowns).toHaveCount(2);
+  await dropdowns.nth(1).selectOption({ label: year });
+  await dropdowns.nth(0).selectOption({ index: monthIndex });
+  await calendar.getByRole("button", { name: day, exact: true }).click();
+}
+
 async function fillAdultRegistration(page: Page) {
   await chooseOption(page, /Miasto/, "Gdynia");
   await chooseOption(page, /Zajęcia/, "Hip-hop");
   await page.getByLabel(/^Imię \*/).fill("Jan");
   await page.getByLabel(/^Nazwisko \*/).fill("Kowalski");
-  await page.getByLabel(/^Wiek/).fill("18");
+  await chooseBirthDate(page, "2000", 0, "15");
   await page.getByLabel(/Numer telefonu/).fill("500 000 000");
   await page.getByLabel(/Adres e-mail/).fill("jan@example.com");
 }
@@ -44,7 +56,7 @@ test("filters offerings by city and submits a minor registration", async ({ page
 
   await page.getByLabel(/^Imię \*/).fill("Jan");
   await page.getByLabel(/^Nazwisko \*/).fill("Kowalski");
-  await page.getByLabel(/^Wiek/).fill("17");
+  await chooseBirthDate(page, "2012", 0, "15");
 
   await page.getByLabel(/Imię rodzica/).fill("Anna");
   await page.getByLabel(/Nazwisko rodzica/).fill("Kowalska");
@@ -55,6 +67,15 @@ test("filters offerings by city and submits a minor registration", async ({ page
   await page.getByRole("button", { name: "Wyślij zgłoszenie" }).click();
 
   await expect(page.getByText("Dziękujemy. Zgłoszenie zostało wysłane.")).toBeVisible();
+});
+
+test("selects a birth date with the shadcn date picker", async ({ page }) => {
+  await openRegistrationForm(page);
+
+  await chooseBirthDate(page, "2000", 0, "15");
+
+  await expect(page.getByRole("button", { name: /Data urodzenia/ })).toContainText("15");
+  await expect(page.getByRole("button", { name: /Data urodzenia/ })).toContainText("2000");
 });
 
 test("formats a Polish phone number and uses the shadcn country selector", async ({ page }) => {
@@ -89,16 +110,15 @@ test("changing city clears the previously selected offering", async ({ page }) =
   await expect(page.getByRole("option", { name: "Contemporary", exact: true })).toHaveCount(0);
 });
 
-test("switching from minor to adult clears guardian UI", async ({ page }) => {
+test("switching from minor to adult birth date clears guardian UI", async ({ page }) => {
   await openRegistrationForm(page);
 
-  const age = page.getByLabel(/^Wiek/);
-  await age.fill("17");
+  await chooseBirthDate(page, "2012", 0, "15");
   await expect(page.getByLabel(/Imię rodzica/)).toBeVisible();
 
   await page.getByLabel(/Imię rodzica/).fill("Anna");
   await page.getByLabel(/Nazwisko rodzica/).fill("Kowalska");
-  await age.fill("18");
+  await chooseBirthDate(page, "2000", 0, "15");
 
   await expect(page.getByLabel(/Imię rodzica/)).toHaveCount(0);
   await expect(page.getByLabel(/Nazwisko rodzica/)).toHaveCount(0);
