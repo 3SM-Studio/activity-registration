@@ -20,6 +20,14 @@ type ValuesResponse = Readonly<{
   values?: readonly (readonly unknown[])[];
 }>;
 
+type GridRangeResponse = Readonly<{
+  sheetId?: number;
+  startRowIndex?: number;
+  endRowIndex?: number;
+  startColumnIndex?: number;
+  endColumnIndex?: number;
+}>;
+
 type SpreadsheetMetadataResponse = Readonly<{
   sheets?: readonly {
     properties?: {
@@ -39,13 +47,7 @@ type SpreadsheetMetadataResponse = Readonly<{
     tables?: readonly {
       tableId?: string;
       name?: string;
-      range?: {
-        sheetId?: number;
-        startRowIndex?: number;
-        endRowIndex?: number;
-        startColumnIndex?: number;
-        endColumnIndex?: number;
-      };
+      range?: GridRangeResponse;
       columnProperties?: readonly {
         columnIndex?: number;
         columnName?: string;
@@ -57,6 +59,21 @@ type SpreadsheetMetadataResponse = Readonly<{
           };
         };
       }[];
+    }[];
+    filterViews?: readonly {
+      filterViewId?: number;
+      title?: string;
+      range?: GridRangeResponse;
+      criteria?: Readonly<Record<string, { hiddenValues?: readonly string[] }>>;
+    }[];
+    conditionalFormats?: readonly {
+      ranges?: readonly GridRangeResponse[];
+      booleanRule?: {
+        condition?: {
+          type?: string;
+          values?: readonly { userEnteredValue?: string }[];
+        };
+      };
     }[];
   }[];
 }>;
@@ -86,11 +103,23 @@ export type TableMetadata = Readonly<{
   columnProperties: readonly TableColumnMetadata[];
 }>;
 
+export type FilterViewMetadata = Readonly<{
+  filterViewId: number;
+  title: string;
+}>;
+
+export type ConditionalFormatMetadata = Readonly<{
+  index: number;
+  customFormula: string | null;
+}>;
+
 export type SheetMetadata = Readonly<{
   sheetId: number;
   title: string;
   protectedRanges?: readonly ProtectedRangeMetadata[];
   tables?: readonly TableMetadata[];
+  filterViews?: readonly FilterViewMetadata[];
+  conditionalFormats?: readonly ConditionalFormatMetadata[];
 }>;
 
 export type ValueRenderOption = "FORMATTED_VALUE" | "UNFORMATTED_VALUE" | "FORMULA";
@@ -267,7 +296,7 @@ export class GoogleSheetsClient implements SheetsClient {
 
   async getSheetMetadata(): Promise<readonly SheetMetadata[]> {
     const data = await this.request<SpreadsheetMetadataResponse>(
-      "?fields=sheets(properties(sheetId,title),protectedRanges(protectedRangeId,description,warningOnly,range(sheetId,startColumnIndex,endColumnIndex)),tables(tableId,name,range(sheetId,startRowIndex,endRowIndex,startColumnIndex,endColumnIndex),columnProperties(columnIndex,columnName,columnType,dataValidationRule(condition(type,values(userEnteredValue))))))",
+      "?fields=sheets(properties(sheetId,title),protectedRanges(protectedRangeId,description,warningOnly,range(sheetId,startColumnIndex,endColumnIndex)),tables(tableId,name,range(sheetId,startRowIndex,endRowIndex,startColumnIndex,endColumnIndex),columnProperties(columnIndex,columnName,columnType,dataValidationRule(condition(type,values(userEnteredValue))))),filterViews(filterViewId,title),conditionalFormats(booleanRule(condition(type,values(userEnteredValue)))))",
     );
 
     return (data.sheets ?? []).flatMap((sheet) => {
@@ -343,7 +372,29 @@ export class GoogleSheetsClient implements SheetsClient {
         ];
       });
 
-      return [{ sheetId, title, protectedRanges, tables } satisfies SheetMetadata];
+      const filterViews = (sheet.filterViews ?? []).flatMap((filterView) => {
+        if (typeof filterView.filterViewId !== "number" || !filterView.title) {
+          return [];
+        }
+        return [
+          {
+            filterViewId: filterView.filterViewId,
+            title: filterView.title,
+          } satisfies FilterViewMetadata,
+        ];
+      });
+
+      const conditionalFormats = (sheet.conditionalFormats ?? []).map((rule, index) => ({
+        index,
+        customFormula:
+          rule.booleanRule?.condition?.type === "CUSTOM_FORMULA"
+            ? (rule.booleanRule.condition.values?.[0]?.userEnteredValue ?? null)
+            : null,
+      } satisfies ConditionalFormatMetadata));
+
+      return [
+        { sheetId, title, protectedRanges, tables, filterViews, conditionalFormats } satisfies SheetMetadata,
+      ];
     });
   }
 
