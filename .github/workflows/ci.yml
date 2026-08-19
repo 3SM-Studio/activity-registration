@@ -8,45 +8,14 @@ on:
       - preview
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  format-sources:
-    if: github.event_name == 'pull_request' && github.head_ref == 'feat/full-shadcn-form'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          ref: feat/full-shadcn-form
-      - uses: pnpm/action-setup@v6
-        with:
-          version: 11.20.0
-          run_install: false
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 24.19.0
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm format
-      - name: Commit formatted product files
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src tests
-          if git diff --cached --quiet; then
-            echo "No source formatting changes needed"
-            exit 0
-          fi
-          git commit -m "style: format final shadcn sources"
-          git push origin HEAD:feat/full-shadcn-form
-
   check:
-    if: github.event_name != 'pull_request' || github.head_ref != 'feat/full-shadcn-form'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -59,9 +28,13 @@ jobs:
         with:
           node-version: 24.19.0
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm check
-      - run: google-chrome --version
-      - run: pnpm test:e2e
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Quality gate
+        run: pnpm check
+      - name: Verify system Chrome
+        run: google-chrome --version
+      - name: Critical E2E
+        run: pnpm test:e2e
         env:
           PLAYWRIGHT_USE_SYSTEM_CHROME: "1"
