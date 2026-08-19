@@ -10,11 +10,23 @@ import { APPLICATION_ERROR_CODE } from "@/application/errors";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldLabel,
+  FieldLegend,
+  FieldSet,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { NativeSelect } from "@/components/ui/native-select";
 import { PhoneNumberInput } from "@/components/ui/phone-number-input";
-import { FieldError } from "@/components/registration/field-error";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { PublicCatalog } from "@/domain/catalog";
 import type { PublicSettings } from "@/domain/settings";
 import {
@@ -88,17 +100,7 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
     [catalog.offerings, cityId],
   );
 
-  const cityRegistration = register("cityId");
   const ageRegistration = register("age", { valueAsNumber: true });
-
-  const onCityChange: ChangeEventHandler<HTMLSelectElement> = (event) => {
-    cityRegistration.onChange(event);
-    setValue("offeringId", "", {
-      shouldDirty: true,
-      shouldValidate: false,
-    });
-    clearErrors("offeringId");
-  };
 
   const onAgeChange: ChangeEventHandler<HTMLInputElement> = (event) => {
     ageRegistration.onChange(event);
@@ -174,8 +176,7 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
         ) {
           router.refresh();
         } else if (failure.code === APPLICATION_ERROR_CODE.requestIdConflict) {
-          const nextRequestId = newRequestId();
-          setValue("requestId", nextRequestId);
+          setValue("requestId", newRequestId());
         }
 
         setGlobalError(failure.message || "Nie udało się wysłać zgłoszenia.");
@@ -193,8 +194,8 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
   if (!settings.registrationsOpen) {
     return (
       <Card className="text-center" aria-live="polite">
-        <h2 className="text-xl font-semibold text-neutral-950">Zapisy są zamknięte</h2>
-        <p className="mt-2 text-neutral-600">Formularz nie przyjmuje teraz nowych zgłoszeń.</p>
+        <h2 className="text-xl font-semibold text-foreground">Zapisy są zamknięte</h2>
+        <p className="mt-2 text-muted-foreground">Formularz nie przyjmuje teraz nowych zgłoszeń.</p>
       </Card>
     );
   }
@@ -202,8 +203,8 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
   if (catalog.cities.length === 0 || catalog.offerings.length === 0) {
     return (
       <Card className="text-center" aria-live="polite">
-        <h2 className="text-xl font-semibold text-neutral-950">Brak dostępnych zajęć</h2>
-        <p className="mt-2 text-neutral-600">Aktualnie nie ma zajęć dostępnych do zapisów.</p>
+        <h2 className="text-xl font-semibold text-foreground">Brak dostępnych zajęć</h2>
+        <p className="mt-2 text-muted-foreground">Aktualnie nie ma zajęć dostępnych do zapisów.</p>
       </Card>
     );
   }
@@ -217,8 +218,8 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
         >
           ✓
         </div>
-        <h2 className="text-xl font-semibold text-neutral-950">Zgłoszenie przyjęte</h2>
-        <p className="mt-2 text-neutral-600">{settings.successMessage}</p>
+        <h2 className="text-xl font-semibold text-foreground">Zgłoszenie przyjęte</h2>
+        <p className="mt-2 text-muted-foreground">{settings.successMessage}</p>
       </Card>
     );
   }
@@ -233,62 +234,94 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
         }}
         noValidate
         onSubmit={handleSubmit(submit, invalid)}
-        className="space-y-7"
+        className="space-y-8"
       >
         <div className="grid gap-5 sm:grid-cols-2">
-          <div>
-            <Label htmlFor="cityId">
-              Miasto <span aria-hidden="true">*</span>
-            </Label>
-            <NativeSelect
-              id="cityId"
-              required
-              aria-invalid={Boolean(errors.cityId)}
-              aria-describedby={errors.cityId ? "cityId-error" : undefined}
-              {...cityRegistration}
-              onChange={onCityChange}
-            >
-              <option value="">Wybierz miasto</option>
-              {catalog.cities.map((city) => (
-                <option key={city.id} value={city.id}>
-                  {city.name}
-                </option>
-              ))}
-            </NativeSelect>
-            <FieldError id="cityId-error" message={errors.cityId?.message} />
-          </div>
+          <Controller
+            name="cityId"
+            control={control}
+            render={({ field, fieldState }) => (
+              <Field data-invalid={fieldState.invalid}>
+                <FieldLabel htmlFor="cityId">
+                  Miasto <span aria-hidden="true">*</span>
+                </FieldLabel>
+                <Select
+                  name={field.name}
+                  value={field.value ?? ""}
+                  onValueChange={(nextCityId) => {
+                    field.onChange(nextCityId);
+                    setValue("offeringId", "", {
+                      shouldDirty: true,
+                      shouldValidate: false,
+                    });
+                    clearErrors("offeringId");
+                  }}
+                >
+                  <SelectTrigger
+                    id="cityId"
+                    aria-invalid={fieldState.invalid}
+                    {...(fieldState.invalid ? { "aria-describedby": "cityId-error" } : {})}
+                  >
+                    <SelectValue placeholder="Wybierz miasto" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {catalog.cities.map((city) => (
+                      <SelectItem key={city.id} value={city.id}>
+                        {city.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FieldError id="cityId-error" errors={[fieldState.error]} />
+              </Field>
+            )}
+          />
 
-          <div>
-            <Label htmlFor="offeringId">
-              Zajęcia <span aria-hidden="true">*</span>
-            </Label>
-            <NativeSelect
-              id="offeringId"
-              required
-              disabled={!cityId}
-              aria-invalid={Boolean(errors.offeringId)}
-              aria-describedby={errors.offeringId ? "offeringId-error" : undefined}
-              {...register("offeringId")}
-            >
-              <option value="">{cityId ? "Wybierz zajęcia" : "Najpierw wybierz miasto"}</option>
-              {availableOfferings.map((offering) => (
-                <option key={offering.id} value={offering.id}>
-                  {offering.name}
-                </option>
-              ))}
-            </NativeSelect>
-            <FieldError id="offeringId-error" message={errors.offeringId?.message} />
-          </div>
+          <Controller
+            name="offeringId"
+            control={control}
+            render={({ field, fieldState }) => (
+              <Field data-invalid={fieldState.invalid}>
+                <FieldLabel htmlFor="offeringId">
+                  Zajęcia <span aria-hidden="true">*</span>
+                </FieldLabel>
+                <Select
+                  name={field.name}
+                  value={field.value ?? ""}
+                  onValueChange={field.onChange}
+                  disabled={!cityId}
+                >
+                  <SelectTrigger
+                    id="offeringId"
+                    aria-invalid={fieldState.invalid}
+                    {...(fieldState.invalid ? { "aria-describedby": "offeringId-error" } : {})}
+                  >
+                    <SelectValue
+                      placeholder={cityId ? "Wybierz zajęcia" : "Najpierw wybierz miasto"}
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableOfferings.map((offering) => (
+                      <SelectItem key={offering.id} value={offering.id}>
+                        {offering.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FieldError id="offeringId-error" errors={[fieldState.error]} />
+              </Field>
+            )}
+          />
         </div>
 
-        <fieldset className="space-y-5">
-          <legend className="text-base font-semibold text-neutral-950">Dane uczestnika</legend>
+        <FieldSet>
+          <FieldLegend>Dane uczestnika</FieldLegend>
 
           <div className="grid gap-5 sm:grid-cols-2">
-            <div>
-              <Label htmlFor="participantFirstName">
+            <Field data-invalid={Boolean(errors.participantFirstName)}>
+              <FieldLabel htmlFor="participantFirstName">
                 Imię <span aria-hidden="true">*</span>
-              </Label>
+              </FieldLabel>
               <Input
                 id="participantFirstName"
                 required
@@ -300,16 +333,13 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
                 }
                 {...register("participantFirstName")}
               />
-              <FieldError
-                id="participantFirstName-error"
-                message={errors.participantFirstName?.message}
-              />
-            </div>
+              <FieldError id="participantFirstName-error" errors={[errors.participantFirstName]} />
+            </Field>
 
-            <div>
-              <Label htmlFor="participantLastName">
+            <Field data-invalid={Boolean(errors.participantLastName)}>
+              <FieldLabel htmlFor="participantLastName">
                 Nazwisko <span aria-hidden="true">*</span>
-              </Label>
+              </FieldLabel>
               <Input
                 id="participantLastName"
                 required
@@ -321,17 +351,14 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
                 }
                 {...register("participantLastName")}
               />
-              <FieldError
-                id="participantLastName-error"
-                message={errors.participantLastName?.message}
-              />
-            </div>
+              <FieldError id="participantLastName-error" errors={[errors.participantLastName]} />
+            </Field>
           </div>
 
-          <div className="max-w-48">
-            <Label htmlFor="age">
+          <Field className="max-w-48" data-invalid={Boolean(errors.age)}>
+            <FieldLabel htmlFor="age">
               Wiek <span aria-hidden="true">*</span>
-            </Label>
+            </FieldLabel>
             <Input
               id="age"
               required
@@ -345,25 +372,23 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
               {...ageRegistration}
               onChange={onAgeChange}
             />
-            <FieldError id="age-error" message={errors.age?.message} />
-          </div>
-        </fieldset>
+            <FieldError id="age-error" errors={[errors.age]} />
+          </Field>
+        </FieldSet>
 
         {isMinor ? (
-          <fieldset className="space-y-5 rounded-2xl bg-neutral-50 p-4 sm:p-5">
-            <legend className="px-1 text-base font-semibold text-neutral-950">
-              Rodzic lub opiekun
-            </legend>
-            <p className="text-sm text-neutral-600">
+          <FieldSet className="rounded-2xl border border-border bg-muted/45 p-4 sm:p-5">
+            <FieldLegend className="px-1">Rodzic lub opiekun</FieldLegend>
+            <FieldDescription>
               Uczestnik jest niepełnoletni, dlatego potrzebujemy danych osoby odpowiedzialnej za
               zgłoszenie.
-            </p>
+            </FieldDescription>
 
             <div className="grid gap-5 sm:grid-cols-2">
-              <div>
-                <Label htmlFor="guardianFirstName">
+              <Field data-invalid={Boolean(errors.guardianFirstName)}>
+                <FieldLabel htmlFor="guardianFirstName">
                   Imię rodzica lub opiekuna <span aria-hidden="true">*</span>
-                </Label>
+                </FieldLabel>
                 <Input
                   id="guardianFirstName"
                   required
@@ -375,16 +400,13 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
                   }
                   {...register("guardianFirstName")}
                 />
-                <FieldError
-                  id="guardianFirstName-error"
-                  message={errors.guardianFirstName?.message}
-                />
-              </div>
+                <FieldError id="guardianFirstName-error" errors={[errors.guardianFirstName]} />
+              </Field>
 
-              <div>
-                <Label htmlFor="guardianLastName">
+              <Field data-invalid={Boolean(errors.guardianLastName)}>
+                <FieldLabel htmlFor="guardianLastName">
                   Nazwisko rodzica lub opiekuna <span aria-hidden="true">*</span>
-                </Label>
+                </FieldLabel>
                 <Input
                   id="guardianLastName"
                   required
@@ -394,32 +416,29 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
                   aria-describedby={errors.guardianLastName ? "guardianLastName-error" : undefined}
                   {...register("guardianLastName")}
                 />
-                <FieldError
-                  id="guardianLastName-error"
-                  message={errors.guardianLastName?.message}
-                />
-              </div>
+                <FieldError id="guardianLastName-error" errors={[errors.guardianLastName]} />
+              </Field>
             </div>
-          </fieldset>
+          </FieldSet>
         ) : null}
 
-        <fieldset className="space-y-5">
-          <legend className="text-base font-semibold text-neutral-950">Dane kontaktowe</legend>
-          <p className="text-sm text-neutral-600">
+        <FieldSet>
+          <FieldLegend>Dane kontaktowe</FieldLegend>
+          <FieldDescription>
             {isMinor
               ? "Podaj telefon i e-mail rodzica lub opiekuna odpowiedzialnego za zgłoszenie."
               : "Podaj telefon i e-mail uczestnika."}
-          </p>
+          </FieldDescription>
 
           <div className="grid gap-5 sm:grid-cols-2">
-            <div>
-              <Label htmlFor="phone">
-                Numer telefonu <span aria-hidden="true">*</span>
-              </Label>
-              <Controller
-                name="phone"
-                control={control}
-                render={({ field }) => (
+            <Controller
+              name="phone"
+              control={control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="phone">
+                    Numer telefonu <span aria-hidden="true">*</span>
+                  </FieldLabel>
                   <PhoneNumberInput
                     id="phone"
                     name={field.name}
@@ -428,18 +447,18 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
                     onBlur={field.onBlur}
                     required
                     autoComplete="tel"
-                    invalid={Boolean(errors.phone)}
-                    describedBy={errors.phone ? "phone-error" : undefined}
+                    invalid={fieldState.invalid}
+                    describedBy={fieldState.invalid ? "phone-error" : undefined}
                   />
-                )}
-              />
-              <FieldError id="phone-error" message={errors.phone?.message} />
-            </div>
+                  <FieldError id="phone-error" errors={[fieldState.error]} />
+                </Field>
+              )}
+            />
 
-            <div>
-              <Label htmlFor="email">
+            <Field data-invalid={Boolean(errors.email)}>
+              <FieldLabel htmlFor="email">
                 Adres e-mail <span aria-hidden="true">*</span>
-              </Label>
+              </FieldLabel>
               <Input
                 id="email"
                 required
@@ -452,10 +471,10 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
                 aria-describedby={errors.email ? "email-error" : undefined}
                 {...register("email")}
               />
-              <FieldError id="email-error" message={errors.email?.message} />
-            </div>
+              <FieldError id="email-error" errors={[errors.email]} />
+            </Field>
           </div>
-        </fieldset>
+        </FieldSet>
 
         <input
           type="text"
@@ -476,13 +495,13 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
         <input type="hidden" {...register("renderedAt", { valueAsNumber: true })} />
 
         {settings.privacyNoticeUrl ? (
-          <p className="text-sm leading-6 text-neutral-600">
+          <p className="text-sm leading-6 text-muted-foreground">
             Przed wysłaniem zapoznaj się z{" "}
             <a
               href={settings.privacyNoticeUrl}
               target="_blank"
               rel="noreferrer"
-              className="font-medium text-neutral-950 underline underline-offset-4"
+              className="font-medium text-foreground underline underline-offset-4 hover:text-primary"
             >
               informacją o przetwarzaniu danych
             </a>
@@ -509,12 +528,11 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
         ) : null}
 
         {globalError ? (
-          <div
-            role="alert"
-            className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800"
-          >
-            {globalError}
-          </div>
+          <Alert variant="destructive" role="alert">
+            <CircleAlert aria-hidden="true" />
+            <AlertTitle>Nie udało się wysłać zgłoszenia</AlertTitle>
+            <AlertDescription>{globalError}</AlertDescription>
+          </Alert>
         ) : null}
 
         <Button
@@ -530,7 +548,7 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
               : "Zapisy są zamknięte"}
         </Button>
 
-        <p className="text-center text-xs text-neutral-500">Pola oznaczone * są wymagane.</p>
+        <p className="text-center text-xs text-muted-foreground">Pola oznaczone * są wymagane.</p>
       </form>
     </Card>
   );

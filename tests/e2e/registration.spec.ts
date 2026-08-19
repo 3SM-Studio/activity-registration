@@ -5,9 +5,21 @@ async function openRegistrationForm(page: Page) {
   await expect(page.locator('form[data-hydrated="true"]')).toBeVisible();
 }
 
+function combobox(page: Page, name: RegExp) {
+  return page.getByRole("combobox", { name });
+}
+
+async function chooseOption(page: Page, fieldName: RegExp, optionName: string) {
+  const trigger = combobox(page, fieldName);
+  await trigger.click();
+  const option = page.getByRole("option", { name: optionName, exact: true });
+  await expect(option).toBeVisible();
+  await option.click();
+}
+
 async function fillAdultRegistration(page: Page) {
-  await page.getByLabel(/Miasto/).selectOption("gdynia");
-  await page.getByLabel(/Zajęcia/).selectOption("gdynia-hiphop");
+  await chooseOption(page, /Miasto/, "Gdynia");
+  await chooseOption(page, /Zajęcia/, "Hip-hop");
   await page.getByLabel(/^Imię \*/).fill("Jan");
   await page.getByLabel(/^Nazwisko \*/).fill("Kowalski");
   await page.getByLabel(/^Wiek/).fill("18");
@@ -18,18 +30,18 @@ async function fillAdultRegistration(page: Page) {
 test("filters offerings by city and submits a minor registration", async ({ page }) => {
   await openRegistrationForm(page);
 
-  const offering = page.getByLabel(/Zajęcia/);
+  const offering = combobox(page, /Zajęcia/);
   await expect(offering).toBeDisabled();
 
-  await page.getByLabel(/Miasto/).selectOption("gdynia");
+  await chooseOption(page, /Miasto/, "Gdynia");
   await expect(offering).toBeEnabled();
 
-  const options = await offering.locator("option").allTextContents();
-  expect(options).toContain("Hip-hop");
-  expect(options).toContain("Contemporary");
-  expect(options).not.toContain("Choreografia");
+  await offering.click();
+  await expect(page.getByRole("option", { name: "Hip-hop", exact: true })).toBeVisible();
+  await expect(page.getByRole("option", { name: "Contemporary", exact: true })).toBeVisible();
+  await expect(page.getByRole("option", { name: "Choreografia", exact: true })).toHaveCount(0);
+  await page.getByRole("option", { name: "Contemporary", exact: true }).click();
 
-  await offering.selectOption("gdynia-contemporary");
   await page.getByLabel(/^Imię \*/).fill("Jan");
   await page.getByLabel(/^Nazwisko \*/).fill("Kowalski");
   await page.getByLabel(/^Wiek/).fill("17");
@@ -45,33 +57,36 @@ test("filters offerings by city and submits a minor registration", async ({ page
   await expect(page.getByText("Dziękujemy. Zgłoszenie zostało wysłane.")).toBeVisible();
 });
 
-test("formats a Polish phone number and exposes the country selector", async ({ page }) => {
+test("formats a Polish phone number and uses the shadcn country selector", async ({ page }) => {
   await openRegistrationForm(page);
 
   const phone = page.getByLabel(/Numer telefonu/);
-  const country = page.locator(".PhoneInputCountrySelect");
+  const country = combobox(page, /Kraj numeru telefonu/);
 
-  await expect(country).toHaveValue("PL");
+  await expect(country).toContainText("+48");
   await phone.fill("500000000");
-  await expect(phone).toHaveValue("+48 500 000 000");
+  await expect(phone).toHaveValue("500 000 000");
+
+  await country.click();
+  await expect(page.getByRole("option", { name: /Niemcy.*\+49/ })).toBeVisible();
+  await page.keyboard.press("Escape");
 });
 
 test("changing city clears the previously selected offering", async ({ page }) => {
   await openRegistrationForm(page);
 
-  const city = page.getByLabel(/Miasto/);
-  const offering = page.getByLabel(/Zajęcia/);
+  const offering = combobox(page, /Zajęcia/);
 
-  await city.selectOption("gdynia");
-  await offering.selectOption("gdynia-hiphop");
-  await expect(offering).toHaveValue("gdynia-hiphop");
+  await chooseOption(page, /Miasto/, "Gdynia");
+  await chooseOption(page, /Zajęcia/, "Hip-hop");
+  await expect(offering).toContainText("Hip-hop");
 
-  await city.selectOption("sopot");
+  await chooseOption(page, /Miasto/, "Sopot");
 
-  await expect(offering).toHaveValue("");
-  const options = await offering.locator("option").allTextContents();
-  expect(options).toContain("Choreografia");
-  expect(options).not.toContain("Contemporary");
+  await expect(offering).toContainText("Wybierz zajęcia");
+  await offering.click();
+  await expect(page.getByRole("option", { name: "Choreografia", exact: true })).toBeVisible();
+  await expect(page.getByRole("option", { name: "Contemporary", exact: true })).toHaveCount(0);
 });
 
 test("switching from minor to adult clears guardian UI", async ({ page }) => {
@@ -105,10 +120,10 @@ test("clears a stale offering after the server rejects it", async ({ page }) => 
   await openRegistrationForm(page);
   await fillAdultRegistration(page);
 
-  const offering = page.getByLabel(/Zajęcia/);
+  const offering = combobox(page, /Zajęcia/);
   await page.getByRole("button", { name: "Wyślij zgłoszenie" }).click();
 
-  await expect(offering).toHaveValue("");
+  await expect(offering).toContainText("Wybierz zajęcia");
   await expect(page.getByText("Wybrane zajęcia nie są już dostępne.").first()).toBeVisible();
 });
 
@@ -165,7 +180,7 @@ test("shows validation summary without focusing an input after invalid submit", 
   const summary = page.locator("[data-validation-summary]");
   await expect(summary).toBeVisible();
   await expect(summary).toBeFocused();
-  await expect(page.getByLabel(/Miasto/)).not.toBeFocused();
+  await expect(combobox(page, /Miasto/)).not.toBeFocused();
 });
 
 test("handles accidental honeypot autofill without focusing the hidden field", async ({ page }) => {
