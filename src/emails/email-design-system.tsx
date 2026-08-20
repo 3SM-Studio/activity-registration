@@ -46,11 +46,7 @@ type EmailLayoutProps = Readonly<{
   maxWidth?: number;
 }>;
 
-export function EmailLayout({
-  preview,
-  children,
-  maxWidth = 640,
-}: EmailLayoutProps) {
+export function EmailLayout({ preview, children, maxWidth = 640 }: EmailLayoutProps) {
   return (
     <Html lang="pl" dir="ltr">
       <Head />
@@ -128,11 +124,7 @@ type EmailCardProps = Readonly<{
   padding?: string;
 }>;
 
-export function EmailCard({
-  children,
-  tone = "default",
-  padding = "24px",
-}: EmailCardProps) {
+export function EmailCard({ children, tone = "default", padding = "24px" }: EmailCardProps) {
   const toneStyle: Record<NonNullable<EmailCardProps["tone"]>, CSSProperties> = {
     default: {
       backgroundColor: emailColors.surfaceStrong,
@@ -157,9 +149,7 @@ export function EmailCard({
   };
 
   return (
-    <Section
-      style={{ ...cardBaseStyle, ...toneStyle[tone], padding, marginBottom: "14px" }}
-    >
+    <Section style={{ ...cardBaseStyle, ...toneStyle[tone], padding, marginBottom: "14px" }}>
       {children}
     </Section>
   );
