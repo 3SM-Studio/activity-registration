@@ -6,11 +6,14 @@ import {
   Head,
   Heading,
   Html,
+  Img,
   Preview,
   Row,
   Section,
   Text,
 } from "react-email";
+
+import { POZYTYWKA_EMAIL_LOGO_SRC } from "@/emails/email-brand-assets";
 
 export const emailColors = {
   background: "#fff8ed",
@@ -72,23 +75,21 @@ export function BrandHeader() {
   return (
     <Section style={{ padding: "0 8px 20px" }}>
       <Row>
-        <Column style={{ verticalAlign: "middle", width: "48px" }}>
-          <Text
+        <Column style={{ verticalAlign: "middle", width: "80px" }}>
+          <Img
+            src={POZYTYWKA_EMAIL_LOGO_SRC}
+            alt="Pozytywka"
+            width="64"
+            height="49"
             style={{
-              backgroundColor: emailColors.brand,
-              borderRadius: "12px",
-              color: "#ffffff",
-              fontSize: "18px",
-              fontWeight: 800,
-              height: "40px",
-              lineHeight: "40px",
-              margin: 0,
-              textAlign: "center",
-              width: "40px",
+              border: 0,
+              display: "block",
+              height: "49px",
+              outline: "none",
+              textDecoration: "none",
+              width: "64px",
             }}
-          >
-            P
-          </Text>
+          />
         </Column>
         <Column style={{ verticalAlign: "middle" }}>
           <Text
