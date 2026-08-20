@@ -43,6 +43,15 @@ export class ResendEmailSender implements EmailSender {
         text: message.text,
         html: message.html,
         ...(message.replyTo ? { reply_to: message.replyTo } : {}),
+        ...(message.attachments
+          ? {
+              attachments: message.attachments.map((attachment) => ({
+                path: attachment.path,
+                filename: attachment.filename,
+                ...(attachment.contentId ? { content_id: attachment.contentId } : {}),
+              })),
+            }
+          : {}),
       }),
     });
 
