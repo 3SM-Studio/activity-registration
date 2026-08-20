@@ -11,7 +11,7 @@
     "build": "next build",
     "start": "next start",
     "format": "prettier --write .",
-    "format:check": "prettier --write docs/PRODUCTION_DECISIONS_2026-08-20.md docs/RODO_AND_RETENTION_POLICY.md scripts/seed-production-catalog.ts src/app/polityka-prywatnosci/page.tsx && git diff --exit-code -- docs/PRODUCTION_DECISIONS_2026-08-20.md docs/RODO_AND_RETENTION_POLICY.md scripts/seed-production-catalog.ts src/app/polityka-prywatnosci/page.tsx",
+    "format:check": "prettier --check .",
     "lint": "eslint .",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest",
