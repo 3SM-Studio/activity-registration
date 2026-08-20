@@ -173,16 +173,18 @@ Still required from Iwona for each real group:
 
 Until those data exist, `GRUPY` may remain structurally valid without fabricated production rows and `ASSIGNED_GROUP_ID` may remain empty.
 
-## Current production-readiness work
+## PR 11 / production-readiness engineering
 
-PR 11 / `chore/prod-readiness` is the current engineering stage.
+Production-readiness engineering is implemented in PR #28 on `chore/prod-readiness`.
 
-Code/runbook work includes:
+Its source/runbook scope includes:
 
 - production environment preflight without secret output,
 - truth-doc synchronization from stale v2 language to current v3,
 - final release checklist correction,
 - explicit closed-production verification order.
+
+GitHub PR/CI state is the source of truth for whether #28 has passed its merge gate. The external Production gates below remain separate even after the engineering PR is merged.
 
 ## External blockers before PROD can open
 
