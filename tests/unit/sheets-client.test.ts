@@ -147,7 +147,9 @@ describe("GoogleSheetsClient", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const client = new GoogleSheetsClient(env, "sheet-id");
-    await expect(client.appendTableRow("900001", ["abc"])).rejects.toMatchObject({ status: 503 });
+    await expect(client.appendTableRow("900001", ["abc"])).rejects.toMatchObject({
+      status: 503,
+    });
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
