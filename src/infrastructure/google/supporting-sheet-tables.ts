@@ -95,20 +95,28 @@ function assertTableRange(
   }
 }
 
-export async function bootstrapSupportingSheetTables(client: SheetsClient): Promise<void> {
+export async function bootstrapSupportingSheetTables(
+  client: SheetsClient,
+): Promise<void> {
   const metadata = await client.getSheetMetadata();
 
   for (const spec of SUPPORTING_TABLE_SPECS) {
     const sheet = metadata.find((candidate) => candidate.title === spec.sheet);
     if (!sheet) {
-      throw new SheetSchemaError(`Missing ${spec.sheet} sheet. Run sheet:bootstrap first.`);
+      throw new SheetSchemaError(
+        `Missing ${spec.sheet} sheet. Run sheet:bootstrap first.`,
+      );
     }
 
     const rows = await client.getValues(`${spec.sheet}!A:ZZ`);
     const definition = {
       tableId: spec.tableId,
       name: spec.tableName,
-      range: tableRange(sheet.sheetId, rows.length, SHEET_SCHEMA[spec.sheet].length),
+      range: tableRange(
+        sheet.sheetId,
+        rows.length,
+        SHEET_SCHEMA[spec.sheet].length,
+      ),
       rowsProperties: SUPPORTING_TABLE_ROWS_PROPERTIES,
     } as const;
 
@@ -151,7 +159,9 @@ export async function bootstrapSupportingSheetTables(client: SheetsClient): Prom
   }
 }
 
-export async function validateSupportingSheetTables(client: SheetsClient): Promise<void> {
+export async function validateSupportingSheetTables(
+  client: SheetsClient,
+): Promise<void> {
   const metadata = await client.getSheetMetadata();
 
   for (const spec of SUPPORTING_TABLE_SPECS) {
