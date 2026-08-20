@@ -36,7 +36,9 @@ async function appendMappedRows(
 async function assertSafeInitialSeed(client: SheetsClient): Promise<void> {
   const existingRegistrationIds = await client.getValues(`${SHEET.registrations}!A2:A`);
   if (existingRegistrationIds.some((row) => String(row[0] ?? "").trim().length > 0)) {
-    throw new Error("Refusing production catalog seed because ZAPISY already contains registrations.");
+    throw new Error(
+      "Refusing production catalog seed because ZAPISY already contains registrations.",
+    );
   }
 }
 
@@ -101,8 +103,7 @@ async function main() {
       OFFERING_ID: "olkusz-wokal",
       CITY_ID: "olkusz",
       NAME: "Wokal",
-      PUBLIC_DESCRIPTION:
-        "Zajęcia rozwijające emisję głosu, interpretację i swobodę sceniczną.",
+      PUBLIC_DESCRIPTION: "Zajęcia rozwijające emisję głosu, interpretację i swobodę sceniczną.",
       ACTIVE: "TAK",
       SORT_ORDER: 20,
       REGISTRATION_MODE: "ROLLING",
@@ -143,8 +144,7 @@ async function main() {
       OFFERING_ID: "olkusz-balet",
       CITY_ID: "olkusz",
       NAME: "Balet",
-      PUBLIC_DESCRIPTION:
-        "Podstawy tańca klasycznego, koordynacji, muzykalności i pracy z ruchem.",
+      PUBLIC_DESCRIPTION: "Podstawy tańca klasycznego, koordynacji, muzykalności i pracy z ruchem.",
       ACTIVE: "TAK",
       SORT_ORDER: 50,
       REGISTRATION_MODE: "ROLLING",
@@ -307,8 +307,7 @@ async function main() {
     { KEY: SETTING_KEY.publicFormTitle, VALUE: "Zapisy na zajęcia 2026/2027" },
     {
       KEY: SETTING_KEY.successMessage,
-      VALUE:
-        "Dziękujemy. Otrzymaliśmy Twoje zgłoszenie i skontaktujemy się po jego weryfikacji.",
+      VALUE: "Dziękujemy. Otrzymaliśmy Twoje zgłoszenie i skontaktujemy się po jego weryfikacji.",
     },
     { KEY: SETTING_KEY.privacyNoticeUrl, VALUE: "/polityka-prywatnosci" },
     { KEY: SETTING_KEY.privacyNoticeVersion, VALUE: "2026-08-20" },
