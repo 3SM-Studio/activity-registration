@@ -1,102 +1,30 @@
 # Data model
 
-This document separates the **currently implemented schema v2** from the **target v3 model**. Do not treat target v3 fields as already deployed until the explicit migration PR is merged and verified.
+This document describes the **currently implemented schema v3**. Historical v1/v2 contracts are retained only where they matter for migration and legacy-row handling.
 
-## Current implemented schema v2
+The executable Google Sheets contract lives in `src/infrastructure/google/sheets-contracts.ts` and is authoritative when documentation and code differ.
 
-### MIASTA
-
-| Column     | Meaning                |
-| ---------- | ---------------------- |
-| CITY_ID    | stabilne techniczne ID |
-| NAME       | publiczna nazwa        |
-| ACTIVE     | TAK/NIE                |
-| SORT_ORDER | kolejność              |
-
-### OFERTY_ZAJEC
-
-| Column      | Meaning                |
-| ----------- | ---------------------- |
-| OFFERING_ID | stabilne techniczne ID |
-| CITY_ID     | relacja do miasta      |
-| NAME        | publiczna nazwa zajęć  |
-| ACTIVE      | TAK/NIE                |
-| SORT_ORDER  | kolejność              |
-
-### ZAPISY
-
-`ZAPISY` jest natywną Google Sheets Table o nazwie `Rejestracje`. Kod zapisuje nowe rekordy do body tabeli przez `AppendCellsRequest`, używając `tableId` oraz odpowiadającego `sheetId` rozwiązanego z metadata arkusza.
-
-Systemowe nagłówki schema v2:
+## Current schema version
 
 ```text
-REGISTRATION_ID
-REQUEST_ID
-SUBMITTED_AT
-OFFERING_ID
-CITY_ID_SNAPSHOT
-CITY_NAME_SNAPSHOT
-OFFERING_NAME_SNAPSHOT
-PARTICIPANT_FIRST_NAME
-PARTICIPANT_LAST_NAME
-BIRTH_DATE
-AGE_AT_SUBMISSION
-GUARDIAN_FIRST_NAME
-GUARDIAN_LAST_NAME
-PHONE
-EMAIL
-STATUS
-NOTES
-PRIVACY_NOTICE_VERSION
-SOURCE
-CREATED_AT
-UPDATED_AT
-SCHEMA_VERSION
+SYSTEM_SCHEMA_VERSION=3
+REGISTRATION_SCHEMA_VERSION=3 for new registrations
 ```
 
-`BIRTH_DATE` jest źródłową datą urodzenia dla nowych zapisów. `AGE_AT_SUBMISSION` jest snapshotem wieku w dniu przyjęcia zgłoszenia.
+Historical v1/v2 registration rows may remain at their original row schema version where values cannot be truthfully backfilled.
 
-Migracja v1 -> v2 była niedestrukcyjna. Dawna kolumna `AGE` stała się `AGE_AT_SUBMISSION`, a przed nią została wstawiona `BIRTH_DATE`. Historyczne rekordy v1 zachowują stary wiek, mają pustą `BIRTH_DATE` i pozostają oznaczone `SCHEMA_VERSION=1`. Nie odgadujemy historycznych dat urodzenia.
-
-Snapshoty nazw są celowe. Zmiana nazwy miasta lub zajęć później nie zmienia historycznego znaczenia istniejącego zgłoszenia.
-
-Typy v2:
-
-- `BIRTH_DATE`: `DATE`,
-- `AGE_AT_SUBMISSION`: `DOUBLE`,
-- `STATUS`: `DROPDOWN` z `NEW`, `IN_PROGRESS`, `ACCEPTED`, `CANCELLED`,
-- `SCHEMA_VERSION`: `DOUBLE`,
-- pozostałe kolumny: głównie `TEXT`.
-
-Kolumny techniczne są objęte warning-only protections. `STATUS` i `NOTES` są celowo edytowalne dla operatora.
-
-### USTAWIENIA v2
+## MIASTA
 
 ```text
-KEY
-VALUE
+CITY_ID
+NAME
+ACTIVE
+SORT_ORDER
 ```
 
-Obsługiwane klucze:
+`CITY_ID` is the stable identifier used by offerings and registration snapshots.
 
-```text
-SYSTEM_SCHEMA_VERSION
-REGISTRATIONS_OPEN
-PUBLIC_FORM_TITLE
-SUCCESS_MESSAGE
-PRIVACY_NOTICE_URL
-PRIVACY_NOTICE_VERSION
-```
-
-Aktualny zaimplementowany `SYSTEM_SCHEMA_VERSION` to `2`.
-
-## Target schema v3
-
-v3 dodaje model biznesowy potrzebny do poprawnej obsługi sezonów, okien zapisów, listy rezerwowej, wewnętrznego przypisania grupy i biznesowej deduplikacji.
-
-### SEZONY
-
-Nowy arkusz:
+## SEZONY
 
 ```text
 SEASON_ID
@@ -107,17 +35,9 @@ ACTIVE
 SORT_ORDER
 ```
 
-Przykład syntetyczny:
+The public registration season is selected explicitly with `CURRENT_SEASON_ID` in `USTAWIENIA`. The application does not infer the current season only from the calendar month.
 
-```text
-2026-2027 | 2026/2027 | 2026-09-01 | 2027-07-31 | TRUE | 10
-```
-
-Bieżący sezon zapisów ma być wskazywany jawnie przez `CURRENT_SEASON_ID`.
-
-### OFERTY_ZAJEC v3
-
-Docelowy kontrakt:
+## OFERTY_ZAJEC
 
 ```text
 OFFERING_ID
@@ -148,13 +68,11 @@ WAITLIST_ONLY
 CLOSED
 ```
 
-`WINDOWED` wymaga poprawnego zakresu `REGISTRATION_OPEN_FROM <= REGISTRATION_OPEN_TO`.
+The public application derives `OPEN`, `WAITLIST_ONLY`, `UPCOMING` or `CLOSED` from the stored configuration and the Poland-local current date. The server revalidates availability during submit; disabled browser options are not the security/correctness boundary.
 
-Nie dodajemy ceny, płatności ani godzin grup bez zweryfikowanych danych od Iwony.
+Invalid catalog configuration fails diagnostics and submit handling closed.
 
-### GRUPY
-
-Nowy wewnętrzny arkusz:
+## GRUPY
 
 ```text
 GROUP_ID
@@ -173,24 +91,52 @@ ACTIVE
 SORT_ORDER
 ```
 
-`Group` jest wewnętrznym przypisaniem po weryfikacji. Nie jest publicznym wymaganym wyborem formularza.
+`Group` is an internal Pozytywka concept selected after review. It is not a mandatory public form choice and v3 does not auto-assign groups.
 
-Początkowo `GRUPY` może zawierać wyłącznie kontrakt nagłówków, dopóki nie dostaniemy realnego katalogu od Iwony. Nie wolno wymyślać grup.
+The schema and operator field exist even when the real group catalog has not yet been supplied. Do not fabricate group rows. Real group data remains an external business input from Iwona.
 
-### ZAPISY v3
+## ZAPISY
 
-Nowe pola:
+`ZAPISY` is one native Google Sheets Table named `Rejestracje`. It is the canonical registration dataset.
+
+Current system headers:
 
 ```text
+REGISTRATION_ID
+REQUEST_ID
+SUBMITTED_AT
+OFFERING_ID
+CITY_ID_SNAPSHOT
+CITY_NAME_SNAPSHOT
+OFFERING_NAME_SNAPSHOT
+PARTICIPANT_FIRST_NAME
+PARTICIPANT_LAST_NAME
+BIRTH_DATE
+AGE_AT_SUBMISSION
+GUARDIAN_FIRST_NAME
+GUARDIAN_LAST_NAME
+PHONE
+EMAIL
+STATUS
+NOTES
+PRIVACY_NOTICE_VERSION
+SOURCE
+CREATED_AT
+UPDATED_AT
 SEASON_ID
 SEASON_NAME_SNAPSHOT
 ASSIGNED_GROUP_ID
 CONTACTED_AT
 CONFIRMED_AT
 POSSIBLE_DUPLICATE_OF
+SCHEMA_VERSION
 ```
 
-Docelowe statusy:
+The adapter maps by header name rather than relying on a fragile fixed index. Operator metadata hides/reorders the normal working view without deleting technical fields.
+
+### Status
+
+Current enum:
 
 ```text
 NEW
@@ -202,52 +148,66 @@ REJECTED
 CANCELLED
 ```
 
-`CONFIRMED` oznacza zakończoną weryfikację i potwierdzoną konkretną możliwość uczestnictwa. Nie jest to tracking późniejszej frekwencji.
+Closed intake-workflow states are:
 
-Historyczne v1/v2 rekordy mogą mieć puste nowe pola. Nie odgadujemy sezonu, grupy ani timestampów.
+```text
+CONFIRMED
+REJECTED
+CANCELLED
+```
 
-`ZAPISY` pozostaje jedną natywną Google Sheets Table i jedynym źródłem prawdy dla zgłoszeń.
+This application does not track later attendance or resignation from already-running classes.
 
-### Operator-first view
+### Operator fields
 
-Docelowo operator powinien widzieć najpierw:
+The operator workflow intentionally allows Iwona to edit:
 
 ```text
 STATUS
-PARTICIPANT_FIRST_NAME
-PARTICIPANT_LAST_NAME
-BIRTH_DATE
-AGE_AT_SUBMISSION
-OFFERING_NAME_SNAPSHOT
-CITY_NAME_SNAPSHOT
-GUARDIAN_FIRST_NAME
-GUARDIAN_LAST_NAME
-PHONE
-EMAIL
-SUBMITTED_AT
 ASSIGNED_GROUP_ID
 CONTACTED_AT
 CONFIRMED_AT
 NOTES
 ```
 
-Techniczne kolumny pozostają w rekordzie, ale powinny być przesunięte na prawo lub ukryte w normalnym widoku operatora.
+Technical fields remain protected/hidden according to the Google Sheets metadata contract.
 
-### USTAWIENIA v3
+`UPDATED_AT` means application/system-write time. A direct manual edit in Sheets does not magically update it. `CONTACTED_AT` and `CONFIRMED_AT` exist for meaningful operator workflow timestamps.
 
-Do istniejących ustawień dochodzi:
+### Date of birth
+
+`BIRTH_DATE` is the source date for current registrations. `AGE_AT_SUBMISSION` is a historical snapshot calculated at submission time.
+
+Legacy rows without a reliable `BIRTH_DATE` are not backfilled by guessing.
+
+## USTAWIENIA
 
 ```text
-CURRENT_SEASON_ID
+KEY
+VALUE
 ```
 
-Nie przenosimy całej konfiguracji biznesowej do `USTAWIENIA`.
+Supported keys include:
+
+```text
+SYSTEM_SCHEMA_VERSION
+REGISTRATIONS_OPEN
+CURRENT_SEASON_ID
+PUBLIC_FORM_TITLE
+SUCCESS_MESSAGE
+PRIVACY_NOTICE_URL
+PRIVACY_NOTICE_VERSION
+```
+
+Do not move all business configuration into this key/value sheet.
 
 ## Business duplicate identity
 
-v3 rozdziela transportowe `requestId` od biznesowej deduplikacji.
+Transport idempotency and business deduplication are separate.
 
-Biznesowa tożsamość zgłoszenia opiera się na znormalizowanych:
+`REQUEST_ID` handles replay/double-submit of one logical request.
+
+Business duplicate comparison uses normalized:
 
 ```text
 participant first name
@@ -258,22 +218,50 @@ OFFERING_ID
 SEASON_ID
 ```
 
-Telefon E.164 i znormalizowany e-mail są dodatkowymi sygnałami dokładnego duplikatu.
+Phone is normalized to E.164 and e-mail through the existing e-mail normalization strategy.
 
-- exact active duplicate: nie tworzy nowego wiersza,
-- probable duplicate z innym kontaktem: tworzy rekord z `POSSIBLE_DUPLICATE_OF`,
-- inne zajęcia lub inny sezon: prawidłowe nowe zgłoszenie,
-- legacy bez DOB: nie może twardo zablokować zgłoszenia na podstawie odgadniętej tożsamości.
+Current behavior:
 
-Google Sheets nie daje atomowego uniqueness constraint, więc to soft deduplication. Twarda gwarancja uruchamia storage review.
+- exact active duplicate with the same contact does not append another row,
+- probable duplicate with changed contact is accepted and stores `POSSIBLE_DUPLICATE_OF`,
+- another offering is a valid independent request,
+- another season is a valid independent request,
+- previous `REJECTED` or `CANCELLED` does not block a fresh request,
+- legacy rows without reliable DOB cannot hard-block using guessed identity.
 
-## Schema rules
+Google Sheets does not provide an atomic uniqueness constraint. Business dedupe is strong soft deduplication, not a transactional guarantee. Reconciliation can detect candidates after the fact. Hard uniqueness/capacity guarantees require a storage review.
 
-- Current runtime remains v2 until migration v2 -> v3 is implemented.
-- Target versions after migration: `SYSTEM_SCHEMA_VERSION=3`, `REGISTRATION_SCHEMA_VERSION=3`.
-- Mapping remains header-name based.
-- Reordering can be supported, but adding/removing system columns requires explicit versioned migration.
-- Migration must be TEST-first, idempotent, non-destructive and backed up before execution.
-- Unknown historical values stay empty rather than guessed.
+## Migration history
 
-See `docs/REGISTRATION_V3_PLAN.md` for the complete target contract.
+### v1 -> v2
+
+- replaced source age entry with full `BIRTH_DATE`,
+- retained old age values as `AGE_AT_SUBMISSION`,
+- converted `ZAPISY` to native Google Sheets Table,
+- introduced typed birth date/status columns.
+
+Historical v1 rows keep unknown birth dates empty.
+
+### v2 -> v3
+
+Implemented as an explicit versioned migration:
+
+- adds `SEZONY`,
+- adds `GRUPY`,
+- extends `OFERTY_ZAJEC`,
+- extends `ZAPISY`,
+- adds `CURRENT_SEASON_ID`,
+- updates table/protection/status metadata,
+- preserves unknown historical fields as empty,
+- sets system schema v3 only after structural work succeeds,
+- detects already-applied/partial structures and fails closed rather than duplicating them.
+
+Rollback remains restore-from-backup rather than pretending Google Sheets batch operations have a fully transactional reverse migration.
+
+## Current TEST evidence
+
+The canonical Preview currently reads the TEST v3 catalog successfully with an explicit current season and v3 intake statuses while TEST registrations remain closed. This proves the live TEST path is no longer operating on the old v2 contract.
+
+Use `sheet:validate`, `diagnostics`, `registrations:reconcile` and the dedicated TEST-only real-Google integration command for structural/reconciliation verification before release work.
+
+See `docs/REGISTRATION_V3_PLAN.md` for the original v3 contract and `docs/RELEASE_CHECKLIST.md` for remaining release gates.

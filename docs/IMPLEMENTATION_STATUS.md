@@ -1,214 +1,229 @@
 # Implementation status
 
-Date: 2026-08-19
+Date: 2026-08-20
 
 ## Current runtime generation
 
-The currently implemented application is **schema v2**.
+The implemented application is **schema/runtime v3**.
 
-The v3 product/domain plan is approved as the next target. v3 runtime/schema changes are not yet implemented.
+The old statements that v2 is current and v3 is only a target are obsolete. The executable contract currently has `SYSTEM_SCHEMA_VERSION=3`, `SEZONY`, `GRUPY`, v3 Offering intake fields, v3 Registration fields/statuses and the v3 submission workflow.
 
-## Verified architecture
+The canonical Vercel Preview reads the TEST v3 catalog successfully while TEST registrations remain closed.
 
-Current Preview/TEST architecture:
+## Current TEST architecture
 
 ```text
 Browser
--> canonical Vercel Preview
+-> canonical Vercel Preview (`preview` branch)
 -> Next.js App Router
 -> Vercel OIDC
 -> Google Workload Identity Federation
 -> TEST service account
--> TEST Google Sheet read/write
+-> TEST Google Sheet v3
 -> native Google Sheets Table `Rejestracje`
--> Resend participant/admin notifications
+-> Resend participant/admin notifications when a successful controlled submit is allowed
 ```
 
-TEST and PROD remain separated at spreadsheet/identity level.
+TEST and PROD must remain separate at spreadsheet and identity level.
 
-## Implemented v2 product/runtime
+## Implemented product/runtime
 
-- Next.js App Router frontend and API.
-- Mobile-first public Pozytywka registration form.
-- shadcn/Radix form foundation and visible controls.
-- shadcn Select for city/offering and phone-country selection.
-- International phone formatting with country flags and E.164 canonical storage.
-- Samsung-oriented phone/input hardening.
-- Full date-of-birth input with shadcn/Radix popover/calendar.
-- `BIRTH_DATE` source value and `AGE_AT_SUBMISSION` historical snapshot.
-- Minor/adult guardian flow with guardian data cleared when participant becomes adult.
-- Name/email whitespace hygiene and server-side normalization.
-- Client and server validation.
-- Server revalidation of current city/offering at submit.
-- Stable request IDs and same-request transport idempotency.
-- Request ID conflict detection when payload changes after an earlier attempt.
-- Application/domain/infrastructure boundaries.
-- Google Sheets repository adapter.
-- Header-by-name mapping.
-- Native Google Sheets Table `Rejestracje` for `ZAPISY`.
-- Registration append via `AppendCellsRequest` to native table body with table metadata resolution.
-- No automatic retry of ambiguous non-idempotent append.
-- Snapshot names for city/offering.
-- Schema v1 -> v2 migration preserving old age values without inventing birth dates.
-- Native `BIRTH_DATE` date column and native `STATUS` dropdown.
-- Warning-only protections for technical columns while `STATUS` and `NOTES` remain operational.
-- TEST and PROD spreadsheets separated.
-- Vercel OIDC -> Google WIF for Preview.
-- TEST service account limited to TEST Sheet and not granted PROD access.
-- Memory repositories for local/E2E use.
-- Sheet bootstrap, validation, migration, diagnostics, TEST seeding and registration reconciliation.
-- Honeypot, minimum form-fill time and API body-size limit.
-- PII-safe structured logging.
-- Security headers.
-- Privacy notice version stored with Registration.
-- Production fail-closed without complete privacy configuration.
-- Participant confirmation and admin notification through provider-agnostic e-mail layer + Resend.
-- E-mail runs only after persistence and does not roll back a successful Registration.
-- Transport replay does not send duplicate notifications.
-- Unit tests, Playwright E2E, repository contract validation and GitHub Actions CI.
-- Desktop/mobile viewport coverage including Samsung-like regression scenarios.
-- Real-Google TEST-only integration roundtrip command.
-- Exact-pinned dependencies and `pnpm-lock.yaml`.
-- Public repository is intentional; secrets, credentials and participant PII stay outside Git.
+### Existing foundations preserved
 
-## Completed v3 preparation
+- Next.js App Router frontend/API.
+- strict TypeScript + Zod + React Hook Form.
+- shadcn/Radix public form controls.
+- international phone input, country flags, country-aware formatting and E.164 storage.
+- full date-of-birth picker and server validation.
+- minor/adult guardian flow.
+- name/e-mail normalization.
+- Google Sheets repository adapter and header-by-name mapping.
+- native `ZAPISY` table `Rejestracje` and non-retried ambiguous append design.
+- Vercel OIDC -> Google WIF for canonical TEST.
+- PII-safe logging and security headers.
+- typed React Email participant/admin notifications through Resend.
+- memory adapters for local/E2E.
+- unit, repository, API and Playwright coverage.
+- TEST-only real-Google integration command.
+- exact-pinned dependencies and repository policy checks.
 
-### Product truth
+### v3 schema/domain
 
-`docs/v3-product-truth` was merged after green Quality gate and Critical E2E.
+Implemented and merged:
 
-The repository now contains `docs/REGISTRATION_V3_PLAN.md` and truth docs explicitly distinguish current v2 runtime from target v3.
-
-### TEST hygiene
-
-Before further v3 work:
-
-- TEST registrations were set to `FALSE`,
-- a full spreadsheet backup was created,
-- manual/real-looking PII rows were removed from `ZAPISY`,
-- `ZAPISY` now contains one explicitly synthetic fixture using `example.com`,
-- normal TEST policy is synthetic data only.
-
-No PROD data was modified.
-
-### Vercel branch deployments
-
-Root cause of deployment spam was identified.
-
-The previous catch-all:
-
-```json
-"*": false
-```
-
-did not cover slash branches such as `feat/...`, `fix/...`, `docs/...` under Vercel minimatch behavior, so those unspecified branches defaulted to deployment enabled.
-
-The branch contract is now:
-
-```json
-"**": false,
-"preview": true,
-"main": true
-```
-
-`scripts/repo-validate.mjs` protects that configuration.
-
-Multiple commits pushed after the `**` fix produced zero new feature-branch Vercel deployments, confirming the fix behaves as intended.
-
-## Current known v2 product limitations
-
-- No `Season` model.
-- No internal `Group` model.
-- Offering only contains basic city/name/active/sort information.
-- No rolling/windowed intake rules.
-- No waitlist-only offering state.
-- Statuses remain `NEW`, `IN_PROGRESS`, `ACCEPTED`, `CANCELLED`.
-- No business duplicate detection beyond same-`requestId` replay.
-- Public success screen is too generic.
-- Participant e-mail currently implies contact only if additional information is needed, while the real business process requires contact after review.
-- The form still contains a visual stepper-like presentation even though it is one page.
-- `ZAPISY` is technically strong but not yet optimized as an operator-first view for Iwona.
-- Production privacy notice and retention policy are not finalized.
-- Canonical Preview is currently known to be behind the latest GitHub `preview` commit and must be refreshed/verified before the next product QA.
-
-## Approved v3 target
-
-The approved v3 contract is in `docs/REGISTRATION_V3_PLAN.md`.
-
-v3 introduces in staged PRs:
-
-- `Season`,
-- internal `Group`,
-- richer Offering intake configuration,
-- `ROLLING` / `WINDOWED`,
-- `OPEN` / `WAITLIST_ONLY` / `CLOSED`,
-- workflow statuses `NEW`, `IN_REVIEW`, `CONTACTED`, `WAITLISTED`, `CONFIRMED`, `REJECTED`, `CANCELLED`,
-- business duplicate detection separate from `requestId`,
-- `POSSIBLE_DUPLICATE_OF`,
+- first-class `Season`,
+- internal `Group` schema,
+- `CURRENT_SEASON_ID`,
+- `ROLLING` / `WINDOWED` offering modes,
+- `OPEN` / `WAITLIST_ONLY` / `CLOSED` intake configuration,
+- public derived `OPEN` / `WAITLIST_ONLY` / `UPCOMING` / `CLOSED` status,
+- server-authoritative current-date intake validation,
+- `SEASON_ID` / season snapshot on registrations,
 - `ASSIGNED_GROUP_ID`,
 - `CONTACTED_AT`,
 - `CONFIRMED_AT`,
-- operator-first Sheets experience,
-- corrected public success/mail flow,
-- repeat-registration actions,
-- privacy/retention/child-protection release gates.
+- `POSSIBLE_DUPLICATE_OF`,
+- statuses `NEW`, `IN_REVIEW`, `CONTACTED`, `WAITLISTED`, `CONFIRMED`, `REJECTED`, `CANCELLED`,
+- v2 -> v3 explicit/idempotent migration support,
+- preservation of unknown historical values without fabrication.
 
-## Immediate implementation sequence
+### Business duplicate detection
 
-1. `docs/v3-product-truth` - complete.
-2. `chore/test-hygiene-and-preview` - current stage.
-3. `feat/sheets-schema-v3-foundation`.
-4. `feat/offering-intake-rules`.
-5. `feat/registration-business-deduplication`.
-6. `feat/registration-workflow-statuses`.
-7. `feat/operator-sheets-experience`.
-8. `feat/registration-copy-and-repeat-flow`.
-9. `feat/group-catalog-operations` after real Iwona group data exists.
-10. `chore/privacy-retention-readiness`.
-11. `feat/abuse-hardening`.
-12. `chore/prod-readiness`.
+Implemented and merged:
 
-Do not collapse stages into one PR.
+- separate from `requestId` idempotency,
+- exact active duplicate successful no-op without second row,
+- probable duplicate accepted with `POSSIBLE_DUPLICATE_OF`,
+- different offering/season accepted independently,
+- rejected/cancelled previous requests can be submitted again,
+- conservative legacy handling without guessed DOB,
+- reconciliation support and documented Sheets concurrency limitation.
 
-## External input still required
+### Public UX / messaging
 
-From Iwona/business audit:
+Implemented and merged:
 
-- verified real city/offering catalog,
-- real internal groups,
-- age ranges,
-- schedules,
-- instructors,
-- capacities,
-- prices,
-- payment process,
-- contract-conclusion point,
-- resignation rules,
-- exact theatre window/casting rules,
-- contact SLA if any,
-- whether guardian relationship is operationally useful,
-- confirmed legal/contact details,
-- approved retention periods.
+- one-page sections instead of fake stepper,
+- clear mandatory review/contact explanation,
+- real DOB purpose copy,
+- pre-submit explanation that submission is not place confirmation,
+- normal success screen with `Co dalej?`,
+- privacy-safe exact-duplicate success screen,
+- corrected participant e-mail,
+- operator-focused admin e-mail,
+- `Zapisz kolejne dziecko`,
+- `Zgłoś inne zajęcia`,
+- fresh `requestId` for each repeat submission,
+- automated keyboard/repeat-flow coverage.
 
-Unknown values must not be invented.
+### Operator Sheets UX
 
-## Remaining PROD gates
+Implemented and merged:
 
-- approved final catalog,
-- approved privacy notice,
-- final `PRIVACY_NOTICE_URL` / version,
-- approved retention policy and procedure,
-- processor/access inventory,
-- child-protection standards/personnel verification confirmation recorded,
-- final domain,
-- final visual/business acceptance,
-- separate PROD service account/WIF/access,
+- operator-first visible columns,
+- technical-column hiding while preserving the canonical table,
+- warning-only technical protections,
+- editable workflow fields,
+- v3 status dropdown/formatting,
+- filter views,
+- probable-duplicate visual signal,
+- group-assignment field prepared.
+
+A real workflow/group-data review with Iwona remains a business acceptance gate, not a missing schema implementation.
+
+### Privacy/organizational readiness
+
+Implementable documentation/workflow contract is merged:
+
+- processing purpose/data categories,
+- processor/recipient inventory framework,
+- access-control procedure,
+- `NOTES` policy,
+- retention decision contract,
+- data-subject request procedure,
+- child-protection release evidence gate,
+- TEST PII rule,
+- explicit list of decisions engineering must not invent.
+
+Final legal/business decisions remain external blockers.
+
+### Abuse hardening
+
+Implemented code/documentation:
+
+- existing JSON-only/body-limit/honeypot/minimum-fill-time controls retained,
+- automated abuse-path E2E,
+- PII-safe telemetry contract,
+- hosting-layer Vercel WAF rate limiting selected as the primary volume control,
+- Turnstile kept as an escalation if real abuse justifies it.
+
+The actual WAF dashboard rule still has to be created and verified before public PROD opening because the available connector does not expose firewall mutation.
+
+## Completed v3 stages
+
+- PR 0 / product truth: merged (#16).
+- PR 1 / TEST hygiene + Preview branch hardening: merged (#17).
+- PR 2 / Sheets schema v3 foundation: merged (#18).
+- PR 3 / Offering intake rules: merged (#20).
+- PR 4 / business duplicate detection: merged (#21).
+- PR 5 / workflow statuses: merged (#22).
+- PR 6 / operator Sheets experience: merged (#23).
+- PR 7 / public copy + repeat flow: merged (#25).
+- PR 9 / implementable privacy/retention readiness: merged (#26).
+- PR 10 / abuse hardening code + decision: merged (#27).
+
+PR #19 was superseded/closed; #24 was a temporary PR and is not a roadmap stage.
+
+## Intentionally blocked stage
+
+### PR 8 / real group catalog operations
+
+The v3 schema exists, but the plan explicitly forbids inventing real Pozytywka groups.
+
+Still required from Iwona for each real group:
+
+- season,
+- linked Offering,
+- internal name,
+- age range,
+- day/time,
+- venue,
+- instructor,
+- capacity if tracked.
+
+Until those data exist, `GRUPY` may remain structurally valid without fabricated production rows and `ASSIGNED_GROUP_ID` may remain empty.
+
+## PR 11 / production-readiness engineering
+
+Production-readiness engineering is implemented in PR #28 on `chore/prod-readiness`.
+
+Its source/runbook scope includes:
+
+- production environment preflight without secret output,
+- truth-doc synchronization from stale v2 language to current v3,
+- final release checklist correction,
+- explicit closed-production verification order.
+
+GitHub PR/CI state is the source of truth for whether #28 has passed its merge gate. The external Production gates below remain separate even after the engineering PR is merged.
+
+## External blockers before PROD can open
+
+### Business/catalog
+
+- real city/offering catalog approved for production,
+- real group catalog,
+- theatre/window/casting rules where applicable,
+- contract/payment/resignation facts if they will appear in public process,
+- final visual/business acceptance.
+
+### Privacy/legal/organization
+
+- current controller address/contact verified,
+- final privacy notice and legal bases approved,
+- retention criteria approved,
+- named production access list approved,
+- Standardy Ochrony Małoletnich evidence recorded,
+- personnel verification procedure/evidence confirmed.
+
+### Platform/production
+
+- separate PROD Sheet migrated/validated to v3,
+- separate PROD service account,
+- Production-only WIF binding,
+- PROD Sheet access review,
 - complete Vercel Production env,
-- production Resend sender,
-- admin mailbox delivery verification,
-- manual keyboard/focus/reflow/device QA,
-- PROD closed smoke test,
-- release checklist fully green before opening registrations.
+- production Resend sender and final admin mailbox,
+- Vercel WAF rule created and tested,
+- closed production smoke,
+- physical Samsung Chrome and iPhone Safari checks,
+- manual focus/reflow/contrast acceptance.
+
+## Current safe state
+
+- TEST registrations are closed outside controlled QA.
+- Live canonical Preview can read the v3 TEST catalog.
+- PROD has not been intentionally opened by this v3 work.
+- No stage is allowed to set `REGISTRATIONS_OPEN=TRUE` until all blocking release items are closed.
 
 ## Engineering gates
 
@@ -219,7 +234,7 @@ pnpm check
 pnpm test:e2e
 ```
 
-For Google-backed PRs, additionally on TEST only:
+For Google-backed changes, on TEST only:
 
 ```text
 sheet:validate
@@ -227,8 +242,4 @@ diagnostics
 test:integration:sheets
 ```
 
-Do not rely on old hardcoded test-count numbers. Current CI is the source of truth.
-
-## Release statement
-
-v2 remains the working registration runtime. Product truth and environment hygiene are now being aligned before schema v3 starts. PROD remains intentionally fail-closed until product, legal, infrastructure and manual QA gates are complete.
+Use current CI/run evidence rather than stale fixed test counts.
