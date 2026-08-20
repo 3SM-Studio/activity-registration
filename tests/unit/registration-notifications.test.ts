@@ -77,12 +77,16 @@ describe("registration notifications", () => {
       idempotencyKey: "registration-confirmation/reg_11111111-1111-4111-8111-111111111111",
     });
     expect(messages[0]?.html).toContain("<!DOCTYPE");
+    expect(messages[0]?.html).toContain("Zgłoszenie otrzymane");
+    expect(messages[0]?.html).toContain("Co dzieje się teraz?");
     expect(messages[0]?.text).toContain("nie potwierdzenie miejsca na zajęciach");
     expect(messages[1]).toMatchObject({
       to: ["biuro@example.com"],
       replyTo: "anna@example.com",
       idempotencyKey: "registration-admin/reg_11111111-1111-4111-8111-111111111111",
     });
+    expect(messages[1]?.html).toContain("Obsługa zgłoszenia");
+    expect(messages[1]?.html).toContain("Dane systemowe");
     expect(messages[1]?.text).toContain("Rodzic/opiekun");
     expect(messages[1]?.text).toContain("Anna Kowalska");
     expect(messages[1]?.text).toContain("2012-01-15");
