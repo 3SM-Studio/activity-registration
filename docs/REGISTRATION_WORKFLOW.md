@@ -4,15 +4,13 @@ This document describes the operational status model used in `ZAPISY` for regist
 
 ## Statuses
 
-| Status        | Meaning                                                                                     |
-| ------------- | ------------------------------------------------------------------------------------------- |
-| `NEW`         | New request waiting for operator review.                                                    |
-| `IN_REVIEW`   | Operator is actively reviewing the request.                                                 |
-| `CONTACTED`   | Operator has contacted the participant or guardian.                                         |
-| `WAITLISTED`  | Request is kept on a waiting list.                                                          |
-| `CONFIRMED`   | Place has been confirmed by the operator.                                                   |
-| `REJECTED`    | Request was rejected and no longer blocks a fresh request for the same activity.            |
-| `CANCELLED`   | Request was cancelled and no longer blocks a fresh request for the same activity.           |
+- `NEW`: new request waiting for operator review.
+- `IN_REVIEW`: operator is actively reviewing the request.
+- `CONTACTED`: operator has contacted the participant or guardian.
+- `WAITLISTED`: request is kept on a waiting list.
+- `CONFIRMED`: place has been confirmed by the operator.
+- `REJECTED`: request was rejected and no longer blocks a fresh request for the same activity.
+- `CANCELLED`: request was cancelled and no longer blocks a fresh request for the same activity.
 
 ## Migration from the previous workflow
 
