@@ -35,6 +35,7 @@ Canonical decisions: `docs/PRODUCTION_DECISIONS_2026-08-20.md`.
 - [x] v3 Offering intake fields
 - [x] v3 registration statuses
 - [x] `ASSIGNED_GROUP_ID`
+- [x] `ASSIGNED_GROUP_ID` native dropdown for the adopted 2026/2027 Group IDs
 - [x] `CONTACTED_AT`
 - [x] `CONFIRMED_AT`
 - [x] `POSSIBLE_DUPLICATE_OF`
@@ -114,7 +115,14 @@ Canonical PROD Sheet ID:
 - [x] `SYSTEM_SCHEMA_VERSION=3`
 - [x] `CURRENT_SEASON_ID=2026-2027`
 - [x] `REGISTRATIONS_OPEN=FALSE`
+- [x] native table ranges synchronized to all current catalog/settings rows
+- [x] `OFERTY_ZAJEC` and `GRUPY` rows verified inside their native Tables after resize
+- [x] production `ASSIGNED_GROUP_ID` configured as a native Table dropdown
+- [x] synthetic `appendCells(tableId=900001)` smoke verified a new row stays inside `Rejestracje`
+- [x] smoke row inherited table banding, date typing and semantic `NEW` formatting
+- [x] synthetic PROD smoke row removed immediately after verification
 - [x] guarded/reproducible production catalog seed added to repository
+- [x] catalog seed commands re-run `sheet:bootstrap` so native table ranges cannot remain stale after reseed
 - [ ] repository `sheet:validate` executed using final PROD identity
 - [ ] repository `diagnostics` executed using final PROD identity
 - [ ] repository reconciliation executed using final PROD identity
@@ -124,9 +132,10 @@ Canonical PROD Sheet ID:
 - [x] canonical Preview uses v3 TEST
 - [x] controlled real submit previously reached `201`
 - [x] participant/admin notification path previously reported success
-- [x] current Preview CI foundation green before this finalization PR
-- [ ] remove manual real-delivery QA rows from TEST after final test session
-- [ ] set TEST `REGISTRATIONS_OPEN=FALSE` after final test session
+- [x] manual real-delivery QA rows removed after the final test session
+- [x] only the explicit synthetic fixture remains in TEST `ZAPISY`
+- [x] TEST `REGISTRATIONS_OPEN=FALSE` after the test session
+- [x] seed command re-runs `sheet:bootstrap` so supporting native Tables resize after reseed
 - [ ] final Preview HEAD real-Google validation evidence recorded
 
 ## Security and abuse
