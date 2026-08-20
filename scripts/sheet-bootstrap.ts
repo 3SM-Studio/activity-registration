@@ -1,11 +1,15 @@
 import {
+  bootstrapOperatorSheetExperience,
+  validateOperatorSheetExperience,
+} from "../src/infrastructure/google/operator-sheet";
+import {
   bootstrapSheetStructure,
   validateSheetStructure,
 } from "../src/infrastructure/google/sheet-admin";
 import {
-  bootstrapOperatorSheetExperience,
-  validateOperatorSheetExperience,
-} from "../src/infrastructure/google/operator-sheet";
+  bootstrapSupportingSheetTables,
+  validateSupportingSheetTables,
+} from "../src/infrastructure/google/supporting-sheet-tables";
 import { createAdminSheetsClient } from "./_google-admin";
 
 async function main() {
@@ -13,9 +17,11 @@ async function main() {
 
   console.info("Bootstrapping Google Sheet structure...");
   await bootstrapSheetStructure(client);
+  await bootstrapSupportingSheetTables(client);
   await bootstrapOperatorSheetExperience(client);
 
   const report = await validateSheetStructure(client);
+  await validateSupportingSheetTables(client);
   await validateOperatorSheetExperience(client);
   console.info(
     JSON.stringify(
@@ -24,6 +30,7 @@ async function main() {
         sheets: report.sheets,
         cityCount: report.cityCount,
         offeringCount: report.offeringCount,
+        nativeTables: "ready",
         operatorExperience: "ready",
         warnings: report.warnings,
       },
