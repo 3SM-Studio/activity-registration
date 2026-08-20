@@ -239,7 +239,9 @@ Manual final acceptance:
 - [ ] PR 8 real Group catalog/operations, blocked until Iwona supplies real data
 - [x] PR 9 implementable privacy/retention readiness merged (#26)
 - [x] PR 10 abuse-hardening source/test work merged (#27)
-- [ ] PR 11 production-readiness engineering PR merged
+- [x] PR 11 production-readiness engineering implemented in PR #28
+
+GitHub PR/CI state is the source of truth for whether #28 has passed and merged. External Production gates below remain independent.
 
 Repository quality policy:
 
