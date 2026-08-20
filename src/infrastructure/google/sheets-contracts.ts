@@ -64,6 +64,17 @@ export const GROUP_HEADERS = [
   "SORT_ORDER",
 ] as const;
 
+export const ASSIGNABLE_GROUP_IDS_2026_2027 = [
+  "olkusz-psikusy",
+  "olkusz-psotki",
+  "olkusz-pozytywki",
+  "olkusz-besti",
+  "olkusz-bez-kurtyny",
+  "olkusz-od-poczatku",
+  "olkusz-balet-mlodszy",
+  "olkusz-inside",
+] as const;
+
 export const LEGACY_REGISTRATION_HEADERS = [
   "REGISTRATION_ID",
   "REQUEST_ID",
@@ -164,6 +175,20 @@ export const REGISTRATION_TABLE_COLUMNS = REGISTRATION_HEADERS.map((columnName, 
         condition: {
           type: "ONE_OF_LIST",
           values: Object.values(REGISTRATION_STATUS).map((value) => ({ userEnteredValue: value })),
+        },
+      },
+    } as const;
+  }
+
+  if (columnName === "ASSIGNED_GROUP_ID") {
+    return {
+      columnIndex,
+      columnName,
+      columnType: "DROPDOWN",
+      dataValidationRule: {
+        condition: {
+          type: "ONE_OF_LIST",
+          values: ASSIGNABLE_GROUP_IDS_2026_2027.map((value) => ({ userEnteredValue: value })),
         },
       },
     } as const;

@@ -1,251 +1,157 @@
 # Privacy and organizational readiness
 
-This document defines the operational privacy and child-protection readiness work for the Pozytywka registration application.
+Date: 2026-08-20
+Status: production baseline adopted
+Owner: Iwona Pilarz
 
-It is an engineering and operations contract. It is not legal advice and it deliberately does not invent legal bases, retention periods or unverified business data.
+The original v3 plan deliberately left legal and organizational decisions unresolved. Those decisions are now closed for the production baseline. The canonical detailed policy is `docs/RODO_AND_RETENTION_POLICY.md`, and the child-protection standards are `docs/STANDARDY_OCHRONY_MALOLETNICH.md` plus the shortened version for minors.
 
-## 1. Current controller candidate
+## 1. Controller
 
-Public research consistently points to:
+- Pracownia Twórcza Pozytywka. Iwona Pilarz
+- NIP: 6371975064
+- REGON: 122726372
+- contact address: ul. Browarna 6a, 32-329 Bolesław
+- privacy/contact e-mail: pozytywka.boleslaw@gmail.com
+- phone: 602 753 268
 
-- business name: `Pracownia Twórcza Pozytywka. Iwona Pilarz`
-- legal form: individual business / JDG
-- NIP: `6371975064`
-- REGON: `122726372`
+The public privacy page must be updated when these contact details materially change.
 
-Before production legal copy is approved, Iwona must confirm against the current official registry:
+## 2. Purpose and legal bases
 
-- exact current registered address,
-- correspondence/contact address,
-- privacy contact e-mail,
-- whether any other entity jointly determines purposes or means of processing.
+Core v3 purpose:
 
-Third-party directory addresses must not be copied into production legal text without this verification.
+1. receive a registration request,
+2. identify participant and responsible adult where required,
+3. use DOB for guardian flow and age-group matching,
+4. contact the applicant,
+5. propose and confirm an appropriate participation arrangement,
+6. operate duplicate/security/accountability safeguards.
 
-## 2. Registration processing purpose
+Adopted legal-basis model:
 
-The product purpose currently supported by the application is narrowly defined as:
+- Article 6(1)(b) GDPR for the requested registration/pre-contractual process,
+- Article 6(1)(f) GDPR for narrowly scoped operational integrity, duplicate prevention, security and claims, subject to the documented balancing assessment,
+- Article 6(1)(c) GDPR when a specific legal obligation applies.
 
-1. receive a request to join a Pozytywka activity,
-2. identify the participant,
-3. use date of birth to support age-group matching and guardian requirements,
-4. identify a parent/guardian for a minor,
-5. contact the applicant,
-6. let Iwona review the request and choose an appropriate internal group/time,
-7. confirm, waitlist, reject or cancel the request.
+No generic GDPR consent checkbox is used for the core process.
 
-The public form does not currently:
+## 3. Data minimization
 
-- conclude the paid-services contract,
-- process payment,
-- manage attendance,
-- collect health data,
-- collect image/marketing consent,
-- manage participant lifecycle after the intake workflow is closed.
+Public data remains limited to:
 
-Any future purpose expansion requires a separate data-minimization and legal review.
+- city/offering,
+- participant first/last name,
+- DOB,
+- guardian first/last name for a minor,
+- phone,
+- e-mail.
 
-## 3. Current personal-data categories
+Do not add health data, PESEL, school, address, marketing consent, image consent or billing data to v3 without a separate approved purpose.
 
-Public form:
+`NOTES` is operational only and must not become a store for diagnoses, medication, disability, family conflict, religion or other sensitive narrative.
 
-- city and requested activity,
-- participant first name,
-- participant last name,
-- participant date of birth,
-- guardian first name for a minor,
-- guardian last name for a minor,
-- phone number,
-- e-mail address.
+## 4. Retention
 
-System/operational metadata:
+Adopted schedule:
 
-- registration ID,
-- request ID,
-- timestamps,
-- season and offering snapshots,
-- workflow status,
-- assigned internal group ID when known,
-- possible-duplicate reference,
-- privacy-notice version,
-- source,
-- operator notes.
+- active `NEW` / `IN_REVIEW` / `CONTACTED`: while handled; when closed without confirmation, no longer than 12 months from closure,
+- `WAITLISTED`: through the relevant season plus 3 months,
+- `REJECTED`: 12 months from rejection,
+- `CANCELLED`: 12 months from cancellation,
+- `CONFIRMED`: until the end of the calendar year in which 3 years have elapsed after the end of the relevant season,
+- active dispute/legal hold: only the necessary data for the additional justified period.
 
-Do not add PESEL, home address, school, diagnoses, medication, health history, image consent, marketing consent or invoice data without an approved purpose and design review.
+Quarterly review owner: Iwona Pilarz.
 
-## 4. Data flow and processor/recipient inventory
+Detailed procedure: `docs/RODO_AND_RETENTION_POLICY.md`.
 
-Current technical flow:
+## 5. Processors and transfers
+
+Current data flow:
 
 ```text
 Browser
-  -> Vercel / Next.js application
-  -> Google Sheets
-  -> Resend
-  -> authorized Pozytywka operator(s)
+-> Vercel / Next.js
+-> Google Sheets
+-> Resend
+-> authorized Pozytywka operator(s)
 ```
 
-Inventory to verify before production:
+Production policy:
 
-| Party                    | Current role in system                     | Production readiness action                                                                   |
-| ------------------------ | ------------------------------------------ | --------------------------------------------------------------------------------------------- |
-| Iwona Pilarz / Pozytywka | controller candidate and primary operator  | confirm legal identity and access responsibilities                                            |
-| Vercel                   | application hosting and request processing | record applicable processing terms, region/transfer information and subprocessors as required |
-| Google / Google Sheets   | persistent registration storage            | record applicable processing terms, access model and transfer information as required         |
-| Resend                   | transactional participant/admin e-mail     | record applicable processing terms, sender configuration and subprocessors as required        |
-| Authorized humans        | direct access to registration records      | maintain an approved named access list and least-privilege rule                               |
+- use provider data-processing terms/DPA,
+- review provider subprocessors periodically,
+- use applicable GDPR transfer safeguards for processing outside the EEA,
+- do not add analytics, SMS, Messenger, payment or another processor without updating the inventory.
 
-If analytics, Turnstile, SMS, Messenger, payment or another service is added, this inventory must be updated before production use of that service.
+The current reviewed provider materials are listed in `docs/RODO_AND_RETENTION_POLICY.md`.
 
-## 5. Access control procedure
+## 6. Production access policy
 
-Production registration data must be accessible only to people who need it to perform the intake process.
+Persistent access is kept explicit and narrow.
 
-Minimum operational rules:
+Verified current Production Sheet access on 2026-08-20:
 
-1. Keep a named list of people with access to the production Sheet.
-2. Remove access when a person no longer needs it.
-3. Do not use public-link sharing for the registration Sheet.
-4. TEST service identity must not have access to PROD Sheet.
-5. PROD service identity must be separate from TEST identity.
-6. Technical collaborators should not receive participant-data access merely because they can access source code.
-7. Review Google Sheet sharing before every production launch and periodically afterwards.
+- `pozanuta@gmail.com`: Drive owner, administrative custody of the file,
+- `pozytywka.boleslaw@gmail.com`: writer, Pozytywka operational access,
+- no public-link permission exists.
 
-Owner of the final named access list: **TBD with Iwona**.
+Target runtime model after Google IAM finalization:
 
-## 6. `NOTES` policy
+- Pozytywka operational mailbox: normal human operator access,
+- PROD service identity: application-only access required by the runtime,
+- technical collaborators: no additional standing participant-data access; temporary minimum access only for a real incident when required,
+- TEST identity must not have access to PROD,
+- PROD identity must be separate from TEST.
 
-`NOTES` is an operational field for information necessary to process the registration.
+The administrative Drive owner does not change the controller role: Iwona Pilarz / Pozytywka remains the controller and decides the purposes and means of the registration process.
 
-Allowed examples:
+Sharing is reviewed before opening production and after material team changes.
 
-- attempted contact and a neutral operational outcome,
-- preferred callback time if volunteered and useful,
-- reason an ordinary intake decision needs follow-up,
-- clarification necessary to match the participant to a group.
+## 7. Data-subject requests
 
-Do not use `NOTES` as a general profile of the child or family.
+Operational contact: `pozytywka.boleslaw@gmail.com`.
 
-Without a separately approved process, do not write:
+Human-operated procedure:
 
-- diagnoses,
-- disability details,
-- medication,
-- allergies or other health information,
-- intimate/family-conflict details,
-- religious beliefs,
-- other special-category or highly sensitive data.
+1. record request date/type minimally,
+2. verify identity proportionately,
+3. locate relevant production records,
+4. determine applicable right/exception,
+5. perform the action,
+6. respond through a verified channel,
+7. record minimal evidence of completion.
 
-If Pozytywka later genuinely needs health/safety information, design a separate purpose-specific process instead of silently expanding `NOTES`.
+No self-service account is required for v3.
 
-## 7. Retention decision contract
+## 8. Child protection
 
-The application must not invent a retention period.
+The applicable organization-level Standardy Ochrony Małoletnich are adopted in:
 
-Before production approval, Iwona/legal review must define retention criteria for at least:
+- `docs/STANDARDY_OCHRONY_MALOLETNICH.md`,
+- `docs/STANDARDY_OCHRONY_MALOLETNICH_SKROT.md`.
 
-- `NEW`, `IN_REVIEW`, `CONTACTED`,
-- `WAITLISTED`,
-- `CONFIRMED`,
-- `REJECTED`,
-- `CANCELLED`.
+Iwona Pilarz owns the procedure and review.
 
-The decision must answer:
+Before a person whose real duties involve work with minors is admitted to that activity, Pozytywka completes the checks required by Article 21 of the applicable Polish child-protection act. Verification/KRK documents are kept in personnel/person-specific records, not in `ZAPISY` or Git.
 
-1. what business/legal purpose still exists after each outcome,
-2. when that purpose ends,
-3. whether deletion or anonymization is appropriate,
-4. whether confirmed participants move to a separate record/process with a different retention basis,
-5. who performs the periodic review,
-6. how completion is evidenced without retaining unnecessary PII.
+## 9. TEST data
 
-Until this decision is approved, production release remains blocked. No random value such as 90/180/365 days may be hardcoded merely to close the checklist.
+TEST remains synthetic-only during routine QA. Real/manual delivery tests must be removed after the controlled test session.
 
-## 8. Data-subject request procedure
+TEST is closed outside active QA.
 
-Pozytywka must have a human-operated procedure. A self-service user account is not required for v3.
+## 10. Production readiness truth
 
-When a privacy request is received:
+The former legal/business `TBD` blockers are closed by the production decisions adopted on 2026-08-20.
 
-1. record the request date without copying unnecessary PII into development tools,
-2. verify requester identity proportionately before disclosing or changing participant data,
-3. locate relevant records using the production operational system,
-4. determine the applicable right and any legal exceptions with the controller/legal reviewer,
-5. perform the approved action,
-6. send the response through an approved contact channel,
-7. record minimal evidence that the request was handled.
+Remaining release gates are now technical execution/evidence only, such as:
 
-Never paste participant records into GitHub issues, source-control comments or general engineering logs while handling a request.
+- production Google identity and WIF boundary,
+- Vercel Production environment values,
+- Resend verified production sender/domain,
+- WAF rule,
+- final closed smoke and manual device/accessibility checks.
 
-Operational contact address and owner: **TBD with Iwona**.
-
-## 9. Privacy notice production gate
-
-The final notice must not be generated from assumptions.
-
-Before `PRIVACY_NOTICE_URL` and `PRIVACY_NOTICE_VERSION` are configured in PROD, approve at least:
-
-- controller identity and contact,
-- purpose(s),
-- legal basis/bases,
-- recipients/categories of recipients,
-- processor/subprocessor information where required,
-- international-transfer information where applicable,
-- retention period or criteria,
-- data-subject rights,
-- complaint right,
-- whether providing each data category is required and the consequence of not providing it.
-
-The form must not add a generic `Wyrażam zgodę na RODO` checkbox as a substitute for this work.
-
-## 10. Child-protection readiness gate
-
-The registration application does not store personnel criminal-record checks or child-protection case files.
-
-Before public production launch, the business release checklist must record confirmation from Iwona that the organization-level requirements applicable to its artistic/interest-development work with minors are handled, including:
-
-- applicable Standardy Ochrony Małoletnich exist,
-- location/publication of the full standard is known,
-- shortened/child-friendly version status is recorded where applicable,
-- instructor/personnel verification procedure is in place,
-- required checks for people actually working with minors are completed operationally,
-- responsibility for reacting to child-protection concerns is defined.
-
-Evidence should be recorded as a release-gate reference, not copied into `ZAPISY`.
-
-## 11. TEST data rule
-
-TEST is not a convenient place for real participant data.
-
-Routine QA must use clearly synthetic identities and non-real contact data. Real participant data must not be copied from PROD into TEST.
-
-If a controlled test needs e-mail delivery, use an explicitly approved test mailbox rather than a participant mailbox.
-
-## 12. Logging and engineering tools
-
-PII must not appear in:
-
-- application request-body logs,
-- Vercel diagnostic logs beyond unavoidable infrastructure metadata,
-- GitHub issues/PR comments,
-- test snapshots,
-- fixtures committed to Git,
-- screenshots attached to public engineering discussions.
-
-Prefer technical identifiers, counts and error codes.
-
-## 13. Release blockers that require external approval
-
-The following cannot be truthfully closed by Codex alone:
-
-- [ ] current official business address confirmed,
-- [ ] privacy contact e-mail confirmed,
-- [ ] final privacy notice approved,
-- [ ] legal basis/bases approved,
-- [ ] retention criteria approved,
-- [ ] named production access list approved,
-- [ ] Standardy Ochrony Małoletnich confirmation recorded,
-- [ ] staff/instructor verification confirmation recorded,
-- [ ] exact paid-contract conclusion process understood.
-
-Engineering may prepare the system around these gates, but must remain fail-closed until they are closed.
+Those technical gates must not be marked complete until actual platform evidence exists.
