@@ -28,8 +28,8 @@ export default function PrivacyPage() {
           <section className={sectionClassName}>
             <h2 className={headingClassName}>1. Administrator danych</h2>
             <p className="text-sm leading-6 text-muted-foreground">
-              Administratorem danych jest Pracownia Twórcza Pozytywka. Iwona Pilarz, NIP
-              6371975064, REGON 122726372. Adres do kontaktu: ul. Browarna 6a, 32-329 Bolesław.
+              Administratorem danych jest Pracownia Twórcza Pozytywka. Iwona Pilarz, NIP 6371975064,
+              REGON 122726372. Adres do kontaktu: ul. Browarna 6a, 32-329 Bolesław.
             </p>
             <p className="text-sm leading-6 text-muted-foreground">
               W sprawach dotyczących danych osobowych możesz napisać na{" "}
@@ -51,8 +51,8 @@ export default function PrivacyPage() {
               <li>imię i nazwisko rodzica lub opiekuna, gdy uczestnik jest małoletni,</li>
               <li>numer telefonu i adres e-mail osoby odpowiedzialnej za zgłoszenie,</li>
               <li>
-                dane techniczne i operacyjne niezbędne do obsługi zgłoszenia, takie jak identyfikator,
-                czas wysłania, sezon, status i przypisana grupa.
+                dane techniczne i operacyjne niezbędne do obsługi zgłoszenia, takie jak
+                identyfikator, czas wysłania, sezon, status i przypisana grupa.
               </li>
             </ul>
             <p className="text-sm leading-6 text-muted-foreground">
@@ -66,8 +66,8 @@ export default function PrivacyPage() {
             <ul className={listClassName}>
               <li>
                 przyjęcie zgłoszenia, kontakt oraz uzgodnienie odpowiedniej grupy i warunków
-                uczestnictwa, art. 6 ust. 1 lit. b RODO, czyli działania podejmowane na żądanie osoby
-                przed zawarciem umowy,
+                uczestnictwa, art. 6 ust. 1 lit. b RODO, czyli działania podejmowane na żądanie
+                osoby przed zawarciem umowy,
               </li>
               <li>
                 dopasowanie uczestnika do odpowiedniej grupy wiekowej, organizacja procesu zapisów,
@@ -85,7 +85,8 @@ export default function PrivacyPage() {
             </ul>
             <p className="text-sm leading-6 text-muted-foreground">
               Nie podejmujemy wobec uczestników decyzji wyłącznie w sposób zautomatyzowany i nie
-              profilujemy ich. Ostatecznego doboru grupy dokonuje człowiek po weryfikacji zgłoszenia.
+              profilujemy ich. Ostatecznego doboru grupy dokonuje człowiek po weryfikacji
+              zgłoszenia.
             </p>
           </section>
 
@@ -102,9 +103,9 @@ export default function PrivacyPage() {
             </ul>
             <p className="text-sm leading-6 text-muted-foreground">
               Nie sprzedajemy danych i nie udostępniamy rejestru publicznie. Część dostawców może
-              przetwarzać dane poza Europejskim Obszarem Gospodarczym. W takich przypadkach stosowane
-              są mechanizmy przewidziane przez RODO, w szczególności odpowiednie umowy powierzenia i
-              standardowe klauzule umowne albo inny ważny mechanizm transferowy.
+              przetwarzać dane poza Europejskim Obszarem Gospodarczym. W takich przypadkach
+              stosowane są mechanizmy przewidziane przez RODO, w szczególności odpowiednie umowy
+              powierzenia i standardowe klauzule umowne albo inny ważny mechanizm transferowy.
             </p>
           </section>
 
@@ -138,10 +139,10 @@ export default function PrivacyPage() {
             <h2 className={headingClassName}>6. Twoje prawa</h2>
             <p className="text-sm leading-6 text-muted-foreground">
               W zależności od sytuacji możesz żądać dostępu do danych, ich sprostowania, usunięcia,
-              ograniczenia przetwarzania lub przeniesienia danych. Możesz także wnieść sprzeciw wobec
-              przetwarzania opartego na prawnie uzasadnionym interesie. Realizacja niektórych praw może
-              podlegać ograniczeniom wynikającym z przepisów prawa lub konieczności ustalenia, obrony
-              albo dochodzenia roszczeń.
+              ograniczenia przetwarzania lub przeniesienia danych. Możesz także wnieść sprzeciw
+              wobec przetwarzania opartego na prawnie uzasadnionym interesie. Realizacja niektórych
+              praw może podlegać ograniczeniom wynikającym z przepisów prawa lub konieczności
+              ustalenia, obrony albo dochodzenia roszczeń.
             </p>
             <p className="text-sm leading-6 text-muted-foreground">
               Masz również prawo złożyć skargę do Prezesa Urzędu Ochrony Danych Osobowych.
