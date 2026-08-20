@@ -51,16 +51,16 @@ Closed/upcoming offerings may remain visible as disabled options when the public
 
 Initial editable operating catalog:
 
-| Group | Offering | Age | Day | Time | Instructor | Capacity |
-| --- | --- | ---: | --- | --- | --- | ---: |
-| PSIKUSY | Zajęcia wokalno-taneczne | 3-6 | Poniedziałek | 16:00-17:00 | Iwona Pilarz | 14 |
-| PSOTKI | Zajęcia wokalno-taneczne | 7-9 | Wtorek | 16:00-17:15 | Iwona Pilarz | 16 |
-| POZYTYWKI | Zajęcia wokalno-taneczne | 10-12 | Środa | 16:30-18:00 | Patrycja Tomczyk | 18 |
-| BESTI | Wokal | 13-18 | Czwartek | 17:00-18:30 | Weronika Sapronczyk | 18 |
-| BEZ KURTYNY | Teatr dziecięcy | 8-12 | Piątek | 16:30-18:00 | Iwona Pilarz | 18 |
-| OD POCZĄTKU | Teatr muzyczny | 13-19 | Sobota | 10:00-13:00 | Iwona Pilarz | 36 |
-| Szkółka baletu | Balet | 5-8 | Poniedziałek | 17:15-18:15 | Iwona Pilarz | 14 |
-| INSIDE | Taniec i akrobatyka | 8-14 | Środa | 18:15-19:30 | Oleg Sapronczyk | 18 |
+| Group          | Offering                 |   Age | Day          | Time        | Instructor          | Capacity |
+| -------------- | ------------------------ | ----: | ------------ | ----------- | ------------------- | -------: |
+| PSIKUSY        | Zajęcia wokalno-taneczne |   3-6 | Poniedziałek | 16:00-17:00 | Iwona Pilarz        |       14 |
+| PSOTKI         | Zajęcia wokalno-taneczne |   7-9 | Wtorek       | 16:00-17:15 | Iwona Pilarz        |       16 |
+| POZYTYWKI      | Zajęcia wokalno-taneczne | 10-12 | Środa        | 16:30-18:00 | Patrycja Tomczyk    |       18 |
+| BESTI          | Wokal                    | 13-18 | Czwartek     | 17:00-18:30 | Weronika Sapronczyk |       18 |
+| BEZ KURTYNY    | Teatr dziecięcy          |  8-12 | Piątek       | 16:30-18:00 | Iwona Pilarz        |       18 |
+| OD POCZĄTKU    | Teatr muzyczny           | 13-19 | Sobota       | 10:00-13:00 | Iwona Pilarz        |       36 |
+| Szkółka baletu | Balet                    |   5-8 | Poniedziałek | 17:15-18:15 | Iwona Pilarz        |       14 |
+| INSIDE         | Taniec i akrobatyka      |  8-14 | Środa        | 18:15-19:30 | Oleg Sapronczyk     |       18 |
 
 Locations are currently represented operationally as the relevant Pozytywka room in Olkusz. Exact room wording may be edited directly in `GRUPY`.
 
