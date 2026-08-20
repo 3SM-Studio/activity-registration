@@ -61,6 +61,7 @@ function main(): void {
     env.GCP_WORKLOAD_IDENTITY_POOL_ID &&
     env.GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID,
   );
+  const adminRecipientCount = env.REGISTRATION_ADMIN_EMAILS?.length ?? 0;
 
   console.info(
     JSON.stringify(
@@ -69,7 +70,7 @@ function main(): void {
         appEnv: env.APP_ENV,
         dataBackend: env.DATA_BACKEND,
         emailProvider: env.EMAIL_PROVIDER,
-        adminRecipientCount: env.REGISTRATION_ADMIN_EMAILS.length,
+        adminRecipientCount,
         spreadsheetConfigured: Boolean(env.GOOGLE_SPREADSHEET_ID),
         wifConfigured,
         testSeedDisabled: env.ALLOW_TEST_SEED === "false",
