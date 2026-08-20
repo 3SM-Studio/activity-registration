@@ -73,7 +73,14 @@ export function EmailLayout({ preview, children, maxWidth = 640 }: EmailLayoutPr
 
 export function BrandHeader() {
   return (
-    <Section style={{ padding: "0 8px 20px" }}>
+    <Section
+      style={{
+        backgroundColor: emailColors.teal,
+        borderRadius: "18px",
+        marginBottom: "20px",
+        padding: "16px 20px",
+      }}
+    >
       <Row>
         <Column style={{ verticalAlign: "middle", width: "80px" }}>
           <Img
@@ -84,9 +91,11 @@ export function BrandHeader() {
             style={{
               border: 0,
               display: "block",
+              filter: "brightness(0) invert(1)",
               height: "49px",
               outline: "none",
               textDecoration: "none",
+              WebkitFilter: "brightness(0) invert(1)",
               width: "64px",
             }}
           />
@@ -94,7 +103,7 @@ export function BrandHeader() {
         <Column style={{ verticalAlign: "middle" }}>
           <Text
             style={{
-              color: emailColors.foreground,
+              color: "#fefefe",
               fontSize: "16px",
               fontWeight: 800,
               lineHeight: "20px",
@@ -105,7 +114,7 @@ export function BrandHeader() {
           </Text>
           <Text
             style={{
-              color: emailColors.muted,
+              color: emailColors.tealSoft,
               fontSize: "12px",
               lineHeight: "17px",
               margin: "2px 0 0",
