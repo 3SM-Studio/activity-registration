@@ -3,10 +3,7 @@ import { describe, expect, it } from "vitest";
 import { asSeasonId } from "@/domain/catalog";
 import { GoogleSheetsCatalogRepository } from "@/infrastructure/google/catalog.repository";
 import { SHEET, SHEET_SCHEMA } from "@/infrastructure/google/sheets-contracts";
-import type {
-  SheetsClient,
-  ValueRenderOption,
-} from "@/infrastructure/google/sheets-client";
+import type { SheetsClient, ValueRenderOption } from "@/infrastructure/google/sheets-client";
 
 function offeringRow(
   id: string,
@@ -46,10 +43,7 @@ function createClient(onGetValues?: (call: GetValuesCall) => void): SheetsClient
     ],
     [
       `${SHEET.seasons}!A:ZZ`,
-      [
-        SHEET_SCHEMA[SHEET.seasons],
-        ["test-2026-2027", "2026/2027 TEST", 46266, 46599, "TAK", 10],
-      ],
+      [SHEET_SCHEMA[SHEET.seasons], ["test-2026-2027", "2026/2027 TEST", 46266, 46599, "TAK", 10]],
     ],
   ]);
 
@@ -57,9 +51,7 @@ function createClient(onGetValues?: (call: GetValuesCall) => void): SheetsClient
     async getValues(range, options) {
       onGetValues?.({
         range,
-        ...(options?.valueRenderOption
-          ? { valueRenderOption: options.valueRenderOption }
-          : {}),
+        ...(options?.valueRenderOption ? { valueRenderOption: options.valueRenderOption } : {}),
       });
       return values.get(range) ?? [];
     },
@@ -95,14 +87,10 @@ describe("GoogleSheetsCatalogRepository", () => {
 
   it("reads date-bearing sheet values without locale formatting", async () => {
     const calls: GetValuesCall[] = [];
-    const repository = new GoogleSheetsCatalogRepository(
-      createClient((call) => calls.push(call)),
-    );
+    const repository = new GoogleSheetsCatalogRepository(createClient((call) => calls.push(call)));
 
     await repository.getPublicCatalog("2026-08-19");
-    await expect(
-      repository.findSeasonById(asSeasonId("test-2026-2027")),
-    ).resolves.toMatchObject({
+    await expect(repository.findSeasonById(asSeasonId("test-2026-2027"))).resolves.toMatchObject({
       startDate: "2026-09-01",
       endDate: "2027-07-31",
     });
