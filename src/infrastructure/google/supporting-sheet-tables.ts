@@ -1,6 +1,10 @@
 import { SheetSchemaError } from "@/infrastructure/google/header-map";
 import { SHEET, SHEET_SCHEMA } from "@/infrastructure/google/sheets-contracts";
-import type { SheetMetadata, SheetsClient, TableMetadata } from "@/infrastructure/google/sheets-client";
+import type {
+  SheetMetadata,
+  SheetsClient,
+  TableMetadata,
+} from "@/infrastructure/google/sheets-client";
 
 const SUPPORTING_TABLE_SPECS = [
   {
@@ -122,7 +126,9 @@ export async function bootstrapSupportingSheetTables(client: SheetsClient): Prom
       );
     }
 
-    const existing = (sheet.tables ?? []).find((candidate) => candidate.tableId === spec.tableId);
+    const existing = (sheet.tables ?? []).find(
+      (candidate) => candidate.tableId === spec.tableId,
+    );
     if (!existing) {
       if (byName) {
         throw new SheetSchemaError(
