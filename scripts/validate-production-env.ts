@@ -48,7 +48,9 @@ function main(): void {
   }
 
   if (problems.length > 0) {
-    throw new Error(`Production environment is not release-ready: ${problems.join("; ")}`);
+    throw new Error(
+      `Production environment is not release-ready: ${problems.join("; ")}`,
+    );
   }
 
   console.info(
