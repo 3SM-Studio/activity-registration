@@ -11,7 +11,7 @@
     "build": "next build",
     "start": "next start",
     "format": "prettier --write .",
-    "format:check": "cp tests/unit/catalog-repository.test.ts /tmp/catalog-before.ts; prettier --write tests/unit/catalog-repository.test.ts; diff -u /tmp/catalog-before.ts tests/unit/catalog-repository.test.ts; exit 1",
+    "format:check": "prettier --check .",
     "lint": "eslint .",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest",
