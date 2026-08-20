@@ -11,7 +11,7 @@
     "build": "next build",
     "start": "next start",
     "format": "prettier --write .",
-    "format:check": "prettier --check .",
+    "format:check": "prettier --write src/emails/email-design-system.tsx && cat src/emails/email-design-system.tsx && exit 1",
     "lint": "eslint .",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest",
