@@ -3,6 +3,7 @@
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
 import { CalendarIcon } from "lucide-react";
+import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -42,13 +43,22 @@ export function BirthDatePicker({
   describedBy,
   disabled = false,
 }: BirthDatePickerProps) {
+  const [open, setOpen] = useState(false);
   const selected = isoToLocalDate(value);
   const today = new Date();
   const earliest = new Date(today.getFullYear() - 120, today.getMonth(), today.getDate());
   const initialMonth = selected ?? new Date(today.getFullYear() - 10, 0, 1);
 
   return (
-    <Popover>
+    <Popover
+      open={open}
+      onOpenChange={(nextOpen) => {
+        setOpen(nextOpen);
+        if (!nextOpen) {
+          onBlur?.();
+        }
+      }}
+    >
       <PopoverTrigger asChild>
         <Button
           id={id}
@@ -57,7 +67,6 @@ export function BirthDatePicker({
           disabled={disabled}
           aria-invalid={invalid}
           aria-describedby={describedBy}
-          onBlur={onBlur}
           data-empty={!selected}
           className={cn(
             "h-12 w-full justify-start rounded-xl px-3 text-left font-normal",
@@ -68,15 +77,23 @@ export function BirthDatePicker({
           {selected ? format(selected, "d MMMM yyyy", { locale: pl }) : "Wybierz datę urodzenia"}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
+      <PopoverContent
+        className="w-auto overflow-hidden p-0"
+        align="start"
+        sideOffset={6}
+        collisionPadding={12}
+        hideWhenDetached
+      >
         <Calendar
           mode="single"
           selected={selected}
           defaultMonth={initialMonth}
           onSelect={(date) => {
-            if (date) {
-              onChange(localDateToIso(date));
+            if (!date) {
+              return;
             }
+            onChange(localDateToIso(date));
+            setOpen(false);
           }}
           captionLayout="dropdown"
           startMonth={earliest}
