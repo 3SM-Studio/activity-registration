@@ -2,8 +2,15 @@ import { createElement, type ReactElement } from "react";
 import { render, toPlainText } from "react-email";
 
 import type { Registration } from "@/domain/registration";
+import { POZYTYWKA_EMAIL_LOGO_ATTACHMENT } from "@/emails/email-brand-assets";
 import { RegistrationAdminEmail } from "@/emails/registration-admin-email";
 import { RegistrationConfirmationEmail } from "@/emails/registration-confirmation-email";
+
+export type EmailAttachment = Readonly<{
+  path: string;
+  filename: string;
+  contentId?: string;
+}>;
 
 export type EmailMessage = Readonly<{
   from: string;
@@ -13,6 +20,7 @@ export type EmailMessage = Readonly<{
   html: string;
   idempotencyKey: string;
   replyTo?: string;
+  attachments?: readonly EmailAttachment[];
 }>;
 
 export interface EmailSender {
@@ -59,6 +67,7 @@ async function confirmationMessage(
     text: rendered.text,
     html: rendered.html,
     idempotencyKey: `registration-confirmation/${registration.id}`,
+    attachments: [POZYTYWKA_EMAIL_LOGO_ATTACHMENT],
   };
 }
 
@@ -78,6 +87,7 @@ async function adminMessage(
     text: rendered.text,
     html: rendered.html,
     idempotencyKey: `registration-admin/${registration.id}`,
+    attachments: [POZYTYWKA_EMAIL_LOGO_ATTACHMENT],
   };
 }
 

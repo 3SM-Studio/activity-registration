@@ -9,12 +9,19 @@ const message: EmailMessage = {
   replyTo: "reply@example.com",
   subject: "Test",
   text: "Plain text",
-  html: "<p>HTML</p>",
+  html: '<img src="cid:pozytywka-logo" alt="Pozytywka" />',
   idempotencyKey: "registration-confirmation/reg_123",
+  attachments: [
+    {
+      path: "https://example.com/pozytywka-logo.webp",
+      filename: "pozytywka-logo.webp",
+      contentId: "pozytywka-logo",
+    },
+  ],
 };
 
 describe("ResendEmailSender", () => {
-  it("sends the expected Resend request with an idempotency key", async () => {
+  it("sends the expected Resend request with an idempotency key and inline attachments", async () => {
     const calls: Array<Readonly<{ input: RequestInfo | URL; init?: RequestInit }>> = [];
     const fetchStub = (async (input: RequestInfo | URL, init?: RequestInit) => {
       calls.push({ input, ...(init ? { init } : {}) });
@@ -39,8 +46,15 @@ describe("ResendEmailSender", () => {
       to: ["parent@example.com"],
       subject: "Test",
       text: "Plain text",
-      html: "<p>HTML</p>",
+      html: '<img src="cid:pozytywka-logo" alt="Pozytywka" />',
       reply_to: "reply@example.com",
+      attachments: [
+        {
+          path: "https://example.com/pozytywka-logo.webp",
+          filename: "pozytywka-logo.webp",
+          content_id: "pozytywka-logo",
+        },
+      ],
     });
   });
 
