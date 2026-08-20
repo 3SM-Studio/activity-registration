@@ -20,9 +20,7 @@ function createClient(metadata: readonly SheetMetadata[]) {
 
   const client: SheetsClient = {
     async getValues(range) {
-      const spec = SUPPORTING_TABLES.find((candidate) =>
-        range.startsWith(`${candidate.sheet}!`),
-      );
+      const spec = SUPPORTING_TABLES.find((candidate) => range.startsWith(`${candidate.sheet}!`));
       return spec ? [SHEET_SCHEMA[spec.sheet]] : [];
     },
     async updateValues() {},
@@ -54,9 +52,7 @@ describe("bootstrapSupportingSheetTables", () => {
     await bootstrapSupportingSheetTables(client);
 
     const tables = batchRequests.flatMap((request) => {
-      const addTable = request.addTable as
-        | { table?: Record<string, unknown> }
-        | undefined;
+      const addTable = request.addTable as { table?: Record<string, unknown> } | undefined;
       return addTable?.table ? [addTable.table] : [];
     });
 
@@ -67,18 +63,18 @@ describe("bootstrapSupportingSheetTables", () => {
     expect(tables.map((table) => table.name)).toEqual(
       SUPPORTING_TABLES.map(({ tableName }) => tableName),
     );
-    expect(
-      tables.map((table) => (table.range as Record<string, number>).startRowIndex),
-    ).toEqual(SUPPORTING_TABLES.map(() => 0));
-    expect(
-      tables.map((table) => (table.range as Record<string, number>).endRowIndex),
-    ).toEqual(SUPPORTING_TABLES.map(() => 2));
-    expect(
-      tables.map((table) => (table.range as Record<string, number>).startColumnIndex),
-    ).toEqual(SUPPORTING_TABLES.map(() => 0));
-    expect(
-      tables.map((table) => (table.range as Record<string, number>).endColumnIndex),
-    ).toEqual(SUPPORTING_TABLES.map(({ sheet }) => SHEET_SCHEMA[sheet].length));
+    expect(tables.map((table) => (table.range as Record<string, number>).startRowIndex)).toEqual(
+      SUPPORTING_TABLES.map(() => 0),
+    );
+    expect(tables.map((table) => (table.range as Record<string, number>).endRowIndex)).toEqual(
+      SUPPORTING_TABLES.map(() => 2),
+    );
+    expect(tables.map((table) => (table.range as Record<string, number>).startColumnIndex)).toEqual(
+      SUPPORTING_TABLES.map(() => 0),
+    );
+    expect(tables.map((table) => (table.range as Record<string, number>).endColumnIndex)).toEqual(
+      SUPPORTING_TABLES.map(({ sheet }) => SHEET_SCHEMA[sheet].length),
+    );
     expect(tables.every((table) => table.rowsProperties !== undefined)).toBe(true);
   });
 
