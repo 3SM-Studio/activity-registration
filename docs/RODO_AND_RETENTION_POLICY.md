@@ -138,13 +138,13 @@ The interests and rights of the participant, particularly a child, are reviewed 
 
 Retention is status/outcome based.
 
-| Outcome | Retention in registration intake store | Reason |
-| --- | --- | --- |
-| `NEW`, `IN_REVIEW`, `CONTACTED` | while actively handled; if closed without confirmation, up to 12 months from closure | handling, correction and short post-process accountability |
-| `WAITLISTED` | through the relevant season plus 3 months | possible place becoming available and orderly closure of the season |
-| `REJECTED` | 12 months from rejection | short-term correction/dispute handling and repeat-contact context |
-| `CANCELLED` | 12 months from cancellation | short-term correction/dispute handling |
-| `CONFIRMED` | until the end of the calendar year in which 3 years have elapsed after the end of the relevant season | ordinary business-claim limitation and accountability |
+| Outcome                         | Retention in registration intake store                                                                | Reason                                                              |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| `NEW`, `IN_REVIEW`, `CONTACTED` | while actively handled; if closed without confirmation, up to 12 months from closure                  | handling, correction and short post-process accountability          |
+| `WAITLISTED`                    | through the relevant season plus 3 months                                                             | possible place becoming available and orderly closure of the season |
+| `REJECTED`                      | 12 months from rejection                                                                              | short-term correction/dispute handling and repeat-contact context   |
+| `CANCELLED`                     | 12 months from cancellation                                                                           | short-term correction/dispute handling                              |
+| `CONFIRMED`                     | until the end of the calendar year in which 3 years have elapsed after the end of the relevant season | ordinary business-claim limitation and accountability               |
 
 If a concrete dispute, legal hold or statutory obligation requires longer storage, preserve only the data necessary for that purpose and record the reason.
 
