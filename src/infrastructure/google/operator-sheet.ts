@@ -1,5 +1,9 @@
 import { REGISTRATION_STATUS } from "@/domain/registration";
-import { REGISTRATION_HEADERS, SHEET } from "@/infrastructure/google/sheets-contracts";
+import {
+  REGISTRATION_HEADERS,
+  REGISTRATIONS_TABLE_ID,
+  SHEET,
+} from "@/infrastructure/google/sheets-contracts";
 import type { SheetMetadata, SheetsClient } from "@/infrastructure/google/sheets-client";
 
 const STATUS_COLUMN_INDEX = REGISTRATION_HEADERS.indexOf("STATUS");
@@ -71,15 +75,6 @@ export const OWNED_OPERATOR_FORMAT_FORMULAS = new Set([
   POSSIBLE_DUPLICATE_FORMULA,
 ]);
 
-function filterRange(sheetId: number) {
-  return {
-    sheetId,
-    startRowIndex: 0,
-    startColumnIndex: 0,
-    endColumnIndex: REGISTRATION_HEADERS.length,
-  } as const;
-}
-
 function filterCriteria(visibleStatuses: readonly string[]) {
   const visible = new Set(visibleStatuses);
   return {
@@ -89,11 +84,11 @@ function filterCriteria(visibleStatuses: readonly string[]) {
   } as const;
 }
 
-function desiredFilterViews(sheetId: number) {
+function desiredFilterViews() {
   return [
     {
       title: REGISTRATION_OPERATOR_FILTER_VIEW_TITLES.active,
-      range: filterRange(sheetId),
+      tableId: REGISTRATIONS_TABLE_ID,
       criteria: filterCriteria([
         REGISTRATION_STATUS.new,
         REGISTRATION_STATUS.inReview,
@@ -102,12 +97,12 @@ function desiredFilterViews(sheetId: number) {
     },
     {
       title: REGISTRATION_OPERATOR_FILTER_VIEW_TITLES.waitlist,
-      range: filterRange(sheetId),
+      tableId: REGISTRATIONS_TABLE_ID,
       criteria: filterCriteria([REGISTRATION_STATUS.waitlisted]),
     },
     {
       title: REGISTRATION_OPERATOR_FILTER_VIEW_TITLES.confirmed,
-      range: filterRange(sheetId),
+      tableId: REGISTRATIONS_TABLE_ID,
       criteria: filterCriteria([REGISTRATION_STATUS.confirmed]),
     },
   ] as const;
@@ -168,6 +163,13 @@ export function buildOperatorSheetRequests(
 ): readonly Record<string, unknown>[] {
   const requests: Record<string, unknown>[] = [];
 
+  const registrationsTable = (sheet.tables ?? []).find(
+    (table) => table.tableId === REGISTRATIONS_TABLE_ID,
+  );
+  if (!registrationsTable) {
+    throw new Error("Missing native Rejestracje table for operator console bootstrap.");
+  }
+
   for (const range of TECHNICAL_COLUMN_RANGES) {
     requests.push({
       updateDimensionProperties: {
@@ -183,7 +185,7 @@ export function buildOperatorSheetRequests(
     });
   }
 
-  for (const desired of desiredFilterViews(sheet.sheetId)) {
+  for (const desired of desiredFilterViews()) {
     const matching = (sheet.filterViews ?? []).filter((view) => view.title === desired.title);
     const [existing, ...duplicates] = matching;
 
@@ -195,7 +197,7 @@ export function buildOperatorSheetRequests(
       requests.push({
         updateFilterView: {
           filter: { filterViewId: existing.filterViewId, ...desired },
-          fields: "title,range,criteria",
+          fields: "title,tableId,criteria",
         },
       });
     } else {
