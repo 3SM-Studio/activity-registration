@@ -66,11 +66,12 @@ afterEach(() => {
 
 describe("GoogleSheetsClient", () => {
   it("appends ordinary user values using RAW input mode", async () => {
-    const fetchMock = vi.fn(async () =>
-      new Response(JSON.stringify({}), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
+    const fetchMock = vi.fn(
+      async () =>
+        new Response(JSON.stringify({}), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
     );
     vi.stubGlobal("fetch", fetchMock);
 
