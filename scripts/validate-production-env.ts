@@ -11,6 +11,10 @@ const REQUIRED_PRODUCTION_KEYS = [
   "REGISTRATION_ADMIN_EMAILS",
 ] as const;
 
+const MISSING_ENV_PREFIX = "Missing required production environment variables:";
+const INVALID_ENV_PREFIX = "Production environment is not release-ready:";
+const VALIDATION_FAILED_MESSAGE = "Production environment validation failed.";
+
 function missingRequiredKeys(raw: NodeJS.ProcessEnv): string[] {
   return REQUIRED_PRODUCTION_KEYS.filter((key) => !raw[key]?.trim());
 }
@@ -19,9 +23,8 @@ function main(): void {
   const missing = missingRequiredKeys(process.env);
 
   if (missing.length > 0) {
-    throw new Error(
-      `Missing required production environment variables: ${missing.join(", ")}`,
-    );
+    const details = missing.join(", ");
+    throw new Error(`${MISSING_ENV_PREFIX} ${details}`);
   }
 
   const env = parseServerEnv({
@@ -48,10 +51,16 @@ function main(): void {
   }
 
   if (problems.length > 0) {
-    throw new Error(
-      `Production environment is not release-ready: ${problems.join("; ")}`,
-    );
+    const details = problems.join("; ");
+    throw new Error(`${INVALID_ENV_PREFIX} ${details}`);
   }
+
+  const wifConfigured = Boolean(
+    env.GCP_PROJECT_NUMBER &&
+      env.GCP_SERVICE_ACCOUNT_EMAIL &&
+      env.GCP_WORKLOAD_IDENTITY_POOL_ID &&
+      env.GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID,
+  );
 
   console.info(
     JSON.stringify(
@@ -62,12 +71,7 @@ function main(): void {
         emailProvider: env.EMAIL_PROVIDER,
         adminRecipientCount: env.REGISTRATION_ADMIN_EMAILS.length,
         spreadsheetConfigured: Boolean(env.GOOGLE_SPREADSHEET_ID),
-        wifConfigured: Boolean(
-          env.GCP_PROJECT_NUMBER &&
-            env.GCP_SERVICE_ACCOUNT_EMAIL &&
-            env.GCP_WORKLOAD_IDENTITY_POOL_ID &&
-            env.GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID,
-        ),
+        wifConfigured,
         testSeedDisabled: env.ALLOW_TEST_SEED === "false",
       },
       null,
@@ -79,8 +83,7 @@ function main(): void {
 try {
   main();
 } catch (error: unknown) {
-  console.error(
-    error instanceof Error ? error.message : "Production environment validation failed.",
-  );
+  const message = error instanceof Error ? error.message : VALIDATION_FAILED_MESSAGE;
+  console.error(message);
   process.exitCode = 1;
 }
