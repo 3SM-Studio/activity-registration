@@ -19,7 +19,9 @@ function main(): void {
   const missing = missingRequiredKeys(process.env);
 
   if (missing.length > 0) {
-    throw new Error(`Missing required production environment variables: ${missing.join(", ")}`);
+    throw new Error(
+      `Missing required production environment variables: ${missing.join(", ")}`,
+    );
   }
 
   const env = parseServerEnv({
@@ -75,6 +77,8 @@ function main(): void {
 try {
   main();
 } catch (error: unknown) {
-  console.error(error instanceof Error ? error.message : "Production environment validation failed.");
+  console.error(
+    error instanceof Error ? error.message : "Production environment validation failed.",
+  );
   process.exitCode = 1;
 }
