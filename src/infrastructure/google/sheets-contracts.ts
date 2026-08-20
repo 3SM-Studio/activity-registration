@@ -64,17 +64,6 @@ export const GROUP_HEADERS = [
   "SORT_ORDER",
 ] as const;
 
-export const ASSIGNABLE_GROUP_IDS_2026_2027 = [
-  "olkusz-psikusy",
-  "olkusz-psotki",
-  "olkusz-pozytywki",
-  "olkusz-besti",
-  "olkusz-bez-kurtyny",
-  "olkusz-od-poczatku",
-  "olkusz-balet-mlodszy",
-  "olkusz-inside",
-] as const;
-
 export const LEGACY_REGISTRATION_HEADERS = [
   "REGISTRATION_ID",
   "REQUEST_ID",
@@ -180,22 +169,28 @@ export const REGISTRATION_TABLE_COLUMNS = REGISTRATION_HEADERS.map((columnName, 
     } as const;
   }
 
-  if (columnName === "ASSIGNED_GROUP_ID") {
+  return { columnIndex, columnName, columnType: "TEXT" } as const;
+});
+
+export function buildRegistrationTableColumns(assignableGroupIds: readonly string[]) {
+  return REGISTRATION_TABLE_COLUMNS.map((column) => {
+    if (column.columnName !== "ASSIGNED_GROUP_ID" || assignableGroupIds.length === 0) {
+      return column;
+    }
+
     return {
-      columnIndex,
-      columnName,
+      columnIndex: column.columnIndex,
+      columnName: column.columnName,
       columnType: "DROPDOWN",
       dataValidationRule: {
         condition: {
           type: "ONE_OF_LIST",
-          values: ASSIGNABLE_GROUP_IDS_2026_2027.map((value) => ({ userEnteredValue: value })),
+          values: assignableGroupIds.map((value) => ({ userEnteredValue: value })),
         },
       },
     } as const;
-  }
-
-  return { columnIndex, columnName, columnType: "TEXT" } as const;
-});
+  });
+}
 
 export const SETTINGS_HEADERS = ["KEY", "VALUE"] as const;
 
