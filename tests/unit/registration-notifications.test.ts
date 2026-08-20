@@ -75,8 +75,16 @@ describe("registration notifications", () => {
     expect(messages[0]).toMatchObject({
       to: ["anna@example.com"],
       idempotencyKey: "registration-confirmation/reg_11111111-1111-4111-8111-111111111111",
+      attachments: [
+        {
+          filename: "pozytywka-logo.webp",
+          contentId: "pozytywka-logo",
+        },
+      ],
     });
     expect(messages[0]?.html).toContain("<!DOCTYPE");
+    expect(messages[0]?.html).toContain('src="cid:pozytywka-logo"');
+    expect(messages[0]?.html).toContain('alt="Pozytywka"');
     expect(messages[0]?.html).toContain("Zgłoszenie otrzymane");
     expect(messages[0]?.html).toContain("Co dzieje się teraz?");
     expect(messages[0]?.text).toContain("nie potwierdzenie miejsca na zajęciach");
@@ -84,7 +92,14 @@ describe("registration notifications", () => {
       to: ["biuro@example.com"],
       replyTo: "anna@example.com",
       idempotencyKey: "registration-admin/reg_11111111-1111-4111-8111-111111111111",
+      attachments: [
+        {
+          filename: "pozytywka-logo.webp",
+          contentId: "pozytywka-logo",
+        },
+      ],
     });
+    expect(messages[1]?.html).toContain('src="cid:pozytywka-logo"');
     expect(messages[1]?.html).toContain("Obsługa zgłoszenia");
     expect(messages[1]?.html).toContain("Dane systemowe");
     expect(messages[1]?.text).toContain("Rodzic/opiekun");
