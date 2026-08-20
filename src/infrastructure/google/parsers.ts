@@ -23,9 +23,9 @@ import {
   isRegistrationId,
   isRequestId,
   LEGACY_REGISTRATION_SCHEMA_VERSION,
+  normalizeStoredRegistrationStatus,
   REGISTRATION_SCHEMA_VERSION,
   REGISTRATION_SOURCE,
-  REGISTRATION_STATUS,
   type RegistrationSchemaVersion,
 } from "@/domain/registration";
 import { googleSerialToIsoDate } from "@/infrastructure/google/google-date";
@@ -325,8 +325,8 @@ export function parseRegistrationRow(
   }
 
   const rawStatus = cell(row, headers, "STATUS");
-  const allowedStatuses = new Set<string>(Object.values(REGISTRATION_STATUS));
-  if (!allowedStatuses.has(rawStatus)) {
+  const status = normalizeStoredRegistrationStatus(rawStatus);
+  if (!status) {
     throw new SheetSchemaError(`Unknown registration status for ${id}: ${rawStatus}`);
   }
 
@@ -417,7 +417,7 @@ export function parseRegistrationRow(
     guardianLastName: cell(row, headers, "GUARDIAN_LAST_NAME") || null,
     phone: cell(row, headers, "PHONE"),
     email: cell(row, headers, "EMAIL"),
-    status: rawStatus as Registration["status"],
+    status,
     assignedGroupId,
     contactedAt,
     confirmedAt,
