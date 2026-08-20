@@ -2,7 +2,6 @@ import { Text } from "react-email";
 
 import type { Registration } from "@/domain/registration";
 import {
-  Badge,
   BrandHeader,
   DetailRow,
   EmailCard,
@@ -66,11 +65,7 @@ export function RegistrationAdminEmail({ registration }: RegistrationAdminEmailP
         {registration.seasonNameSnapshot ? (
           <DetailRow label="Sezon" value={registration.seasonNameSnapshot} />
         ) : null}
-        <DetailRow
-          label="Status obsługi"
-          value={<Badge tone="neutral">{registration.status}</Badge>}
-          last
-        />
+        <DetailRow label="Status obsługi" value={registration.status} last />
       </EmailCard>
 
       <EmailCard>
