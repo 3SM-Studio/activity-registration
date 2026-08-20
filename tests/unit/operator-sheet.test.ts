@@ -73,8 +73,7 @@ describe("operator Sheets experience", () => {
     const requests = buildOperatorSheetRequests(sheet());
     const rules = requests.flatMap((request) => {
       const add = request.addConditionalFormatRule as
-        | { rule?: { booleanRule?: { format?: unknown } } }
-        | undefined;
+        { rule?: { booleanRule?: { format?: unknown } } } | undefined;
       return add?.rule?.booleanRule?.format ? [add.rule.booleanRule.format] : [];
     });
 
