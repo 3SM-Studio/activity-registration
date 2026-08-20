@@ -27,10 +27,7 @@ async function main() {
   const client = createAdminSheetsClient();
   const report = await validateSheetStructure(client);
   const registrationRows = await client.getValues(`${SHEET.registrations}!A:ZZ`);
-  const registrationHeaders = createHeaderMap(
-    registrationRows[0] ?? [],
-    REGISTRATION_HEADERS,
-  );
+  const registrationHeaders = createHeaderMap(registrationRows[0] ?? [], REGISTRATION_HEADERS);
   const legacyWorkflowStatuses = registrationRows
     .slice(1)
     .map((row, offset) => ({
