@@ -214,6 +214,8 @@ describe("GoogleSheetsClient", () => {
             ],
           },
         ],
+        filterViews: [],
+        conditionalFormats: [],
       },
     ]);
   });
