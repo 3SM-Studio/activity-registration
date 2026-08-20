@@ -4,6 +4,7 @@ import {
   buildOperatorSheetRequests,
   OWNED_OPERATOR_FORMAT_FORMULAS,
   REGISTRATION_OPERATOR_FILTER_VIEW_TITLES,
+  REGISTRATION_STATUS_FORMATS,
 } from "@/infrastructure/google/operator-sheet";
 import type { SheetMetadata } from "@/infrastructure/google/sheets-client";
 
@@ -25,6 +26,71 @@ function sheet(overrides: Partial<SheetMetadata> = {}): SheetMetadata {
 }
 
 describe("operator Sheets experience", () => {
+  it("clears stale body colors and keeps the status column centered", () => {
+    const requests = buildOperatorSheetRequests(sheet());
+    const repeatCells = requests.flatMap((request) => {
+      const repeat = request.repeatCell as Record<string, unknown> | undefined;
+      return repeat ? [repeat] : [];
+    });
+
+    expect(repeatCells).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          range: {
+            sheetId: 1003,
+            startRowIndex: 1,
+            startColumnIndex: 0,
+            endColumnIndex: 28,
+          },
+          fields: expect.stringContaining("userEnteredFormat.backgroundColorStyle"),
+        }),
+        {
+          range: {
+            sheetId: 1003,
+            startRowIndex: 1,
+            startColumnIndex: 15,
+            endColumnIndex: 16,
+          },
+          cell: {
+            userEnteredFormat: {
+              horizontalAlignment: "CENTER",
+              verticalAlignment: "MIDDLE",
+            },
+          },
+          fields: "userEnteredFormat.horizontalAlignment,userEnteredFormat.verticalAlignment",
+        },
+      ]),
+    );
+  });
+
+  it("uses a distinct professional semantic color for every workflow status", () => {
+    const formats = REGISTRATION_STATUS_FORMATS;
+
+    expect(formats).toHaveLength(7);
+    expect(new Set(formats.map(({ status }) => status)).size).toBe(7);
+    expect(new Set(formats.map(({ background }) => JSON.stringify(background))).size).toBe(7);
+
+    const requests = buildOperatorSheetRequests(sheet());
+    const rules = requests.flatMap((request) => {
+      const add = request.addConditionalFormatRule as
+        | { rule?: { booleanRule?: { format?: unknown } } }
+        | undefined;
+      return add?.rule?.booleanRule?.format ? [add.rule.booleanRule.format] : [];
+    });
+
+    expect(rules).toEqual(
+      expect.arrayContaining(
+        formats.map(({ background, foreground }) => ({
+          backgroundColorStyle: { rgbColor: background },
+          textFormat: {
+            foregroundColorStyle: { rgbColor: foreground },
+            bold: true,
+          },
+        })),
+      ),
+    );
+  });
+
   it("hides technical columns but keeps operator fields outside hidden ranges", () => {
     const requests = buildOperatorSheetRequests(sheet());
     const hiddenRanges = requests.flatMap((request) => {
