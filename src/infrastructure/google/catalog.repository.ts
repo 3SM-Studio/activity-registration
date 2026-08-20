@@ -16,13 +16,15 @@ import {
 } from "@/infrastructure/google/sheets-contracts";
 import type { SheetsClient } from "@/infrastructure/google/sheets-client";
 
+const UNFORMATTED_VALUES = { valueRenderOption: "UNFORMATTED_VALUE" } as const;
+
 export class GoogleSheetsCatalogRepository implements CatalogRepository {
   constructor(private readonly client: SheetsClient) {}
 
   private async readCatalog() {
     const [cityRows, offeringRows] = await Promise.all([
-      this.client.getValues(`${SHEET.cities}!A:ZZ`),
-      this.client.getValues(`${SHEET.offerings}!A:ZZ`),
+      this.client.getValues(`${SHEET.cities}!A:ZZ`, UNFORMATTED_VALUES),
+      this.client.getValues(`${SHEET.offerings}!A:ZZ`, UNFORMATTED_VALUES),
     ]);
 
     const cityHeader = cityRows[0] ?? [];
@@ -47,7 +49,7 @@ export class GoogleSheetsCatalogRepository implements CatalogRepository {
   }
 
   private async readSeasons(): Promise<readonly Season[]> {
-    const rows = await this.client.getValues(`${SHEET.seasons}!A:ZZ`);
+    const rows = await this.client.getValues(`${SHEET.seasons}!A:ZZ`, UNFORMATTED_VALUES);
     const headers = createHeaderMap(rows[0] ?? [], SEASON_HEADERS);
     const seasons = rows
       .slice(1)
