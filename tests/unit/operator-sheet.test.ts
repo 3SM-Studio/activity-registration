@@ -57,7 +57,9 @@ describe("operator Sheets experience", () => {
     const requests = buildOperatorSheetRequests(sheet());
     const filters = requests.flatMap((request) => {
       const add = request.addFilterView as
-        | { filter?: { title?: string; tableId?: string; range?: unknown } }
+        | {
+            filter?: { title?: string; tableId?: string; range?: unknown };
+          }
         | undefined;
       return add?.filter ? [add.filter] : [];
     });
