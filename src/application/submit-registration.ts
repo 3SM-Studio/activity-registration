@@ -1,7 +1,18 @@
 import { APPLICATION_ERROR_CODE, ApplicationError } from "@/application/errors";
-import type { City, ClassOffering } from "@/domain/catalog";
-import { asCityId, asOfferingId } from "@/domain/catalog";
+import {
+  PUBLIC_INTAKE_STATUS,
+  asCityId,
+  asOfferingId,
+  type City,
+  type PublicOffering,
+} from "@/domain/catalog";
+import { offeringAcceptsRegistration } from "@/domain/offering-intake";
 import type { ApplicationRepositories } from "@/domain/repositories";
+import {
+  classifyRegistrationDuplicates,
+  possibleDuplicateRegistrationId,
+  type RegistrationDuplicateCriteria,
+} from "@/domain/registration-duplicates";
 import {
   REGISTRATION_SCHEMA_VERSION,
   REGISTRATION_SOURCE,
@@ -9,6 +20,7 @@ import {
   asRequestId,
   type Registration,
 } from "@/domain/registration";
+import { calculateAgeAtDate, dateOnlyInPoland } from "@/lib/birth-date";
 import { normalizeEmail } from "@/lib/email";
 import { createRegistrationId } from "@/lib/ids";
 import { InvalidPhoneError, normalizePhone } from "@/lib/phone";
@@ -25,6 +37,7 @@ export type SubmitRegistrationDependencies = Readonly<{
 export type SubmitRegistrationResult = Readonly<{
   registrationId: string;
   idempotentReplay: boolean;
+  businessDuplicate: boolean;
   registration: Registration;
 }>;
 
@@ -39,7 +52,8 @@ function sameLogicalRequest(
     offeringId: string;
     participantFirstName: string;
     participantLastName: string;
-    age: number;
+    birthDate: string;
+    ageAtSubmission: number;
     guardianFirstName: string | null;
     guardianLastName: string | null;
     phone: string;
@@ -51,7 +65,8 @@ function sameLogicalRequest(
     existing.offeringId === input.offeringId &&
     existing.participantFirstName === input.participantFirstName &&
     existing.participantLastName === input.participantLastName &&
-    existing.age === input.age &&
+    existing.birthDate === input.birthDate &&
+    existing.ageAtSubmission === input.ageAtSubmission &&
     existing.guardianFirstName === input.guardianFirstName &&
     existing.guardianLastName === input.guardianLastName &&
     existing.phone === input.phone &&
@@ -67,10 +82,18 @@ function findCity(
 }
 
 function findOffering(
-  offerings: readonly Pick<ClassOffering, "id" | "cityId" | "name">[],
+  offerings: readonly PublicOffering[],
   offeringId: string,
-): Pick<ClassOffering, "id" | "cityId" | "name"> | null {
+): PublicOffering | null {
   return offerings.find((offering) => offering.id === offeringId) ?? null;
+}
+
+function unavailableOfferingMessage(offering: PublicOffering): string {
+  if (offering.intakeStatus === PUBLIC_INTAKE_STATUS.upcoming) {
+    return "Zapisy na wybrane zajęcia jeszcze się nie rozpoczęły.";
+  }
+
+  return "Zapisy na wybrane zajęcia są obecnie zamknięte.";
 }
 
 export async function submitRegistration(
@@ -86,8 +109,9 @@ export async function submitRegistration(
   }
 
   const input = parsed.data;
+  const nowDate = (dependencies.now ?? (() => new Date()))();
 
-  const elapsedSinceRender = Date.now() - input.renderedAt;
+  const elapsedSinceRender = nowDate.getTime() - input.renderedAt;
   if (elapsedSinceRender >= 0 && elapsedSinceRender < MINIMUM_FORM_FILL_TIME_MS) {
     throw new ApplicationError(
       APPLICATION_ERROR_CODE.validation,
@@ -107,14 +131,17 @@ export async function submitRegistration(
     throw error;
   }
 
+  const birthDate = input.birthDate.trim();
+  const ageAtSubmission = calculateAgeAtDate(birthDate, dateOnlyInPoland(nowDate));
   const normalized = {
     cityId: input.cityId,
     offeringId: input.offeringId,
     participantFirstName: input.participantFirstName.trim(),
     participantLastName: input.participantLastName.trim(),
-    age: input.age,
-    guardianFirstName: input.age < 18 ? normalizeOptionalName(input.guardianFirstName) : null,
-    guardianLastName: input.age < 18 ? normalizeOptionalName(input.guardianLastName) : null,
+    birthDate,
+    ageAtSubmission,
+    guardianFirstName: ageAtSubmission < 18 ? normalizeOptionalName(input.guardianFirstName) : null,
+    guardianLastName: ageAtSubmission < 18 ? normalizeOptionalName(input.guardianLastName) : null,
     phone,
     email: normalizeEmail(input.email),
   };
@@ -133,12 +160,14 @@ export async function submitRegistration(
     return {
       registrationId: existing.id,
       idempotentReplay: true,
+      businessDuplicate: false,
       registration: existing,
     };
   }
 
+  const currentDate = dateOnlyInPoland(nowDate);
   const [catalog, settings] = await Promise.all([
-    dependencies.repositories.catalog.getPublicCatalog(),
+    dependencies.repositories.catalog.getPublicCatalog(currentDate),
     dependencies.repositories.settings.getPublicSettings(),
   ]);
 
@@ -156,6 +185,21 @@ export async function submitRegistration(
     throw new ApplicationError(
       APPLICATION_ERROR_CODE.systemNotReady,
       "System zapisów nie jest jeszcze gotowy do pracy produkcyjnej.",
+    );
+  }
+
+  if (!settings.currentSeasonId) {
+    throw new ApplicationError(
+      APPLICATION_ERROR_CODE.systemNotReady,
+      "System zapisów nie ma skonfigurowanego bieżącego sezonu.",
+    );
+  }
+
+  const season = await dependencies.repositories.catalog.findSeasonById(settings.currentSeasonId);
+  if (!season || !season.active) {
+    throw new ApplicationError(
+      APPLICATION_ERROR_CODE.systemNotReady,
+      "Skonfigurowany sezon zapisów nie jest dostępny.",
     );
   }
 
@@ -182,23 +226,60 @@ export async function submitRegistration(
     );
   }
 
-  const now = (dependencies.now ?? (() => new Date()))().toISOString();
+  if (!offeringAcceptsRegistration(offering.intakeStatus)) {
+    throw new ApplicationError(
+      APPLICATION_ERROR_CODE.offeringNotAvailable,
+      unavailableOfferingMessage(offering),
+    );
+  }
+
+  const duplicateCriteria: RegistrationDuplicateCriteria = {
+    seasonId: season.id,
+    offeringId: asOfferingId(offering.id),
+    cityId: asCityId(city.id),
+    participantFirstName: normalized.participantFirstName,
+    participantLastName: normalized.participantLastName,
+    birthDate: normalized.birthDate,
+    phone: normalized.phone,
+    email: normalized.email,
+  };
+  const candidates =
+    await dependencies.repositories.registrations.findPotentialDuplicates(duplicateCriteria);
+  const duplicateMatch = classifyRegistrationDuplicates(candidates, duplicateCriteria);
+
+  if (duplicateMatch.kind === "exact") {
+    return {
+      registrationId: duplicateMatch.registration.id,
+      idempotentReplay: false,
+      businessDuplicate: true,
+      registration: duplicateMatch.registration,
+    };
+  }
+
+  const now = nowDate.toISOString();
   const registration: Registration = {
     id: createRegistrationId(),
     requestId,
     submittedAt: now,
+    seasonId: season.id,
+    seasonNameSnapshot: season.name,
     offeringId: asOfferingId(offering.id),
     cityIdSnapshot: asCityId(city.id),
     cityNameSnapshot: city.name,
     offeringNameSnapshot: offering.name,
     participantFirstName: normalized.participantFirstName,
     participantLastName: normalized.participantLastName,
-    age: normalized.age,
+    birthDate: normalized.birthDate,
+    ageAtSubmission: normalized.ageAtSubmission,
     guardianFirstName: normalized.guardianFirstName,
     guardianLastName: normalized.guardianLastName,
     phone: normalized.phone,
     email: normalized.email,
     status: REGISTRATION_STATUS.new,
+    assignedGroupId: null,
+    contactedAt: null,
+    confirmedAt: null,
+    possibleDuplicateOf: possibleDuplicateRegistrationId(duplicateMatch),
     notes: "",
     privacyNoticeVersion: settings.privacyNoticeVersion ?? "unconfigured",
     source: REGISTRATION_SOURCE.web,
@@ -212,6 +293,7 @@ export async function submitRegistration(
   return {
     registrationId: registration.id,
     idempotentReplay: false,
+    businessDuplicate: false,
     registration,
   };
 }

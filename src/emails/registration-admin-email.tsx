@@ -1,54 +1,22 @@
-import {
-  Body,
-  Column,
-  Container,
-  Head,
-  Heading,
-  Html,
-  Preview,
-  Row,
-  Section,
-  Text,
-} from "react-email";
+import { Text } from "react-email";
 
 import type { Registration } from "@/domain/registration";
+import {
+  BrandHeader,
+  DetailRow,
+  EmailCard,
+  EmailFooter,
+  EmailLayout,
+  Hero,
+  SectionTitle,
+  StepRow,
+  WarningNotice,
+  emailColors,
+} from "@/emails/email-design-system";
 
 type RegistrationAdminEmailProps = Readonly<{
   registration: Registration;
 }>;
-
-const colors = {
-  background: "#f7f7f8",
-  surface: "#ffffff",
-  foreground: "#29172d",
-  muted: "#74616f",
-  line: "#e8d7c6",
-  brand: "#a3205a",
-} as const;
-
-const labelStyle = {
-  color: colors.muted,
-  fontSize: "14px",
-  lineHeight: "20px",
-  padding: "6px 12px 6px 0",
-  width: "160px",
-} as const;
-
-const valueStyle = {
-  color: colors.foreground,
-  fontSize: "14px",
-  lineHeight: "20px",
-  padding: "6px 0",
-} as const;
-
-function DetailRow({ label, value }: Readonly<{ label: string; value: string }>) {
-  return (
-    <Row>
-      <Column style={labelStyle}>{label}</Column>
-      <Column style={valueStyle}>{value}</Column>
-    </Row>
-  );
-}
 
 export function RegistrationAdminEmail({ registration }: RegistrationAdminEmailProps) {
   const participantName = `${registration.participantFirstName} ${registration.participantLastName}`;
@@ -58,85 +26,95 @@ export function RegistrationAdminEmail({ registration }: RegistrationAdminEmailP
       : null;
 
   return (
-    <Html lang="pl" dir="ltr">
-      <Head />
-      <Preview>
-        Nowe zgłoszenie: {participantName} - {registration.offeringNameSnapshot}
-      </Preview>
-      <Body
-        style={{
-          backgroundColor: colors.background,
-          color: colors.foreground,
-          fontFamily: "Arial, Helvetica, sans-serif",
-          margin: 0,
-          padding: "32px 16px",
-        }}
-      >
-        <Container
+    <EmailLayout
+      preview={`Nowe zgłoszenie: ${participantName} - ${registration.offeringNameSnapshot}`}
+      maxWidth={680}
+    >
+      <BrandHeader />
+
+      <Hero
+        eyebrow="Nowe zgłoszenie"
+        title={participantName}
+        description={
+          <>
+            {registration.offeringNameSnapshot} · {registration.cityNameSnapshot}
+          </>
+        }
+      />
+
+      {registration.possibleDuplicateOf ? (
+        <WarningNotice title="Możliwy duplikat wcześniejszego zgłoszenia">
+          Porównaj dane z wcześniejszym rekordem przed dalszą obsługą. Informacja o możliwym
+          duplikacie jest widoczna tylko administracyjnie.
+        </WarningNotice>
+      ) : null}
+
+      <EmailCard>
+        <SectionTitle>Uczestnik</SectionTitle>
+        <DetailRow label="Imię i nazwisko" value={participantName} />
+        {registration.birthDate ? (
+          <DetailRow label="Data urodzenia" value={registration.birthDate} />
+        ) : null}
+        <DetailRow label="Wiek przy zapisie" value={`${registration.ageAtSubmission} lat`} last />
+      </EmailCard>
+
+      <EmailCard>
+        <SectionTitle>Zajęcia</SectionTitle>
+        <DetailRow label="Oferta" value={registration.offeringNameSnapshot} />
+        <DetailRow label="Miasto" value={registration.cityNameSnapshot} />
+        {registration.seasonNameSnapshot ? (
+          <DetailRow label="Sezon" value={registration.seasonNameSnapshot} />
+        ) : null}
+        <DetailRow label="Status obsługi" value={registration.status} last />
+      </EmailCard>
+
+      <EmailCard>
+        <SectionTitle>Kontakt</SectionTitle>
+        {guardian ? <DetailRow label="Rodzic/opiekun" value={guardian} /> : null}
+        <DetailRow label="Telefon" value={registration.phone} />
+        <DetailRow label="E-mail" value={registration.email} last />
+      </EmailCard>
+
+      <EmailCard tone="muted">
+        <SectionTitle>Obsługa zgłoszenia</SectionTitle>
+        <StepRow
+          number={1}
+          title="Zweryfikuj dane"
+          description="Sprawdź uczestnika, ofertę i ewentualny duplikat."
+        />
+        <StepRow
+          number={2}
+          title="Dobierz grupę"
+          description="Przypisz właściwą grupę dopiero po potwierdzeniu realnych warunków zapisu."
+        />
+        <StepRow
+          number={3}
+          title="Skontaktuj się i zaktualizuj status"
+          description="Po kontakcie zapisz aktualny status obsługi w arkuszu ZAPISY."
+          last
+        />
+      </EmailCard>
+
+      <EmailCard tone="default" padding="18px 20px">
+        <SectionTitle>Dane systemowe</SectionTitle>
+        <DetailRow label="Numer zgłoszenia" value={registration.id} />
+        <DetailRow label="Wysłano" value={registration.submittedAt} last />
+        <Text
           style={{
-            backgroundColor: colors.surface,
-            border: `1px solid ${colors.line}`,
-            borderRadius: "20px",
-            margin: "0 auto",
-            maxWidth: "680px",
-            padding: "32px",
+            borderTop: `1px solid ${emailColors.line}`,
+            color: emailColors.muted,
+            fontSize: "12px",
+            lineHeight: "18px",
+            margin: "14px 0 0",
+            paddingTop: "14px",
           }}
         >
-          <Text
-            style={{
-              color: colors.brand,
-              fontSize: "12px",
-              fontWeight: 700,
-              letterSpacing: "1.6px",
-              margin: "0 0 10px",
-              textTransform: "uppercase",
-            }}
-          >
-            Pracownia Twórcza Pozytywka
-          </Text>
-          <Heading
-            as="h1"
-            style={{
-              color: colors.foreground,
-              fontSize: "26px",
-              lineHeight: "32px",
-              margin: "0 0 22px",
-            }}
-          >
-            Nowe zgłoszenie
-          </Heading>
+          Odpowiedź na tę wiadomość trafi bezpośrednio na adres kontaktowy ze zgłoszenia.
+        </Text>
+      </EmailCard>
 
-          <Section
-            style={{
-              borderTop: `1px solid ${colors.line}`,
-              borderBottom: `1px solid ${colors.line}`,
-              padding: "14px 0",
-            }}
-          >
-            <DetailRow label="Uczestnik" value={participantName} />
-            <DetailRow label="Wiek" value={String(registration.age)} />
-            <DetailRow label="Zajęcia" value={registration.offeringNameSnapshot} />
-            <DetailRow label="Miasto" value={registration.cityNameSnapshot} />
-            {guardian ? <DetailRow label="Rodzic/opiekun" value={guardian} /> : null}
-            <DetailRow label="Telefon" value={registration.phone} />
-            <DetailRow label="E-mail" value={registration.email} />
-            <DetailRow label="Numer zgłoszenia" value={registration.id} />
-            <DetailRow label="Wysłano" value={registration.submittedAt} />
-          </Section>
-
-          <Text
-            style={{
-              color: colors.muted,
-              fontSize: "13px",
-              lineHeight: "20px",
-              margin: "18px 0 0",
-            }}
-          >
-            Odpowiedź na tę wiadomość trafi bezpośrednio na adres kontaktowy ze zgłoszenia.
-          </Text>
-        </Container>
-      </Body>
-    </Html>
+      <EmailFooter reference={registration.id} />
+    </EmailLayout>
   );
 }
 

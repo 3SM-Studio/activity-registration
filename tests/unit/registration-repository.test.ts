@@ -1,64 +1,87 @@
 import { describe, expect, it } from "vitest";
 
-import { asCityId, asOfferingId } from "@/domain/catalog";
+import { asCityId, asOfferingId, asSeasonId } from "@/domain/catalog";
+import type { RegistrationDuplicateCriteria } from "@/domain/registration-duplicates";
 import {
   asRegistrationId,
   asRequestId,
   REGISTRATION_STATUS,
   type Registration,
 } from "@/domain/registration";
+import { isoDateToGoogleSerial } from "@/infrastructure/google/google-date";
 import { SheetSchemaError } from "@/infrastructure/google/header-map";
 import { GoogleSheetsRegistrationRepository } from "@/infrastructure/google/registration.repository";
-import { REGISTRATION_HEADERS, SHEET } from "@/infrastructure/google/sheets-contracts";
+import {
+  REGISTRATION_HEADERS,
+  REGISTRATIONS_TABLE_ID,
+  SHEET,
+} from "@/infrastructure/google/sheets-contracts";
 import type { SheetsClient } from "@/infrastructure/google/sheets-client";
 
 const registration: Registration = {
   id: asRegistrationId("reg_11111111-1111-4111-8111-111111111111"),
   requestId: asRequestId("22222222-2222-4222-8222-222222222222"),
   submittedAt: "2026-08-18T12:00:00.000Z",
+  seasonId: null,
+  seasonNameSnapshot: null,
   offeringId: asOfferingId("gdynia-hiphop"),
   cityIdSnapshot: asCityId("gdynia"),
   cityNameSnapshot: "Gdynia",
   offeringNameSnapshot: "Hip-hop",
   participantFirstName: "Jan",
   participantLastName: "Kowalski",
-  age: 17,
+  birthDate: "2009-01-15",
+  ageAtSubmission: 17,
   guardianFirstName: "Anna",
   guardianLastName: "Kowalska",
   phone: "+48500000000",
   email: "anna@example.com",
   status: REGISTRATION_STATUS.new,
+  assignedGroupId: null,
+  contactedAt: null,
+  confirmedAt: null,
+  possibleDuplicateOf: null,
   notes: "",
   privacyNoticeVersion: "2026-08-v1",
   source: "WEB",
   createdAt: "2026-08-18T12:00:00.000Z",
   updatedAt: "2026-08-18T12:00:00.000Z",
-  schemaVersion: 1,
+  schemaVersion: 2,
 };
 
-function rowForHeaders(headers: readonly string[]): readonly (string | number)[] {
+function rowForHeaders(
+  headers: readonly string[],
+  record: Registration = registration,
+): readonly (string | number)[] {
   const values: Readonly<Record<string, string | number>> = {
-    REGISTRATION_ID: registration.id,
-    REQUEST_ID: registration.requestId,
-    SUBMITTED_AT: registration.submittedAt,
-    OFFERING_ID: registration.offeringId,
-    CITY_ID_SNAPSHOT: registration.cityIdSnapshot,
-    CITY_NAME_SNAPSHOT: registration.cityNameSnapshot,
-    OFFERING_NAME_SNAPSHOT: registration.offeringNameSnapshot,
-    PARTICIPANT_FIRST_NAME: registration.participantFirstName,
-    PARTICIPANT_LAST_NAME: registration.participantLastName,
-    AGE: registration.age,
-    GUARDIAN_FIRST_NAME: registration.guardianFirstName ?? "",
-    GUARDIAN_LAST_NAME: registration.guardianLastName ?? "",
-    PHONE: registration.phone,
-    EMAIL: registration.email,
-    STATUS: registration.status,
-    NOTES: registration.notes,
-    PRIVACY_NOTICE_VERSION: registration.privacyNoticeVersion,
-    SOURCE: registration.source,
-    CREATED_AT: registration.createdAt,
-    UPDATED_AT: registration.updatedAt,
-    SCHEMA_VERSION: registration.schemaVersion,
+    REGISTRATION_ID: record.id,
+    REQUEST_ID: record.requestId,
+    SUBMITTED_AT: record.submittedAt,
+    OFFERING_ID: record.offeringId,
+    CITY_ID_SNAPSHOT: record.cityIdSnapshot,
+    CITY_NAME_SNAPSHOT: record.cityNameSnapshot,
+    OFFERING_NAME_SNAPSHOT: record.offeringNameSnapshot,
+    PARTICIPANT_FIRST_NAME: record.participantFirstName,
+    PARTICIPANT_LAST_NAME: record.participantLastName,
+    BIRTH_DATE: isoDateToGoogleSerial(record.birthDate ?? ""),
+    AGE_AT_SUBMISSION: record.ageAtSubmission,
+    GUARDIAN_FIRST_NAME: record.guardianFirstName ?? "",
+    GUARDIAN_LAST_NAME: record.guardianLastName ?? "",
+    PHONE: record.phone,
+    EMAIL: record.email,
+    STATUS: record.status,
+    NOTES: record.notes,
+    PRIVACY_NOTICE_VERSION: record.privacyNoticeVersion,
+    SOURCE: record.source,
+    CREATED_AT: record.createdAt,
+    UPDATED_AT: record.updatedAt,
+    SEASON_ID: record.seasonId ?? "",
+    SEASON_NAME_SNAPSHOT: record.seasonNameSnapshot ?? "",
+    ASSIGNED_GROUP_ID: record.assignedGroupId ?? "",
+    CONTACTED_AT: record.contactedAt ?? "",
+    CONFIRMED_AT: record.confirmedAt ?? "",
+    POSSIBLE_DUPLICATE_OF: record.possibleDuplicateOf ?? "",
+    SCHEMA_VERSION: record.schemaVersion,
   };
 
   return headers.map((header) => values[header] ?? "");
@@ -69,9 +92,9 @@ function createClient(
   dataRows: readonly (readonly unknown[])[] = [],
 ): {
   readonly client: SheetsClient;
-  readonly appended: (readonly (string | number | boolean)[])[];
+  readonly appended: { tableId: string; row: readonly (string | number | boolean)[] }[];
 } {
-  const appended: (readonly (string | number | boolean)[])[] = [];
+  const appended: { tableId: string; row: readonly (string | number | boolean)[] }[] = [];
 
   return {
     appended,
@@ -86,8 +109,9 @@ function createClient(
         return [];
       },
       async updateValues() {},
-      async appendValues(_range, values) {
-        appended.push(...values);
+      async appendValues() {},
+      async appendTableRow(tableId, row) {
+        appended.push({ tableId, row });
       },
       async clearValues() {},
       async getSheetMetadata() {
@@ -99,17 +123,19 @@ function createClient(
 }
 
 describe("GoogleSheetsRegistrationRepository", () => {
-  it("writes by header names when the system columns are reordered", async () => {
+  it("writes by header names into the native table when columns are reordered", async () => {
     const reversedHeaders = [...REGISTRATION_HEADERS].reverse();
     const { client, appended } = createClient(reversedHeaders);
     const repository = new GoogleSheetsRegistrationRepository(client);
 
     await repository.create(registration);
 
-    expect(appended).toEqual([rowForHeaders(reversedHeaders)]);
+    expect(appended).toEqual([
+      { tableId: REGISTRATIONS_TABLE_ID, row: rowForHeaders(reversedHeaders) },
+    ]);
   });
 
-  it("reads an idempotent registration from reordered headers", async () => {
+  it("reads a schema-v2 idempotent registration from reordered v3 headers", async () => {
     const reorderedHeaders = [
       ...REGISTRATION_HEADERS.slice(8),
       ...REGISTRATION_HEADERS.slice(0, 8),
@@ -119,6 +145,42 @@ describe("GoogleSheetsRegistrationRepository", () => {
     const repository = new GoogleSheetsRegistrationRepository(client);
 
     await expect(repository.findByRequestId(registration.requestId)).resolves.toEqual(registration);
+  });
+
+  it("returns only business duplicate candidates from parsed registration rows", async () => {
+    const candidate: Registration = {
+      ...registration,
+      id: asRegistrationId("reg_33333333-3333-4333-8333-333333333333"),
+      requestId: asRequestId("33333333-3333-4333-8333-333333333333"),
+      seasonId: asSeasonId("test-2026-2027"),
+      seasonNameSnapshot: "2026/2027",
+      schemaVersion: 3,
+    };
+    const unrelated: Registration = {
+      ...candidate,
+      id: asRegistrationId("reg_44444444-4444-4444-8444-444444444444"),
+      requestId: asRequestId("44444444-4444-4444-8444-444444444444"),
+      offeringId: asOfferingId("gdynia-contemporary"),
+      offeringNameSnapshot: "Contemporary",
+    };
+    const rows = [
+      rowForHeaders(REGISTRATION_HEADERS, candidate),
+      rowForHeaders(REGISTRATION_HEADERS, unrelated),
+    ];
+    const { client } = createClient(REGISTRATION_HEADERS, rows);
+    const repository = new GoogleSheetsRegistrationRepository(client);
+    const criteria: RegistrationDuplicateCriteria = {
+      seasonId: asSeasonId("test-2026-2027"),
+      offeringId: asOfferingId("gdynia-hiphop"),
+      cityId: asCityId("gdynia"),
+      participantFirstName: "JAN",
+      participantLastName: "Kowalski",
+      birthDate: "2009-01-15",
+      phone: "+48500000000",
+      email: "anna@example.com",
+    };
+
+    await expect(repository.findPotentialDuplicates(criteria)).resolves.toEqual([candidate]);
   });
 
   it("fails fast when a matching stored registration has a corrupted technical ID", async () => {

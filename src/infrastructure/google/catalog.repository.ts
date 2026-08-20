@@ -1,17 +1,30 @@
+import type { PublicCatalog, Season, SeasonId } from "@/domain/catalog";
+import { computeOfferingIntakeStatus } from "@/domain/offering-intake";
 import type { CatalogRepository } from "@/domain/repositories";
-import type { PublicCatalog } from "@/domain/catalog";
 import { createHeaderMap } from "@/infrastructure/google/header-map";
-import { assertUniqueIds, parseCityRow, parseOfferingRow } from "@/infrastructure/google/parsers";
-import { CITY_HEADERS, OFFERING_HEADERS, SHEET } from "@/infrastructure/google/sheets-contracts";
+import {
+  assertUniqueIds,
+  parseCityRow,
+  parseOfferingRow,
+  parseSeasonRow,
+} from "@/infrastructure/google/parsers";
+import {
+  CITY_HEADERS,
+  OFFERING_HEADERS,
+  SEASON_HEADERS,
+  SHEET,
+} from "@/infrastructure/google/sheets-contracts";
 import type { SheetsClient } from "@/infrastructure/google/sheets-client";
+
+const UNFORMATTED_VALUES = { valueRenderOption: "UNFORMATTED_VALUE" } as const;
 
 export class GoogleSheetsCatalogRepository implements CatalogRepository {
   constructor(private readonly client: SheetsClient) {}
 
   private async readCatalog() {
     const [cityRows, offeringRows] = await Promise.all([
-      this.client.getValues(`${SHEET.cities}!A:ZZ`),
-      this.client.getValues(`${SHEET.offerings}!A:ZZ`),
+      this.client.getValues(`${SHEET.cities}!A:ZZ`, UNFORMATTED_VALUES),
+      this.client.getValues(`${SHEET.offerings}!A:ZZ`, UNFORMATTED_VALUES),
     ]);
 
     const cityHeader = cityRows[0] ?? [];
@@ -35,7 +48,19 @@ export class GoogleSheetsCatalogRepository implements CatalogRepository {
     return { cities, offerings };
   }
 
-  async getPublicCatalog(): Promise<PublicCatalog> {
+  private async readSeasons(): Promise<readonly Season[]> {
+    const rows = await this.client.getValues(`${SHEET.seasons}!A:ZZ`, UNFORMATTED_VALUES);
+    const headers = createHeaderMap(rows[0] ?? [], SEASON_HEADERS);
+    const seasons = rows
+      .slice(1)
+      .map((row) => parseSeasonRow(row, headers))
+      .filter((season) => season !== null);
+
+    assertUniqueIds(seasons, "season");
+    return seasons;
+  }
+
+  async getPublicCatalog(currentDate: string): Promise<PublicCatalog> {
     const { cities, offerings } = await this.readCatalog();
 
     const activeCities = cities.filter((city) => city.active);
@@ -43,6 +68,14 @@ export class GoogleSheetsCatalogRepository implements CatalogRepository {
 
     const publicOfferings = offerings
       .filter((offering) => offering.active && activeCityIds.has(offering.cityId))
+      .map((offering) => ({
+        id: offering.id,
+        cityId: offering.cityId,
+        name: offering.name,
+        publicDescription: offering.publicDescription,
+        sortOrder: offering.sortOrder,
+        intakeStatus: computeOfferingIntakeStatus(offering, currentDate),
+      }))
       .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, "pl"));
 
     const cityIdsWithOfferings = new Set(publicOfferings.map((offering) => offering.cityId));
@@ -56,12 +89,12 @@ export class GoogleSheetsCatalogRepository implements CatalogRepository {
         name,
         sortOrder,
       })),
-      offerings: publicOfferings.map(({ id, cityId, name, sortOrder }) => ({
-        id,
-        cityId,
-        name,
-        sortOrder,
-      })),
+      offerings: publicOfferings,
     };
+  }
+
+  async findSeasonById(seasonId: SeasonId): Promise<Season | null> {
+    const seasons = await this.readSeasons();
+    return seasons.find((season) => season.id === seasonId) ?? null;
   }
 }

@@ -1,10 +1,20 @@
 import { z } from "zod";
 
+export const CANONICAL_PREVIEW_BRANCH = "preview";
+
 const oidcKeys = [
   "GCP_PROJECT_NUMBER",
   "GCP_SERVICE_ACCOUNT_EMAIL",
   "GCP_WORKLOAD_IDENTITY_POOL_ID",
   "GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID",
+] as const;
+
+const canonicalPreviewRequiredKeys = [
+  "GOOGLE_SPREADSHEET_ID",
+  ...oidcKeys,
+  "RESEND_API_KEY",
+  "EMAIL_FROM",
+  "REGISTRATION_ADMIN_EMAILS",
 ] as const;
 
 function emptyStringToUndefined(value: unknown): unknown {
@@ -13,6 +23,22 @@ function emptyStringToUndefined(value: unknown): unknown {
   }
 
   return value.trim() === "" ? undefined : value;
+}
+
+function asEnvironmentRecord(input: unknown): Record<string, unknown> | null {
+  if (typeof input !== "object" || input === null || Array.isArray(input)) {
+    return null;
+  }
+
+  return input as Record<string, unknown>;
+}
+
+function isVercelTarget(env: Record<string, unknown>, target: "preview" | "production"): boolean {
+  return env.VERCEL_ENV === target || env.VERCEL_TARGET_ENV === target;
+}
+
+function hasNonEmptyString(value: unknown): boolean {
+  return typeof value === "string" && value.trim().length > 0;
 }
 
 const optionalTrimmedStringSchema = z.preprocess(
@@ -127,15 +153,33 @@ const serverEnvSchema = z
 export type ServerEnv = z.output<typeof serverEnvSchema>;
 
 export function isUnconfiguredVercelProduction(input: unknown = process.env): boolean {
-  if (typeof input !== "object" || input === null || Array.isArray(input)) {
+  const env = asEnvironmentRecord(input);
+  if (!env) {
     return false;
   }
 
-  const env = input as Record<string, unknown>;
-  const isProductionTarget =
-    env.VERCEL_ENV === "production" || env.VERCEL_TARGET_ENV === "production";
+  return isVercelTarget(env, "production") && env.APP_ENV !== "production";
+}
 
-  return isProductionTarget && env.APP_ENV !== "production";
+export function isUnconfiguredVercelPreview(input: unknown = process.env): boolean {
+  const env = asEnvironmentRecord(input);
+  if (!env || !isVercelTarget(env, "preview")) {
+    return false;
+  }
+
+  if (env.VERCEL_GIT_COMMIT_REF !== CANONICAL_PREVIEW_BRANCH) {
+    return true;
+  }
+
+  if (
+    env.APP_ENV !== "test" ||
+    env.DATA_BACKEND !== "google-sheets" ||
+    env.EMAIL_PROVIDER !== "resend"
+  ) {
+    return true;
+  }
+
+  return canonicalPreviewRequiredKeys.some((key) => !hasNonEmptyString(env[key]));
 }
 
 export function parseServerEnv(input: unknown): ServerEnv {

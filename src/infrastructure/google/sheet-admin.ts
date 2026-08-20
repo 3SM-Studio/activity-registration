@@ -1,4 +1,5 @@
-import type { City, ClassOffering } from "@/domain/catalog";
+import type { City, ClassOffering, InternalGroup, Season } from "@/domain/catalog";
+import { REGISTRATION_STATUS } from "@/domain/registration";
 import { DEFAULT_FORM_TITLE, DEFAULT_SUCCESS_MESSAGE } from "@/domain/settings";
 import {
   SheetSchemaError,
@@ -6,26 +7,43 @@ import {
   cell,
   createHeaderMap,
 } from "@/infrastructure/google/header-map";
-import { assertUniqueIds, parseCityRow, parseOfferingRow } from "@/infrastructure/google/parsers";
 import {
+  assertUniqueIds,
+  parseCityRow,
+  parseGroupRow,
+  parseOfferingRow,
+  parseSeasonRow,
+} from "@/infrastructure/google/parsers";
+import {
+  REGISTRATION_HEADERS,
+  REGISTRATION_TABLE_COLUMNS,
+  REGISTRATIONS_TABLE_ID,
+  REGISTRATIONS_TABLE_NAME,
   SETTING_KEY,
   SETTINGS_HEADERS,
   SHEET,
   SHEET_SCHEMA,
   SYSTEM_SCHEMA_VERSION,
 } from "@/infrastructure/google/sheets-contracts";
-import type { SheetMetadata, SheetsClient } from "@/infrastructure/google/sheets-client";
+import type {
+  SheetMetadata,
+  SheetsClient,
+  TableMetadata,
+} from "@/infrastructure/google/sheets-client";
 
 export type SheetValidationReport = Readonly<{
   sheets: readonly string[];
   cityCount: number;
+  seasonCount: number;
   offeringCount: number;
+  groupCount: number;
   warnings: readonly string[];
 }>;
 
 const DEFAULT_SETTINGS = [
   [SETTING_KEY.systemSchemaVersion, String(SYSTEM_SCHEMA_VERSION)],
   [SETTING_KEY.registrationsOpen, "NIE"],
+  [SETTING_KEY.currentSeasonId, ""],
   [SETTING_KEY.publicFormTitle, DEFAULT_FORM_TITLE],
   [SETTING_KEY.successMessage, DEFAULT_SUCCESS_MESSAGE],
   [SETTING_KEY.privacyNoticeUrl, ""],
@@ -39,12 +57,17 @@ const REGISTRATION_PROTECTION_SPECS = [
   {
     description: "activity-registration:system-columns:identity-and-pii",
     startColumnIndex: 0,
-    endColumnIndex: 14,
+    endColumnIndex: 15,
   },
   {
-    description: "activity-registration:system-columns:metadata",
-    startColumnIndex: 16,
-    endColumnIndex: 21,
+    description: "activity-registration:system-columns:metadata-before-operations",
+    startColumnIndex: 17,
+    endColumnIndex: 23,
+  },
+  {
+    description: "activity-registration:system-columns:metadata-after-operations",
+    startColumnIndex: 26,
+    endColumnIndex: 28,
   },
 ] as const;
 
@@ -113,28 +136,130 @@ async function ensureRegistrationProtections(
     return;
   }
 
-  const existingDescriptions = new Set(
-    (registrationSheet.protectedRanges ?? []).map((range) => range.description),
+  const requests: Record<string, unknown>[] = [];
+  const expectedDescriptions = new Set<string>(
+    REGISTRATION_PROTECTION_SPECS.map((spec) => spec.description),
   );
-  const requests = REGISTRATION_PROTECTION_SPECS.filter(
-    (spec) => !existingDescriptions.has(spec.description),
-  ).map((spec) => ({
-    addProtectedRange: {
-      protectedRange: {
-        description: spec.description,
-        warningOnly: true,
-        range: {
-          sheetId: registrationSheet.sheetId,
-          startColumnIndex: spec.startColumnIndex,
-          endColumnIndex: spec.endColumnIndex,
+
+  for (const existing of registrationSheet.protectedRanges ?? []) {
+    if (
+      existing.description.startsWith("activity-registration:system-columns:") &&
+      !expectedDescriptions.has(existing.description)
+    ) {
+      requests.push({ deleteProtectedRange: { protectedRangeId: existing.protectedRangeId } });
+    }
+  }
+
+  for (const spec of REGISTRATION_PROTECTION_SPECS) {
+    const existing = (registrationSheet.protectedRanges ?? []).find(
+      (range) => range.description === spec.description,
+    );
+
+    if (!existing) {
+      requests.push({
+        addProtectedRange: {
+          protectedRange: {
+            description: spec.description,
+            warningOnly: true,
+            range: {
+              sheetId: registrationSheet.sheetId,
+              startColumnIndex: spec.startColumnIndex,
+              endColumnIndex: spec.endColumnIndex,
+            },
+          },
         },
-      },
-    },
-  }));
+      });
+      continue;
+    }
+
+    if (
+      !existing.warningOnly ||
+      existing.startColumnIndex !== spec.startColumnIndex ||
+      existing.endColumnIndex !== spec.endColumnIndex
+    ) {
+      requests.push({
+        updateProtectedRange: {
+          protectedRange: {
+            protectedRangeId: existing.protectedRangeId,
+            description: spec.description,
+            warningOnly: true,
+            range: {
+              sheetId: registrationSheet.sheetId,
+              startColumnIndex: spec.startColumnIndex,
+              endColumnIndex: spec.endColumnIndex,
+            },
+          },
+          fields: "description,warningOnly,range",
+        },
+      });
+    }
+  }
 
   if (requests.length > 0) {
     await client.batchUpdate(requests);
   }
+}
+
+function registrationTableRange(sheetId: number, rowCount: number) {
+  return {
+    sheetId,
+    startRowIndex: 0,
+    endRowIndex: Math.max(rowCount, 2),
+    startColumnIndex: 0,
+    endColumnIndex: REGISTRATION_HEADERS.length,
+  } as const;
+}
+
+const REGISTRATION_TABLE_ROWS_PROPERTIES = {
+  headerColorStyle: { rgbColor: { red: 0.188, green: 0.122, blue: 0.188 } },
+  firstBandColorStyle: { rgbColor: { red: 1, green: 0.988, blue: 0.969 } },
+  secondBandColorStyle: { rgbColor: { red: 1, green: 0.973, blue: 0.949 } },
+} as const;
+
+async function ensureRegistrationTable(
+  client: SheetsClient,
+  metadata: readonly SheetMetadata[],
+): Promise<void> {
+  const registrationSheet = metadata.find((sheet) => sheet.title === SHEET.registrations);
+  if (!registrationSheet) {
+    return;
+  }
+
+  const rows = await client.getValues(`${SHEET.registrations}!A:ZZ`);
+  const table = (registrationSheet.tables ?? []).find(
+    (candidate) => candidate.tableId === REGISTRATIONS_TABLE_ID,
+  );
+
+  const tableDefinition = {
+    tableId: REGISTRATIONS_TABLE_ID,
+    name: REGISTRATIONS_TABLE_NAME,
+    range: registrationTableRange(registrationSheet.sheetId, rows.length),
+    rowsProperties: REGISTRATION_TABLE_ROWS_PROPERTIES,
+    columnProperties: REGISTRATION_TABLE_COLUMNS,
+  } as const;
+
+  if (!table) {
+    const conflictingTable = (registrationSheet.tables ?? []).find(
+      (candidate) => candidate.name === REGISTRATIONS_TABLE_NAME,
+    );
+    if (conflictingTable) {
+      throw new SheetSchemaError(
+        `ZAPISY table name ${REGISTRATIONS_TABLE_NAME} already exists with an unexpected table ID.`,
+      );
+    }
+
+    await client.batchUpdate([{ addTable: { table: tableDefinition } }]);
+    return;
+  }
+
+  await client.batchUpdate([
+    {
+      updateTable: {
+        table: tableDefinition,
+        fields: "name,range,rowsProperties,columnProperties",
+      },
+    },
+  ]);
 }
 
 function warnAboutRegistrationProtections(
@@ -162,6 +287,51 @@ function warnAboutRegistrationProtections(
       protection.endColumnIndex !== spec.endColumnIndex
     ) {
       warnings.push(`ZAPISY protection is inconsistent: ${spec.description}. Run sheet:bootstrap.`);
+    }
+  }
+}
+
+function assertRegistrationTable(table: TableMetadata | undefined): void {
+  if (!table) {
+    throw new SheetSchemaError(
+      `Missing native ZAPISY table ${REGISTRATIONS_TABLE_NAME}. Run sheet:bootstrap.`,
+    );
+  }
+
+  if (
+    table.name !== REGISTRATIONS_TABLE_NAME ||
+    table.startRowIndex !== 0 ||
+    table.startColumnIndex !== 0 ||
+    table.endColumnIndex !== REGISTRATION_HEADERS.length
+  ) {
+    throw new SheetSchemaError(
+      `Native ZAPISY table ${REGISTRATIONS_TABLE_NAME} has an invalid range.`,
+    );
+  }
+
+  for (const expected of REGISTRATION_TABLE_COLUMNS) {
+    const actual = table.columnProperties.find(
+      (column) => column.columnIndex === expected.columnIndex,
+    );
+    if (
+      !actual ||
+      actual.columnName !== expected.columnName ||
+      actual.columnType !== expected.columnType
+    ) {
+      throw new SheetSchemaError(
+        `Native ZAPISY table column ${expected.columnName} has an invalid contract.`,
+      );
+    }
+
+    if (expected.columnName === "STATUS") {
+      const actualValues = new Set(actual.dropdownValues ?? []);
+      const expectedValues = Object.values(REGISTRATION_STATUS);
+      if (
+        actualValues.size !== expectedValues.length ||
+        expectedValues.some((value) => !actualValues.has(value))
+      ) {
+        throw new SheetSchemaError("Native ZAPISY STATUS dropdown has invalid values.");
+      }
     }
   }
 }
@@ -205,7 +375,9 @@ export async function bootstrapSheetStructure(client: SheetsClient): Promise<voi
   }
 
   await ensureDefaultSettings(client);
+  metadata = await client.getSheetMetadata();
   await ensureRegistrationProtections(client, metadata);
+  await ensureRegistrationTable(client, metadata);
 }
 
 export async function validateSheetStructure(client: SheetsClient): Promise<SheetValidationReport> {
@@ -222,28 +394,37 @@ export async function validateSheetStructure(client: SheetsClient): Promise<Shee
     createHeaderMap(headerRows[0] ?? [], requiredHeaders);
   }
 
-  const [cityRows, offeringRows, settingsRows] = await Promise.all([
+  const registrationSheet = metadata.find((sheet) => sheet.title === SHEET.registrations);
+  assertRegistrationTable(
+    registrationSheet?.tables?.find((table) => table.tableId === REGISTRATIONS_TABLE_ID),
+  );
+
+  const [cityRows, seasonRows, offeringRows, groupRows, settingsRows] = await Promise.all([
     client.getValues(`${SHEET.cities}!A:ZZ`),
+    client.getValues(`${SHEET.seasons}!A:ZZ`),
     client.getValues(`${SHEET.offerings}!A:ZZ`),
+    client.getValues(`${SHEET.groups}!A:ZZ`),
     client.getValues(`${SHEET.settings}!A:ZZ`),
   ]);
 
   const cityHeaders = createHeaderMap(cityRows[0] ?? [], SHEET_SCHEMA[SHEET.cities]);
+  const seasonHeaders = createHeaderMap(seasonRows[0] ?? [], SHEET_SCHEMA[SHEET.seasons]);
   const offeringHeaders = createHeaderMap(offeringRows[0] ?? [], SHEET_SCHEMA[SHEET.offerings]);
+  const groupHeaders = createHeaderMap(groupRows[0] ?? [], SHEET_SCHEMA[SHEET.groups]);
   const settingsHeaders = createHeaderMap(settingsRows[0] ?? [], SHEET_SCHEMA[SHEET.settings]);
 
   const warnings: string[] = [];
   const cities: City[] = [];
+  const seasons: Season[] = [];
   const offerings: ClassOffering[] = [];
+  const groups: InternalGroup[] = [];
 
   warnAboutRegistrationProtections(metadata, warnings);
 
   for (const [offset, row] of cityRows.slice(1).entries()) {
     const rowNumber = offset + 2;
     const parsed = parseCityRow(row, cityHeaders);
-
     warnAboutCatalogControls(row, rowNumber, cityHeaders, "MIASTA", warnings);
-
     if (parsed) {
       cities.push(parsed);
     } else if (rowHasContent(row)) {
@@ -253,12 +434,23 @@ export async function validateSheetStructure(client: SheetsClient): Promise<Shee
     }
   }
 
+  for (const [offset, row] of seasonRows.slice(1).entries()) {
+    const rowNumber = offset + 2;
+    const parsed = parseSeasonRow(row, seasonHeaders);
+    warnAboutCatalogControls(row, rowNumber, seasonHeaders, "SEZONY", warnings);
+    if (parsed) {
+      seasons.push(parsed);
+    } else if (rowHasContent(row)) {
+      warnings.push(
+        `SEZONY row ${rowNumber} is incomplete or has an invalid technical ID and will be ignored.`,
+      );
+    }
+  }
+
   for (const [offset, row] of offeringRows.slice(1).entries()) {
     const rowNumber = offset + 2;
     const parsed = parseOfferingRow(row, offeringHeaders);
-
     warnAboutCatalogControls(row, rowNumber, offeringHeaders, "OFERTY_ZAJEC", warnings);
-
     if (parsed) {
       offerings.push(parsed);
     } else if (rowHasContent(row)) {
@@ -268,14 +460,40 @@ export async function validateSheetStructure(client: SheetsClient): Promise<Shee
     }
   }
 
+  for (const [offset, row] of groupRows.slice(1).entries()) {
+    const rowNumber = offset + 2;
+    const parsed = parseGroupRow(row, groupHeaders);
+    warnAboutCatalogControls(row, rowNumber, groupHeaders, "GRUPY", warnings);
+    if (parsed) {
+      groups.push(parsed);
+    } else if (rowHasContent(row)) {
+      warnings.push(
+        `GRUPY row ${rowNumber} is incomplete or has an invalid technical ID and will be ignored.`,
+      );
+    }
+  }
+
   assertUniqueIds(cities, "city");
+  assertUniqueIds(seasons, "season");
   assertUniqueIds(offerings, "offering");
+  assertUniqueIds(groups, "group");
 
   const cityIds = new Set(cities.map((city) => city.id));
+  const seasonIds = new Set(seasons.map((season) => season.id));
+  const offeringIds = new Set(offerings.map((offering) => offering.id));
 
   for (const offering of offerings) {
     if (!cityIds.has(offering.cityId)) {
       warnings.push(`Offering ${offering.id} references unknown city ${offering.cityId}.`);
+    }
+  }
+
+  for (const group of groups) {
+    if (!seasonIds.has(group.seasonId)) {
+      warnings.push(`Group ${group.id} references unknown season ${group.seasonId}.`);
+    }
+    if (!offeringIds.has(group.offeringId)) {
+      warnings.push(`Group ${group.id} references unknown offering ${group.offeringId}.`);
     }
   }
 
@@ -294,6 +512,11 @@ export async function validateSheetStructure(client: SheetsClient): Promise<Shee
     settingValues.set(key, cell(row, settingsHeaders, "VALUE"));
   }
 
+  const missingSettingKeys = REQUIRED_SETTING_KEYS.filter((key) => !settingKeys.has(key));
+  if (missingSettingKeys.length > 0) {
+    throw new SheetSchemaError(`Missing required setting keys: ${missingSettingKeys.join(", ")}`);
+  }
+
   const systemSchemaVersion = (settingValues.get(SETTING_KEY.systemSchemaVersion) ?? "").trim();
   if (systemSchemaVersion !== String(SYSTEM_SCHEMA_VERSION)) {
     throw new SheetSchemaError(
@@ -310,23 +533,32 @@ export async function validateSheetStructure(client: SheetsClient): Promise<Shee
     );
   }
 
-  const privacyUrl = (settingValues.get(SETTING_KEY.privacyNoticeUrl) ?? "").trim();
-  const privacyVersion = (settingValues.get(SETTING_KEY.privacyNoticeVersion) ?? "").trim();
-  if (Boolean(privacyUrl) !== Boolean(privacyVersion)) {
-    warnings.push(
-      "USTAWIENIA privacy notice URL and version should either both be set or both be empty.",
-    );
+  const currentSeasonId = (settingValues.get(SETTING_KEY.currentSeasonId) ?? "").trim();
+  if (!currentSeasonId) {
+    warnings.push(`USTAWIENIA ${SETTING_KEY.currentSeasonId} is empty. Registrations cannot open.`);
+  } else {
+    const currentSeason = seasons.find((season) => season.id === currentSeasonId);
+    if (!currentSeason) {
+      warnings.push(
+        `USTAWIENIA ${SETTING_KEY.currentSeasonId} references unknown season ${currentSeasonId}.`,
+      );
+    } else if (!currentSeason.active) {
+      warnings.push(`USTAWIENIA ${SETTING_KEY.currentSeasonId} references an inactive season.`);
+    }
   }
 
-  const missingSettingKeys = REQUIRED_SETTING_KEYS.filter((key) => !settingKeys.has(key));
-  if (missingSettingKeys.length > 0) {
-    throw new SheetSchemaError(`Missing required setting keys: ${missingSettingKeys.join(", ")}`);
+  const privacyUrl = (settingValues.get(SETTING_KEY.privacyNoticeUrl) ?? "").trim();
+  const privacyVersion = (settingValues.get(SETTING_KEY.privacyNoticeVersion) ?? "").trim();
+  if (!privacyUrl || !privacyVersion) {
+    warnings.push("USTAWIENIA privacy notice URL and version are incomplete.");
   }
 
   return {
     sheets: titles,
     cityCount: cities.length,
+    seasonCount: seasons.length,
     offeringCount: offerings.length,
+    groupCount: groups.length,
     warnings,
   };
 }

@@ -10,6 +10,68 @@ production  -> PROD Sheet przez osobny PROD service account
 
 Preview nie może dostać produkcyjnego `GOOGLE_SPREADSHEET_ID` ani tożsamości mającej dostęp do PROD.
 
+## Branch model
+
+```text
+feat/*, fix/*, docs/*, chore/*
+-> Pull Request do preview
+-> GitHub CI
+-> BEZ automatycznego deploymentu Vercel
+-> merge do preview
+-> stały Vercel Preview TEST
+-> kontrolowany smoke/E2E
+-> Pull Request preview -> main
+-> CI
+-> merge do main
+-> Vercel Production
+```
+
+`preview` jest jedyną gałęzią Vercel Preview, która ma otrzymywać pełny TEST deployment aplikacji. Feature branche nie powinny zużywać quota Vercela i nie są kanonicznym środowiskiem QA.
+
+Hotfix produkcyjny może wyjątkowo wejść bezpośrednio do `main`, ale po opanowaniu incydentu musi zostać zsynchronizowany z `preview`.
+
+## Vercel branch deployment filtering
+
+Vercel używa minimatch dla `git.deploymentEnabled`.
+
+Prawidłowy kontrakt repo:
+
+```json
+{
+  "git": {
+    "deploymentEnabled": {
+      "**": false,
+      "preview": true,
+      "main": true
+    }
+  }
+}
+```
+
+Dlaczego `**`, a nie `*`:
+
+- wcześniejsze `"*": false` nie obejmowało branchy zawierających `/`, np. `feat/...`, `fix/...`, `docs/...`,
+- branche niepasujące do żadnej reguły Vercela domyślnie mają deployment włączony,
+- efektem były niepotrzebne deploymenty praktycznie każdego technicznego commita i powtarzające się build-rate-limit,
+- `"**": false` jest catch-all także dla branchy ze slashami,
+- `preview` i `main` są jawnie ponownie włączone; przy nakładających się regułach Vercel deployuje, jeśli co najmniej jedna pasująca reguła ma `true`.
+
+`scripts/repo-validate.mjs` pilnuje tego kontraktu, aby przypadkowa zmiana z powrotem na `*` nie wróciła.
+
+Nie rozwiązuj problemów quota przez seryjne no-op commity.
+
+## Canonical preview rule
+
+Jedynym kanonicznym URL do QA jest stały alias `preview`.
+
+Przed testem produktu należy sprawdzić:
+
+```text
+GitHub preview HEAD == canonical Vercel preview deployment git SHA
+```
+
+Jeżeli SHA są różne, środowisko ma deployment drift. Nie wolno mówić, że zmiana jest na preview tylko dlatego, że znajduje się w GitHubie.
+
 ## Aktualny stan infrastruktury
 
 Zweryfikowane 2026-08-19:
@@ -18,9 +80,9 @@ Zweryfikowane 2026-08-19:
 Vercel project      pozytywka-activity-registration
 Vercel framework    nextjs
 Production branch   main
-Preview branch       feat/production-integrations
-GCP project          pozytywka-reg-3sm-260819
-GCP project number   656375661462
+Preview branch      preview
+GCP project         pozytywka-reg-3sm-260819
+GCP project number  656375661462
 ```
 
 Google Sheets:
@@ -30,7 +92,7 @@ TEST  11-wmT8OCSVinFNjAFE7oHvIYUKnVOBgxmwIgvGgWH-8
 PROD  1YvPxYSPHkiWetpYjPfCq-KrXncjGy6bSCWIIwjl-v38
 ```
 
-Oba arkusze mają kontrakt:
+Current runtime sheet contract is schema v2:
 
 ```text
 MIASTA
@@ -39,37 +101,31 @@ ZAPISY
 USTAWIENIA
 ```
 
-TEST zawiera syntetyczny katalog do testów. PROD ma `REGISTRATIONS_OPEN=FALSE`, nie ma zatwierdzonego katalogu ani privacy notice i pozostaje fail-closed.
+Target v3 adds `SEZONY` and `GRUPY` only through the explicit migration stage described in `docs/REGISTRATION_V3_PLAN.md`.
+
+TEST contains a synthetic catalog. As part of v3 hygiene, registrations are kept closed outside controlled QA and manual/real-looking PII rows are removed after a full backup.
+
+PROD remains fail-closed and must not be used during v3 development.
 
 ## Izolacja TEST i PROD
 
-TEST i PROD muszą używać różnych service accountów.
+TEST and PROD must use different service accounts.
 
-Aktualny TEST service account:
+Current TEST service account:
 
 ```text
 activity-registration@pozytywka-reg-3sm-260819.iam.gserviceaccount.com
 ```
 
-Ma dostęp wyłącznie do TEST Sheeta i impersonację wyłącznie dla Vercel Preview.
+It may access TEST Sheet only and is used by Vercel Preview.
 
-PROD service account nie jest jeszcze utworzony. Przed produkcją utwórz osobny, np.:
+PROD service account is still a pre-production gate. It must receive access to PROD only and must be bound only to the production Vercel subject.
 
-```text
-activity-registration-prod@pozytywka-reg-3sm-260819.iam.gserviceaccount.com
-```
-
-Następnie:
-
-1. udostępnij mu wyłącznie PROD Sheet,
-2. binduj wyłącznie Vercel subject `environment:production`,
-3. ustaw jego adres jako `GCP_SERVICE_ACCOUNT_EMAIL` tylko w Vercel Production.
-
-Nie udostępniaj PROD Sheeta TEST service accountowi.
+Do not grant PROD Sheet access to the TEST service account.
 
 ## Google WIF
 
-Pool i provider:
+Pool/provider:
 
 ```text
 pool:     vercel
@@ -77,7 +133,7 @@ provider: vercel
 issuer:   https://oidc.vercel.com/atypicalmichas
 ```
 
-Kanoniczny audience używany przez aplikację i dopuszczony przez provider:
+Canonical audience:
 
 ```text
 //iam.googleapis.com/projects/656375661462/locations/global/workloadIdentityPools/vercel/providers/vercel
@@ -89,151 +145,61 @@ Preview subject:
 owner:atypicalmichas:project:pozytywka-activity-registration:environment:preview
 ```
 
-Production subject, jeszcze nieprzyznany:
+Production subject:
 
 ```text
 owner:atypicalmichas:project:pozytywka-activity-registration:environment:production
 ```
 
-Szczegółowy runbook: `docs/GCP_WIF_SETUP.md`.
+Vercel OIDC `sub` does not encode the Git branch name, so the application still validates `VERCEL_GIT_COMMIT_REF` and only canonical `preview` may act as full TEST intake.
 
-## E-mail przez Resend
+Detailed runbook: `docs/GCP_WIF_SETUP.md`.
 
-Wysyłane są dwa maile po skutecznym zapisie do źródła danych:
+## E-mail through Resend
 
-1. potwierdzenie otrzymania zgłoszenia do osoby zapisującej,
-2. powiadomienie administracyjne z `reply_to` ustawionym na adres ze zgłoszenia.
+After successful persistence the application can send:
 
-Awaria e-maila nie cofa zapisu. Powiadomienia są wykonywane przez Next.js `after()` po zapisaniu rejestracji. Resend dostaje stabilny `Idempotency-Key` oparty o typ wiadomości i ID rejestracji.
+1. participant confirmation,
+2. admin notification.
 
-To jest mechanizm best-effort. Trwały outbox/reconciliation pozostaje osobnym hardeningiem opisanym w issue #3.
+E-mail failure does not roll back Registration. Notifications run after persistence and use stable idempotency keys.
 
-### Preview
+This remains best-effort. Durable outbox/reconciliation is deferred hardening.
 
-Aktualny Preview używa Resend do pełnego E2E:
+## Preview environment
 
-```text
-EMAIL_PROVIDER=resend
-EMAIL_FROM=Pracownia Twórcza Pozytywka <zapisy@3stupidmen.com>
-REGISTRATION_ADMIN_EMAILS=3stupidmenbusiness@gmail.com
-RESEND_API_KEY=<Sensitive Preview secret>
-```
+Canonical `preview` uses TEST-only configuration including TEST Sheet, TEST identity and Preview Resend secrets.
 
-### Production
+Do not manually set `VERCEL_OIDC_TOKEN`.
 
-Produkcja ma docelowo używać:
+If canonical preview lacks required TEST configuration, the application must fail closed instead of falling back to a fake memory success.
 
-```text
-EMAIL_PROVIDER=resend
-RESEND_API_KEY=<production secret>
-EMAIL_FROM=<verified production sender>
-REGISTRATION_ADMIN_EMAILS=pozytywka.boleslaw@gmail.com
-```
+## Production environment
 
-Nie kopiuj testowego odbiorcy administracyjnego do Production.
+Production remains blocked until separate PROD identity/access, approved privacy/retention/legal gates, final catalog and production e-mail sender are ready.
 
-## Vercel Preview env
+## Local development with Google
 
-Branch-specific Preview dla `feat/production-integrations`:
+Use Application Default Credentials / TEST identity only. Do not use long-lived JSON private keys.
+
+## TEST operating rule
+
+Outside an explicit controlled QA session:
 
 ```text
-APP_ENV=test
-DATA_BACKEND=google-sheets
-GOOGLE_SPREADSHEET_ID=11-wmT8OCSVinFNjAFE7oHvIYUKnVOBgxmwIgvGgWH-8
-
-EMAIL_PROVIDER=resend
-EMAIL_FROM=Pracownia Twórcza Pozytywka <zapisy@3stupidmen.com>
-REGISTRATION_ADMIN_EMAILS=3stupidmenbusiness@gmail.com
-RESEND_API_KEY=<Sensitive>
-
-GCP_PROJECT_ID=pozytywka-reg-3sm-260819
-GCP_PROJECT_NUMBER=656375661462
-GCP_SERVICE_ACCOUNT_EMAIL=activity-registration@pozytywka-reg-3sm-260819.iam.gserviceaccount.com
-GCP_WORKLOAD_IDENTITY_POOL_ID=vercel
-GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID=vercel
-ALLOW_TEST_SEED=false
+REGISTRATIONS_OPEN=FALSE
 ```
 
-Nie ustawiaj ręcznie `VERCEL_OIDC_TOKEN` w Vercel Environment Variables.
+When opening TEST temporarily:
 
-## Vercel Production env, przyszły stan
-
-Dopiero po przygotowaniu osobnej tożsamości PROD:
-
-```text
-APP_ENV=production
-DATA_BACKEND=google-sheets
-GOOGLE_SPREADSHEET_ID=1YvPxYSPHkiWetpYjPfCq-KrXncjGy6bSCWIIwjl-v38
-
-EMAIL_PROVIDER=resend
-RESEND_API_KEY=<production secret>
-EMAIL_FROM=<verified production sender>
-REGISTRATION_ADMIN_EMAILS=pozytywka.boleslaw@gmail.com
-
-GCP_PROJECT_ID=pozytywka-reg-3sm-260819
-GCP_PROJECT_NUMBER=656375661462
-GCP_SERVICE_ACCOUNT_EMAIL=activity-registration-prod@pozytywka-reg-3sm-260819.iam.gserviceaccount.com
-GCP_WORKLOAD_IDENTITY_POOL_ID=vercel
-GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID=vercel
-ALLOW_TEST_SEED=false
-```
-
-## Local development z Google
-
-Lokalnie preferowane są Application Default Credentials z impersonacją TEST service accountu. Nie używamy JSON private key.
-
-Lokalny `.env.local` nie powinien zawierać `VERCEL_OIDC_TOKEN`, bo wtedy kod przełączy się z ADC na ścieżkę Vercel WIF.
-
-## Zweryfikowany Preview E2E
-
-2026-08-19 sprawdzono realny flow:
-
-```text
-Vercel Preview
--> odczyt katalogu z TEST Sheet
--> POST /api/registrations 201
--> zapis do ZAPISY w TEST Sheet
--> registration.submit.succeeded
--> registration.notifications.succeeded
--> mail uczestnika dostarczony do Gmail
-```
-
-`registration.notifications.succeeded` oznacza brak błędu obu requestów do providera e-mail. Nie traktuj tego jako niezależnego dowodu mailbox delivery wiadomości administracyjnej.
-
-## Flow
-
-```text
-feature branch
--> PR
--> CI
--> Vercel Preview z TEST
--> review
--> merge main
--> przygotowanie osobnej konfiguracji PROD
--> kontrolowany production release
-```
+1. confirm canonical preview SHA,
+2. use synthetic data,
+3. run the planned smoke/integration flow,
+4. clean the test row if the test does not already clean itself,
+5. close TEST again.
 
 ## Production gates
 
-Przed produkcją muszą być zielone:
+Before production all repository quality gates, Google validation, infrastructure isolation, privacy/retention requirements, child-protection organizational gates, operator access review and manual device/accessibility tests must be complete.
 
-```bash
-pnpm install --frozen-lockfile
-pnpm check
-pnpm test:e2e
-APP_ENV=test DATA_BACKEND=google-sheets pnpm sheet:validate
-APP_ENV=test DATA_BACKEND=google-sheets pnpm diagnostics
-```
-
-Dodatkowo wymagane są:
-
-- osobny PROD service account,
-- PROD Sheet udostępniony wyłącznie PROD service accountowi,
-- production WIF subject przypięty wyłącznie do PROD service accountu,
-- zatwierdzona privacy notice i jej wersja wpisana do `USTAWIENIA`,
-- zatwierdzona retention policy,
-- prawdziwy katalog miast i zajęć w PROD,
-- zweryfikowany produkcyjny nadawca Resend,
-- `REGISTRATION_ADMIN_EMAILS=pozytywka.boleslaw@gmail.com`,
-- kontrola smoke testu produkcyjnej konfiguracji przy zamkniętych zapisach,
-- dopiero na końcu zmiana `REGISTRATIONS_OPEN` w PROD na `TRUE`.
+Only then may PROD `REGISTRATIONS_OPEN` become `TRUE`.

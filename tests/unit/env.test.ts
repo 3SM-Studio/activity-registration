@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { isUnconfiguredVercelProduction, parseServerEnv } from "@/lib/env";
+import {
+  isUnconfiguredVercelPreview,
+  isUnconfiguredVercelProduction,
+  parseServerEnv,
+} from "@/lib/env";
 
 const emailProductionConfig = {
   EMAIL_PROVIDER: "resend",
@@ -14,6 +18,16 @@ const vercelWifConfig = {
   GCP_SERVICE_ACCOUNT_EMAIL: "activity@example.iam.gserviceaccount.com",
   GCP_WORKLOAD_IDENTITY_POOL_ID: "vercel",
   GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID: "vercel",
+} as const;
+
+const canonicalPreviewConfig = {
+  VERCEL_ENV: "preview",
+  VERCEL_GIT_COMMIT_REF: "preview",
+  APP_ENV: "test",
+  DATA_BACKEND: "google-sheets",
+  GOOGLE_SPREADSHEET_ID: "sheet-test",
+  ...vercelWifConfig,
+  ...emailProductionConfig,
 } as const;
 
 describe("server environment", () => {
@@ -153,5 +167,43 @@ describe("server environment", () => {
     ).toBe(false);
     expect(isUnconfiguredVercelProduction({ VERCEL_ENV: "preview" })).toBe(false);
     expect(isUnconfiguredVercelProduction({})).toBe(false);
+  });
+
+  it("blocks Vercel Preview deployments from non-canonical branches", () => {
+    expect(
+      isUnconfiguredVercelPreview({
+        VERCEL_ENV: "preview",
+        VERCEL_GIT_COMMIT_REF: "feature/example",
+      }),
+    ).toBe(true);
+  });
+
+  it("blocks the canonical preview branch when durable integrations are missing", () => {
+    expect(
+      isUnconfiguredVercelPreview({
+        VERCEL_ENV: "preview",
+        VERCEL_GIT_COMMIT_REF: "preview",
+      }),
+    ).toBe(true);
+  });
+
+  it("accepts only a fully configured canonical preview deployment", () => {
+    expect(isUnconfiguredVercelPreview(canonicalPreviewConfig)).toBe(false);
+    expect(
+      isUnconfiguredVercelPreview({
+        ...canonicalPreviewConfig,
+        RESEND_API_KEY: "",
+      }),
+    ).toBe(true);
+  });
+
+  it("does not apply the preview guard outside Vercel Preview", () => {
+    expect(isUnconfiguredVercelPreview({})).toBe(false);
+    expect(
+      isUnconfiguredVercelPreview({
+        VERCEL_ENV: "production",
+        VERCEL_GIT_COMMIT_REF: "main",
+      }),
+    ).toBe(false);
   });
 });

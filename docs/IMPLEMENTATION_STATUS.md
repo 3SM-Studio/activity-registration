@@ -1,142 +1,130 @@
 # Implementation status
 
-Date: 2026-08-19
+Date: 2026-08-20
+Runtime: Pozytywka Registration v3
+Integration branch: `preview`
 
-## Current state
+## Current product state
 
-MVP core działa na Vercel Preview z realnym TEST backendem Google Sheets.
+The v3 software core is implemented. The production business/legal baseline is also now adopted rather than left as TBD.
 
-Zweryfikowany flow:
+The system remains a focused registration request intake application, not a full CRM, payment system or attendance platform.
 
-```text
-Browser
--> Vercel Preview
--> Next.js
--> Vercel OIDC
--> Google Workload Identity Federation
--> TEST service account
--> TEST Google Sheet read/write
--> POST /api/registrations 201
--> Resend
-```
+## Implemented runtime
 
-Potwierdzono również faktyczne dostarczenie maila uczestnika do Gmaila.
+- Next.js App Router
+- strict TypeScript
+- Zod server validation
+- React Hook Form
+- shadcn/Radix controls
+- international phone input and E.164 storage
+- full DOB picker
+- adult/minor guardian flow
+- Google Sheets repository
+- native Google Tables
+- Vercel OIDC/WIF architecture
+- PII-safe structured logging
+- Resend participant/admin notifications
+- business duplicate detection
+- requestId idempotency
+- v3 season/offering/group/status model
+- operator-first Sheet UX
+- semantic status colors
+- repeat child/activity flows
+- abuse controls and WAF strategy
 
-## Implemented
+## Production business baseline
 
-- Next.js App Router frontend i API.
-- Mobile-first publiczny formularz Pozytywki.
-- Dependent city -> offering flow.
-- Ukrywanie nieaktywnych miast/ofert i miast bez aktywnej oferty.
-- Minor/adult guardian rules wraz z czyszczeniem danych opiekuna po przejściu do 18+.
-- Dynamiczne wyjaśnienie, czy kontakt dotyczy uczestnika czy opiekuna.
-- Client i server validation.
-- Backendowa rewalidacja aktualnego city/offering przy submit.
-- Normalizacja telefonu i e-maila.
-- Stable request IDs i idempotent retry handling.
-- Request ID conflict detection dla zmienionego payloadu.
-- Application/domain/infrastructure boundaries.
-- Google Sheets REST adapter.
-- Header-by-name mapping.
-- `RAW` writes.
-- Brak automatycznego retry nieidempotentnego append.
-- Snapshoty nazw city/offering.
-- TEST i PROD spreadsheets rozdzielone.
-- Vercel OIDC -> Google WIF dla Preview.
-- TEST service account ograniczony do TEST Sheet i bez dostępu do PROD Sheet.
-- Memory repositories dla lokalnego/E2E developmentu.
-- Sheet bootstrap, validation, migration, diagnostics, TEST seeding i registration reconciliation.
-- Warning-only protected ranges na technicznych kolumnach `ZAPISY` w TEST i PROD, z `STATUS` i `NOTES` pozostawionymi jako operacyjne.
-- Honeypot, minimalny czas od renderu do submit i limit payloadu API.
-- PII-safe structured logging.
-- Security headers.
-- Privacy version zapisywana z Registration.
-- Production fail-closed bez kompletnej privacy configuration.
-- E-mail confirmation + admin notification przez provider-agnostic layer i Resend.
-- E-mail wykonywany dopiero po skutecznym persistence przez Next.js `after()`.
-- Mail failure nie cofa Registration.
-- Transportowy replay nie wysyła maili ponownie.
-- Unit tests, Playwright E2E, repository validator, GitHub Actions CI i Dependabot.
-- Playwright na desktop, 320 px i 430 px.
-- E2E dla same-requestId retry po temporary failure.
-- E2E dla focusu pierwszego błędnego pola.
-- E2E dla braku horizontal overflow.
-- Wzmocniony kontrast obrysów input/select i focus ringów oraz przywrócony natywny affordance selecta.
-- Jawny, twardo blokowany do `APP_ENV=test` real-Google roundtrip command `test:integration:sheets`.
-- Exact-pinned dependencies i `pnpm-lock.yaml`.
-- Publiczne repo jest świadomą decyzją. Sekrety i lokalne env pozostają poza Git.
+Adopted in `docs/PRODUCTION_DECISIONS_2026-08-20.md`:
 
-## Verified gates
+- season 2026/2027,
+- Olkusz production city baseline,
+- six public Offerings,
+- eight initial internal Groups,
+- theatre window baseline,
+- contact/status semantics,
+- contract/payment boundary,
+- operational contact process.
 
-Na branchu zawierającym finalne zmiany runtime zweryfikowano:
+These values are editable business configuration. They are not hard product constraints.
 
-- `pnpm install --frozen-lockfile` przechodzi,
-- repository contract validation przechodzi,
-- Prettier przechodzi,
-- ESLint przechodzi,
-- strict TypeScript przechodzi,
-- Vitest: 14/14 files, 67/67 tests,
-- Next.js 16.3.0 production build przechodzi,
-- Playwright: 21/21 testów na desktop + 320 px + 430 px,
-- GitHub Actions CI zakończone sukcesem.
+## Production privacy/legal baseline
 
-Po synchronizacji dokumentacji pełny `pnpm check` i Critical E2E również zakończyły się sukcesem.
+Adopted:
 
-Dodatkowo zweryfikowano:
+- controller/contact baseline,
+- public production privacy notice,
+- GDPR purpose/legal-basis model,
+- documented legitimate-interest balancing assessment,
+- finite status-based retention,
+- processor/transfer inventory,
+- data-subject request process,
+- production access model,
+- NOTES minimization policy.
 
-- Vercel Preview zawierający finalne zmiany runtime ma stan `READY`,
-- publiczny formularz renderuje realny TEST katalog z Google Sheets,
-- runtime nie raportował nowych błędów/fatal logs po weryfikacji,
-- realny TEST Sheet został odczytany i zapisany przez Vercel WIF,
-- realny publiczny Preview submit został zapisany w `ZAPISY` TEST,
-- Resend zaakceptował participant + admin notifications,
-- participant mailbox delivery została zweryfikowana.
+Canonical policy: `docs/RODO_AND_RETENTION_POLICY.md`.
 
-Późniejsze commity są wyłącznie synchronizacją dokumentacji i checklisty; nie zmieniają runtime ani testów.
+## Child protection baseline
 
-## Remaining work before PROD
+Adopted:
 
-### External product/legal input
+- full Standardy Ochrony Małoletnich,
+- child-friendly shortened version,
+- Iwona Pilarz as process owner,
+- Article 21 personnel-verification procedure,
+- intervention/reporting/support/documentation rules,
+- separation of staff verification and incident records from `ZAPISY`.
 
-- zatwierdzona rzeczywista lista miast,
-- zatwierdzona rzeczywista lista zajęć,
-- zatwierdzona privacy notice dla zapisów,
-- `PRIVACY_NOTICE_URL`,
-- `PRIVACY_NOTICE_VERSION`,
-- zatwierdzona retention policy i procedura retencji,
-- finalny publiczny adres/domena formularza,
-- finalne zatwierdzenie warstwy wizualnej przez Pozytywkę.
+Canonical documents:
 
-### Production infrastructure
+- `docs/STANDARDY_OCHRONY_MALOLETNICH.md`
+- `docs/STANDARDY_OCHRONY_MALOLETNICH_SKROT.md`
 
-- utworzyć osobny PROD service account,
-- udostępnić PROD Sheet wyłącznie PROD service accountowi oraz zatwierdzonym operatorom,
-- dodać production WIF subject wyłącznie do PROD service accountu,
-- ustawić komplet Vercel Production env,
-- ustawić produkcyjnego nadawcę Resend,
-- ustawić `REGISTRATION_ADMIN_EMAILS=pozytywka.boleslaw@gmail.com`,
-- potwierdzić mailbox delivery admin notification,
-- potwierdzić unieważnienie wcześniej ujawnionego/testowego klucza Resend,
-- wykonać production smoke test przy `REGISTRATIONS_OPEN=FALSE`,
-- dopiero po przejściu release gate ustawić `REGISTRATIONS_OPEN=TRUE`.
+## Canonical Production Sheet
 
-### Remaining verification gates
+Created on 2026-08-20:
 
-- uruchomić nowy `APP_ENV=test DATA_BACKEND=google-sheets ALLOW_TEST_SEED=true pnpm test:integration:sheets` na realnym TEST Sheet,
-- wykonać ręczny pełny flow klawiaturą,
-- ręcznie potwierdzić widoczność focus ringów i reflow/zoom,
-- wykonać real-device mobile smoke test,
-- zaakceptować PR #1, następnie merge/retarget PR #2 w poprawnej kolejności.
+`1DRcWvY8xfZDGjJLWOr8Ax1XsyBw4dWU8C6u9WGNvFfM`
 
-## Deferred, not original MVP blockers
+Verified state during production-finalization work:
 
-- durable email outbox/reconciliation, issue #3,
-- twarde limity miejsc,
-- waitlist,
-- panel administratora,
-- płatności,
-- PostgreSQL/Supabase migration.
+- v3 sheet structure copied with native Tables and formatting,
+- inherited TEST registration values removed,
+- `ZAPISY` empty,
+- production city/season/Offerings/Groups populated,
+- `SYSTEM_SCHEMA_VERSION=3`,
+- `CURRENT_SEASON_ID=2026-2027`,
+- `PRIVACY_NOTICE_VERSION=2026-08-20`,
+- `REGISTRATIONS_OPEN=FALSE`.
 
-## Release statement
+The catalog is reproducible through the guarded `pnpm seed:production-catalog` command. That command refuses an unexpected Sheet ID and refuses to seed a Production Sheet that already contains registrations.
 
-System jest działającym i zweryfikowanym TEST/Preview MVP. Wszystkie znane techniczne braki, które można było zamknąć bez danych biznesowych, decyzji prawnych, PROD IAM i ręcznej akceptacji UI, są zaimplementowane na branchu. PROD pozostaje celowo fail-closed do czasu zamknięcia pozostałych gate'ów.
+## TEST
+
+TEST remains the canonical QA environment for Preview. Recent controlled QA proved the real Google submit path and Resend notification path after the locale-date fix.
+
+Manual real-delivery rows created during the current QA cycle must be removed and TEST returned to `REGISTRATIONS_OPEN=FALSE` after final Preview testing.
+
+## Remaining work
+
+No further product/legal invention is required for v3 launch preparation.
+
+The only remaining gates require actual platform execution/evidence:
+
+1. create/use a separate PROD Google service account,
+2. bind Production OIDC/WIF only to that identity,
+3. grant that identity minimum access to the canonical PROD Sheet,
+4. ensure Preview/TEST identity has no PROD access,
+5. configure Vercel Production environment,
+6. configure a Resend sender on a verified production domain,
+7. create/verify the selected Vercel WAF rule,
+8. run final Production validate/diagnostics/reconciliation while closed,
+9. run closed Production smoke and mail delivery checks,
+10. complete physical/manual device/accessibility checks,
+11. open registrations only after those checks.
+
+Current detailed evidence checklist: `docs/RELEASE_CHECKLIST.md`.
+
+## Safety rule
+
+Do not set Production `REGISTRATIONS_OPEN=TRUE` merely to make a checklist look complete. It is the final controlled release action after the infrastructure evidence above is real.

@@ -6,7 +6,7 @@ import {
   type EmailMessage,
   type EmailSender,
 } from "@/application/registration-notifications";
-import { asCityId, asOfferingId } from "@/domain/catalog";
+import { asCityId, asOfferingId, asSeasonId } from "@/domain/catalog";
 import {
   REGISTRATION_SCHEMA_VERSION,
   REGISTRATION_SOURCE,
@@ -21,18 +21,25 @@ function registration(overrides: Partial<Registration> = {}): Registration {
     id: asRegistrationId("reg_11111111-1111-4111-8111-111111111111"),
     requestId: asRequestId("22222222-2222-4222-8222-222222222222"),
     submittedAt: "2026-08-18T18:00:00.000Z",
+    seasonId: asSeasonId("test-2026-2027"),
+    seasonNameSnapshot: "2026/2027",
     offeringId: asOfferingId("gdynia-musical"),
     cityIdSnapshot: asCityId("gdynia"),
     cityNameSnapshot: "Gdynia",
     offeringNameSnapshot: "Teatr muzyczny",
     participantFirstName: "Jan",
     participantLastName: "Kowalski",
-    age: 14,
+    birthDate: "2012-01-15",
+    ageAtSubmission: 14,
     guardianFirstName: "Anna",
     guardianLastName: "Kowalska",
     phone: "+48500000000",
     email: "anna@example.com",
     status: REGISTRATION_STATUS.new,
+    assignedGroupId: null,
+    contactedAt: null,
+    confirmedAt: null,
+    possibleDuplicateOf: null,
     notes: "",
     privacyNoticeVersion: "v1",
     source: REGISTRATION_SOURCE.web,
@@ -68,16 +75,54 @@ describe("registration notifications", () => {
     expect(messages[0]).toMatchObject({
       to: ["anna@example.com"],
       idempotencyKey: "registration-confirmation/reg_11111111-1111-4111-8111-111111111111",
+      attachments: [
+        {
+          filename: "pozytywka-logo.webp",
+          contentId: "pozytywka-logo",
+        },
+      ],
     });
     expect(messages[0]?.html).toContain("<!DOCTYPE");
+    expect(messages[0]?.html).toContain('src="cid:pozytywka-logo"');
+    expect(messages[0]?.html).toContain('alt="Pozytywka"');
+    expect(messages[0]?.html).toContain("Zgłoszenie otrzymane");
+    expect(messages[0]?.html).toContain("Co dzieje się teraz?");
     expect(messages[0]?.text).toContain("nie potwierdzenie miejsca na zajęciach");
     expect(messages[1]).toMatchObject({
       to: ["biuro@example.com"],
       replyTo: "anna@example.com",
       idempotencyKey: "registration-admin/reg_11111111-1111-4111-8111-111111111111",
+      attachments: [
+        {
+          filename: "pozytywka-logo.webp",
+          contentId: "pozytywka-logo",
+        },
+      ],
     });
+    expect(messages[1]?.html).toContain('src="cid:pozytywka-logo"');
+    expect(messages[1]?.html).toContain("Obsługa zgłoszenia");
+    expect(messages[1]?.html).toContain("Dane systemowe");
     expect(messages[1]?.text).toContain("Rodzic/opiekun");
     expect(messages[1]?.text).toContain("Anna Kowalska");
+    expect(messages[1]?.text).toContain("2012-01-15");
+  });
+
+  it("keeps probable-duplicate warning internal to the admin notification", async () => {
+    const messages = await buildRegistrationNotificationMessages(
+      registration({
+        possibleDuplicateOf: asRegistrationId("reg_33333333-3333-4333-8333-333333333333"),
+      }),
+      {
+        from: "Pozytywka <zapisy@example.com>",
+        adminEmails: ["biuro@example.com"],
+      },
+    );
+
+    expect(messages[0]?.text).not.toMatch(/duplikat/i);
+    expect(messages[0]?.html).not.toMatch(/duplikat/i);
+    expect(messages[1]?.text).toMatch(/możliwy duplikat/i);
+    expect(messages[1]?.html).toMatch(/możliwy duplikat/i);
+    expect(messages[1]?.text).not.toContain("reg_33333333-3333-4333-8333-333333333333");
   });
 
   it("escapes participant-controlled values in rendered HTML", async () => {

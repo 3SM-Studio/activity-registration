@@ -12,9 +12,11 @@ const REQUIRED_FILES = [
   "package.json",
   "tsconfig.json",
   "next.config.ts",
+  "vercel.json",
   ".github/workflows/ci.yml",
   ".github/dependabot.yml",
   "docs/PROJECT_BLUEPRINT.md",
+  "docs/REGISTRATION_V3_PLAN.md",
   "docs/DECISIONS.md",
   "docs/ARCHITECTURE.md",
   "docs/DATA_MODEL.md",
@@ -179,6 +181,25 @@ if (!ci.includes("actions/setup-node@v7")) {
 }
 if (!ci.includes("pnpm/action-setup@v6")) {
   errors.push("CI must use the selected current pnpm/action-setup v6 line.");
+}
+
+const vercelConfig = JSON.parse(await readFile(join(ROOT, "vercel.json"), "utf8"));
+const deploymentEnabled = vercelConfig.git?.deploymentEnabled;
+if (deploymentEnabled?.["**"] !== false) {
+  errors.push(
+    'vercel.json must disable all unmatched/slash branches with git.deploymentEnabled["**"] = false.',
+  );
+}
+if (deploymentEnabled?.preview !== true) {
+  errors.push("vercel.json must explicitly enable the preview branch.");
+}
+if (deploymentEnabled?.main !== true) {
+  errors.push("vercel.json must explicitly enable the main branch.");
+}
+if (Object.hasOwn(deploymentEnabled ?? {}, "*")) {
+  errors.push(
+    'vercel.json must not use bare "*" as the catch-all branch rule because it does not cover slash branches such as feat/... consistently.',
+  );
 }
 
 if (!existsSync(join(ROOT, "pnpm-lock.yaml"))) {

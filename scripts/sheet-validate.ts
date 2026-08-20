@@ -1,8 +1,11 @@
 import { validateSheetStructure } from "../src/infrastructure/google/sheet-admin";
+import { validateSupportingSheetTables } from "../src/infrastructure/google/supporting-sheet-tables";
 import { createAdminSheetsClient } from "./_google-admin";
 
 async function main() {
-  const report = await validateSheetStructure(createAdminSheetsClient());
+  const client = createAdminSheetsClient();
+  const report = await validateSheetStructure(client);
+  await validateSupportingSheetTables(client);
 
   console.info(
     JSON.stringify(
@@ -11,6 +14,7 @@ async function main() {
         sheets: report.sheets,
         cityCount: report.cityCount,
         offeringCount: report.offeringCount,
+        nativeTables: "ready",
         warnings: report.warnings,
       },
       null,

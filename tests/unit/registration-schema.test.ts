@@ -8,7 +8,7 @@ const base = {
   offeringId: "gdynia-hiphop",
   participantFirstName: "Jan",
   participantLastName: "Kowalski",
-  age: 18,
+  birthDate: "2000-01-15",
   phone: "500 000 000",
   email: "jan@example.com",
   renderedAt: Date.now() - 2_000,
@@ -22,7 +22,7 @@ describe("registrationRequestSchema", () => {
   });
 
   it("requires guardian data for a minor", () => {
-    const result = registrationRequestSchema.safeParse({ ...base, age: 17 });
+    const result = registrationRequestSchema.safeParse({ ...base, birthDate: "2010-01-15" });
     expect(result.success).toBe(false);
 
     if (!result.success) {
@@ -35,7 +35,7 @@ describe("registrationRequestSchema", () => {
   it("accepts a minor with guardian data", () => {
     const result = registrationRequestSchema.safeParse({
       ...base,
-      age: 17,
+      birthDate: "2010-01-15",
       guardianFirstName: "Anna",
       guardianLastName: "Kowalska",
     });
@@ -43,14 +43,62 @@ describe("registrationRequestSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("rejects a non-integer age", () => {
-    expect(registrationRequestSchema.safeParse({ ...base, age: 17.5 }).success).toBe(false);
+  it("normalizes person-name whitespace while preserving valid internal spaces", () => {
+    const result = registrationRequestSchema.safeParse({
+      ...base,
+      participantFirstName: "  Anna   Maria  ",
+      participantLastName: "  van   der   Meer  ",
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.participantFirstName).toBe("Anna Maria");
+      expect(result.data.participantLastName).toBe("van der Meer");
+    }
+  });
+
+  it("normalizes guardian-name whitespace", () => {
+    const result = registrationRequestSchema.safeParse({
+      ...base,
+      birthDate: "2010-01-15",
+      guardianFirstName: "  Anna   Maria ",
+      guardianLastName: "  de   la   Cruz ",
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.guardianFirstName).toBe("Anna Maria");
+      expect(result.data.guardianLastName).toBe("de la Cruz");
+    }
+  });
+
+  it("rejects an invalid calendar date", () => {
+    expect(registrationRequestSchema.safeParse({ ...base, birthDate: "2010-02-31" }).success).toBe(
+      false,
+    );
+  });
+
+  it("rejects a future birth date", () => {
+    expect(registrationRequestSchema.safeParse({ ...base, birthDate: "2999-01-01" }).success).toBe(
+      false,
+    );
   });
 
   it("rejects invalid email", () => {
     expect(registrationRequestSchema.safeParse({ ...base, email: "not-an-email" }).success).toBe(
       false,
     );
+  });
+
+  it("rejects whitespace inside an email address", () => {
+    const result = registrationRequestSchema.safeParse({ ...base, email: "jan @example.com" });
+    expect(result.success).toBe(false);
+
+    if (!result.success) {
+      expect(result.error.flatten().fieldErrors.email?.[0]).toBe(
+        "Adres e-mail nie może zawierać spacji.",
+      );
+    }
   });
 
   it("trims a valid email before returning parsed data", () => {

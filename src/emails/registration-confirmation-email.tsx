@@ -1,54 +1,21 @@
-import {
-  Body,
-  Column,
-  Container,
-  Head,
-  Heading,
-  Html,
-  Preview,
-  Row,
-  Section,
-  Text,
-} from "react-email";
+import { Text } from "react-email";
 
 import type { Registration } from "@/domain/registration";
+import {
+  BrandHeader,
+  DetailRow,
+  EmailCard,
+  EmailFooter,
+  EmailLayout,
+  Hero,
+  SectionTitle,
+  StepRow,
+  emailColors,
+} from "@/emails/email-design-system";
 
 type RegistrationConfirmationEmailProps = Readonly<{
   registration: Registration;
 }>;
-
-const colors = {
-  background: "#fff8ed",
-  surface: "#fffcf7",
-  foreground: "#29172d",
-  muted: "#74616f",
-  line: "#e8d7c6",
-  brand: "#a3205a",
-} as const;
-
-const labelStyle = {
-  color: colors.muted,
-  fontSize: "14px",
-  lineHeight: "20px",
-  padding: "6px 12px 6px 0",
-  width: "150px",
-} as const;
-
-const valueStyle = {
-  color: colors.foreground,
-  fontSize: "14px",
-  lineHeight: "20px",
-  padding: "6px 0",
-} as const;
-
-function DetailRow({ label, value }: Readonly<{ label: string; value: string }>) {
-  return (
-    <Row>
-      <Column style={labelStyle}>{label}</Column>
-      <Column style={valueStyle}>{value}</Column>
-    </Row>
-  );
-}
 
 export function RegistrationConfirmationEmail({
   registration,
@@ -56,85 +23,79 @@ export function RegistrationConfirmationEmail({
   const participantName = `${registration.participantFirstName} ${registration.participantLastName}`;
 
   return (
-    <Html lang="pl" dir="ltr">
-      <Head />
-      <Preview>Pozytywka otrzymała Twoje zgłoszenie na zajęcia.</Preview>
-      <Body
-        style={{
-          backgroundColor: colors.background,
-          color: colors.foreground,
-          fontFamily: "Arial, Helvetica, sans-serif",
-          margin: 0,
-          padding: "32px 16px",
-        }}
-      >
-        <Container
+    <EmailLayout preview="Pozytywka otrzymała Twoje zgłoszenie na zajęcia.">
+      <BrandHeader />
+
+      <Hero
+        eyebrow="Zgłoszenie otrzymane"
+        title="Dziękujemy, mamy zgłoszenie"
+        tone="success"
+        description={
+          <>
+            Zgłoszenie dotyczące <strong>{participantName}</strong> dotarło do Pozytywki. Teraz
+            sprawdzimy je i wrócimy z informacją o odpowiedniej grupie oraz terminie.
+          </>
+        }
+      />
+
+      <EmailCard>
+        <SectionTitle>Twoje zgłoszenie</SectionTitle>
+        <DetailRow label="Uczestnik" value={participantName} />
+        <DetailRow label="Zajęcia" value={registration.offeringNameSnapshot} />
+        <DetailRow label="Miasto" value={registration.cityNameSnapshot} />
+        {registration.seasonNameSnapshot ? (
+          <DetailRow label="Sezon" value={registration.seasonNameSnapshot} />
+        ) : null}
+        <DetailRow label="Numer zgłoszenia" value={registration.id} last />
+      </EmailCard>
+
+      <EmailCard tone="muted">
+        <SectionTitle>Co dzieje się teraz?</SectionTitle>
+        <StepRow
+          number={1}
+          title="Sprawdzamy zgłoszenie"
+          description="Weryfikujemy przesłane dane i dostępne możliwości zapisów."
+        />
+        <StepRow
+          number={2}
+          title="Dobieramy odpowiednią grupę"
+          description="Bierzemy pod uwagę wybrane zajęcia, miasto i wiek uczestnika."
+        />
+        <StepRow
+          number={3}
+          title="Kontaktujemy się z Tobą"
+          description="Po weryfikacji Pozytywka przekaże informację o dalszych krokach."
+          last
+        />
+      </EmailCard>
+
+      <EmailCard tone="brand" padding="18px 20px">
+        <Text
           style={{
-            backgroundColor: colors.surface,
-            border: `1px solid ${colors.line}`,
-            borderRadius: "20px",
-            margin: "0 auto",
-            maxWidth: "640px",
-            padding: "32px",
+            color: emailColors.foreground,
+            fontSize: "13px",
+            fontWeight: 800,
+            lineHeight: "20px",
+            margin: 0,
           }}
         >
-          <Text
-            style={{
-              color: colors.brand,
-              fontSize: "12px",
-              fontWeight: 700,
-              letterSpacing: "1.6px",
-              margin: "0 0 10px",
-              textTransform: "uppercase",
-            }}
-          >
-            Pracownia Twórcza Pozytywka
-          </Text>
-          <Heading
-            as="h1"
-            style={{
-              color: colors.foreground,
-              fontSize: "26px",
-              lineHeight: "32px",
-              margin: "0 0 18px",
-            }}
-          >
-            Dziękujemy za zgłoszenie
-          </Heading>
-          <Text style={{ fontSize: "16px", lineHeight: "26px", margin: "0 0 22px" }}>
-            Otrzymaliśmy Twoje zgłoszenie do Pracowni Twórczej Pozytywka.
-          </Text>
+          Ważne
+        </Text>
+        <Text
+          style={{
+            color: emailColors.foreground,
+            fontSize: "13px",
+            lineHeight: "20px",
+            margin: "4px 0 0",
+          }}
+        >
+          To potwierdzenie otrzymania zgłoszenia, nie potwierdzenie miejsca na zajęciach. Na tym
+          etapie nie musisz wysyłać formularza ponownie.
+        </Text>
+      </EmailCard>
 
-          <Section
-            style={{
-              borderTop: `1px solid ${colors.line}`,
-              borderBottom: `1px solid ${colors.line}`,
-              padding: "14px 0",
-            }}
-          >
-            <DetailRow label="Uczestnik" value={participantName} />
-            <DetailRow label="Zajęcia" value={registration.offeringNameSnapshot} />
-            <DetailRow label="Miasto" value={registration.cityNameSnapshot} />
-            <DetailRow label="Numer zgłoszenia" value={registration.id} />
-          </Section>
-
-          <Text style={{ fontSize: "15px", lineHeight: "24px", margin: "22px 0 0" }}>
-            Zgłoszenie zostało zapisane. Jeśli będziemy potrzebowali dodatkowych informacji,
-            skontaktujemy się z Tobą.
-          </Text>
-          <Text
-            style={{
-              color: colors.muted,
-              fontSize: "13px",
-              lineHeight: "20px",
-              margin: "16px 0 0",
-            }}
-          >
-            To jest potwierdzenie otrzymania zgłoszenia, a nie potwierdzenie miejsca na zajęciach.
-          </Text>
-        </Container>
-      </Body>
-    </Html>
+      <EmailFooter reference={registration.id} />
+    </EmailLayout>
   );
 }
 

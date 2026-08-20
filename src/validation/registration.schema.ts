@@ -1,10 +1,22 @@
 import { TECHNICAL_ID_PATTERN } from "@/domain/catalog";
+import { calculateAgeToday, isValidIsoDateOnly } from "@/lib/birth-date";
+import { containsWhitespace, normalizePersonName } from "@/lib/text-normalization";
 import { z } from "zod";
 
 const nonEmptyText = (label: string, maxLength = 100) =>
   z.string().trim().min(1, `${label} jest wymagane.`).max(maxLength, `${label} jest zbyt długie.`);
 
-const optionalPersonName = z.string().trim().max(100).optional();
+const personName = (label: string) =>
+  z
+    .string()
+    .transform(normalizePersonName)
+    .pipe(z.string().min(1, `${label} jest wymagane.`).max(100, `${label} jest zbyt długie.`));
+
+const optionalPersonName = z
+  .string()
+  .transform(normalizePersonName)
+  .pipe(z.string().max(100))
+  .optional();
 
 export const registrationRequestSchema = z
   .object({
@@ -17,18 +29,20 @@ export const registrationRequestSchema = z
       TECHNICAL_ID_PATTERN,
       "Nieprawidłowy identyfikator zajęć.",
     ),
-    participantFirstName: nonEmptyText("Imię", 100),
-    participantLastName: nonEmptyText("Nazwisko", 100),
-    age: z
-      .int({ error: "Wiek musi być liczbą całkowitą." })
-      .min(0, { error: "Wiek nie może być ujemny." })
-      .max(120, { error: "Podaj poprawny wiek." }),
+    participantFirstName: personName("Imię"),
+    participantLastName: personName("Nazwisko"),
+    birthDate: nonEmptyText("Data urodzenia", 10).refine(isValidIsoDateOnly, {
+      message: "Podaj poprawną datę urodzenia.",
+    }),
     guardianFirstName: optionalPersonName,
     guardianLastName: optionalPersonName,
     phone: nonEmptyText("Numer telefonu", 40),
     email: z
       .string()
       .trim()
+      .refine((value) => !containsWhitespace(value), {
+        message: "Adres e-mail nie może zawierać spacji.",
+      })
       .pipe(
         z
           .email({ error: "Podaj poprawny adres e-mail." })
@@ -38,7 +52,30 @@ export const registrationRequestSchema = z
     website: z.string().max(0, "Nieprawidłowe zgłoszenie.").optional().default(""),
   })
   .superRefine((data, context) => {
-    if (data.age < 18 && !data.guardianFirstName) {
+    if (!isValidIsoDateOnly(data.birthDate)) {
+      return;
+    }
+
+    const age = calculateAgeToday(data.birthDate);
+    if (age < 0) {
+      context.addIssue({
+        code: "custom",
+        path: ["birthDate"],
+        message: "Data urodzenia nie może być w przyszłości.",
+      });
+      return;
+    }
+
+    if (age > 120) {
+      context.addIssue({
+        code: "custom",
+        path: ["birthDate"],
+        message: "Podaj poprawną datę urodzenia.",
+      });
+      return;
+    }
+
+    if (age < 18 && !data.guardianFirstName) {
       context.addIssue({
         code: "custom",
         path: ["guardianFirstName"],
@@ -46,7 +83,7 @@ export const registrationRequestSchema = z
       });
     }
 
-    if (data.age < 18 && !data.guardianLastName) {
+    if (age < 18 && !data.guardianLastName) {
       context.addIssue({
         code: "custom",
         path: ["guardianLastName"],

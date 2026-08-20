@@ -7,10 +7,16 @@ import { isRequestId } from "@/domain/registration";
 import { createRegistrationNotificationDependencies } from "@/infrastructure/email";
 import { SheetsApiError } from "@/infrastructure/google/sheets-client";
 import { createApplicationRepositories } from "@/infrastructure/repositories";
-import { getServerEnv, isUnconfiguredVercelProduction } from "@/lib/env";
+import {
+  getServerEnv,
+  isUnconfiguredVercelPreview,
+  isUnconfiguredVercelProduction,
+} from "@/lib/env";
 import { logger } from "@/lib/logger";
 
 const MAX_BODY_BYTES = 16_384;
+
+type SubmitStage = "environment" | "repositories" | "notifications" | "registration";
 
 function statusForApplicationError(code: string): number {
   switch (code) {
@@ -44,20 +50,28 @@ function safeRequestId(value: unknown): string | undefined {
   return undefined;
 }
 
+function unavailableResponse() {
+  return NextResponse.json(
+    {
+      ok: false,
+      code: APPLICATION_ERROR_CODE.systemNotReady,
+      message: "Zapisy są obecnie niedostępne.",
+    },
+    { status: 503 },
+  );
+}
+
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   if (isUnconfiguredVercelProduction()) {
     logger.warn("registration.submit.production_not_configured");
+    return unavailableResponse();
+  }
 
-    return NextResponse.json(
-      {
-        ok: false,
-        code: APPLICATION_ERROR_CODE.systemNotReady,
-        message: "Zapisy są obecnie niedostępne.",
-      },
-      { status: 503 },
-    );
+  if (isUnconfiguredVercelPreview()) {
+    logger.warn("registration.submit.preview_not_configured");
+    return unavailableResponse();
   }
 
   const contentType = request.headers.get("content-type") ?? "";
@@ -111,12 +125,18 @@ export async function POST(request: Request) {
   }
 
   const requestId = safeRequestId(raw);
+  let stage: SubmitStage = "environment";
 
   try {
     const env = getServerEnv();
+
+    stage = "repositories";
     const repositories = createApplicationRepositories();
+
+    stage = "notifications";
     const notificationDependencies = createRegistrationNotificationDependencies(env);
 
+    stage = "registration";
     const result = await submitRegistration(raw, {
       repositories,
       requirePrivacyConfiguration: env.APP_ENV === "production",
@@ -126,9 +146,10 @@ export async function POST(request: Request) {
       ...(requestId ? { requestId } : {}),
       registrationId: result.registrationId,
       idempotentReplay: result.idempotentReplay,
+      businessDuplicate: result.businessDuplicate,
     });
 
-    if (notificationDependencies && !result.idempotentReplay) {
+    if (notificationDependencies && !result.idempotentReplay && !result.businessDuplicate) {
       after(async () => {
         try {
           const notificationResult = await sendRegistrationNotifications(
@@ -162,14 +183,19 @@ export async function POST(request: Request) {
       {
         ok: true,
         registrationId: result.registrationId,
+        duplicate: result.businessDuplicate,
       },
-      { status: result.idempotentReplay ? 200 : 201 },
+      { status: result.idempotentReplay || result.businessDuplicate ? 200 : 201 },
     );
   } catch (error) {
+    const errorType = error instanceof Error ? error.name : typeof error;
+
     if (error instanceof ApplicationError) {
       logger.warn("registration.submit.rejected", {
         ...(requestId ? { requestId } : {}),
         code: error.code,
+        stage,
+        errorType,
       });
 
       return NextResponse.json(
@@ -187,6 +213,8 @@ export async function POST(request: Request) {
       logger.error("registration.submit.sheets_failed", {
         ...(requestId ? { requestId } : {}),
         status: error.status,
+        stage,
+        errorType,
       });
 
       return NextResponse.json(
@@ -201,6 +229,8 @@ export async function POST(request: Request) {
 
     logger.error("registration.submit.failed", {
       ...(requestId ? { requestId } : {}),
+      stage,
+      errorType,
     });
 
     return NextResponse.json(

@@ -1,3 +1,4 @@
+import { asSeasonId, isTechnicalId } from "@/domain/catalog";
 import type { SettingsRepository } from "@/domain/repositories";
 import {
   DEFAULT_FORM_TITLE,
@@ -5,6 +6,7 @@ import {
   type PublicSettings,
 } from "@/domain/settings";
 import { SheetSchemaError, cell, createHeaderMap } from "@/infrastructure/google/header-map";
+import { parseBooleanCell } from "@/infrastructure/google/parsers";
 import {
   SETTING_KEY,
   SETTINGS_HEADERS,
@@ -12,7 +14,6 @@ import {
   SYSTEM_SCHEMA_VERSION,
 } from "@/infrastructure/google/sheets-contracts";
 import type { SheetsClient } from "@/infrastructure/google/sheets-client";
-import { parseBooleanCell } from "@/infrastructure/google/parsers";
 
 export class GoogleSheetsSettingsRepository implements SettingsRepository {
   constructor(private readonly client: SheetsClient) {}
@@ -49,11 +50,17 @@ export class GoogleSheetsSettingsRepository implements SettingsRepository {
       );
     }
 
+    const rawCurrentSeasonId = settings.get(SETTING_KEY.currentSeasonId)?.trim() ?? "";
+    if (rawCurrentSeasonId && !isTechnicalId(rawCurrentSeasonId)) {
+      throw new SheetSchemaError(`Invalid CURRENT_SEASON_ID: ${rawCurrentSeasonId}`);
+    }
+
     const privacyNoticeUrl = settings.get(SETTING_KEY.privacyNoticeUrl)?.trim() || null;
     const privacyNoticeVersion = settings.get(SETTING_KEY.privacyNoticeVersion)?.trim() || null;
 
     return {
       registrationsOpen: parseBooleanCell(settings.get(SETTING_KEY.registrationsOpen) ?? ""),
+      currentSeasonId: rawCurrentSeasonId ? asSeasonId(rawCurrentSeasonId) : null,
       formTitle: settings.get(SETTING_KEY.publicFormTitle)?.trim() || DEFAULT_FORM_TITLE,
       successMessage: settings.get(SETTING_KEY.successMessage)?.trim() || DEFAULT_SUCCESS_MESSAGE,
       privacyNoticeUrl,

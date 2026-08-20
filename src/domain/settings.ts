@@ -1,5 +1,8 @@
+import type { SeasonId } from "@/domain/catalog";
+
 export type PublicSettings = Readonly<{
   registrationsOpen: boolean;
+  currentSeasonId: SeasonId | null;
   formTitle: string;
   successMessage: string;
   privacyNoticeUrl: string | null;

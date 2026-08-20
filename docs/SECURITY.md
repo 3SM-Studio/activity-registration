@@ -82,7 +82,7 @@ Warning-only protection chroni przed przypadkową ręczną edycją, ale nie jest
 
 ## Public endpoint
 
-MVP ma:
+Aplikacja ma:
 
 - JSON-only POST,
 - limit rozmiaru requestu,
@@ -92,9 +92,13 @@ MVP ma:
 - brak ujawniania odpowiedzi Google API,
 - brak sesji i uprzywilejowanych cookies użytkownika.
 
-Głównym ryzykiem publicznego endpointu jest spam/abuse, nie klasyczny session CSRF.
+Honeypot i minimum fill time są heurystykami przeciw prostym automatom, nie twardą granicą bezpieczeństwa. Business deduplication również nie jest mechanizmem anti-abuse.
 
-CAPTCHA/Turnstile dodajemy po realnym sygnale abuse lub przed większą kampanią.
+Dla v3 podstawową ochroną wolumetryczną przed publicznym uruchomieniem jest Vercel WAF Rate Limiting dla `POST /api/registrations`. Nie implementujemy pozornego globalnego rate limitera w pamięci pojedynczej funkcji Vercela.
+
+Turnstile nie jest domyślną częścią formularza. Dodajemy go dopiero jako kolejną warstwę, jeśli monitoring pokaże, że WAF + obecne heurystyki nie ograniczają realnego spamu wystarczająco dobrze.
+
+Szczegóły, próg startowy, sposób testu i zasady telemetry są w `docs/ABUSE_PROTECTION.md`.
 
 ## Privacy
 
