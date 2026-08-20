@@ -10,6 +10,8 @@ type SafeLogContext = Readonly<
     status: number;
     durationMs: number;
     warningCount: number;
+    stage: string;
+    errorType: string;
   }>
 >;
 
