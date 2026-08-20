@@ -106,7 +106,7 @@ export function RegistrationAdminEmail({ registration }: RegistrationAdminEmailP
               margin: "0 0 22px",
             }}
           >
-            Nowe zgłoszenie
+            Nowe zgłoszenie do weryfikacji
           </Heading>
 
           {registration.possibleDuplicateOf ? (
@@ -129,6 +129,16 @@ export function RegistrationAdminEmail({ registration }: RegistrationAdminEmailP
                 }}
               >
                 UWAGA: możliwy duplikat wcześniejszego zgłoszenia
+              </Text>
+              <Text
+                style={{
+                  color: colors.warningForeground,
+                  fontSize: "13px",
+                  lineHeight: "20px",
+                  margin: "6px 0 0",
+                }}
+              >
+                Porównaj dane z wcześniejszym rekordem przed dalszą obsługą.
               </Text>
             </Section>
           ) : null}
@@ -153,6 +163,22 @@ export function RegistrationAdminEmail({ registration }: RegistrationAdminEmailP
             <DetailRow label="Numer zgłoszenia" value={registration.id} />
             <DetailRow label="Wysłano" value={registration.submittedAt} />
           </Section>
+
+          <Heading
+            as="h2"
+            style={{
+              color: colors.foreground,
+              fontSize: "18px",
+              lineHeight: "24px",
+              margin: "22px 0 8px",
+            }}
+          >
+            Następny krok
+          </Heading>
+          <Text style={{ fontSize: "14px", lineHeight: "22px", margin: 0 }}>
+            Zweryfikuj zgłoszenie, dobierz odpowiednią grupę i skontaktuj się z uczestnikiem lub
+            rodzicem/opiekunem. Status obsługi aktualizuj w arkuszu ZAPISY.
+          </Text>
 
           <Text
             style={{

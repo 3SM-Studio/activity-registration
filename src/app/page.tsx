@@ -105,30 +105,10 @@ export default async function HomePage() {
               {settings.formTitle}
             </h1>
             <p className="mt-4 max-w-xl text-pretty text-[1.05rem] leading-7 text-neutral-600">
-              Wybierz miasto i zajęcia, a potem uzupełnij dane uczestnika. Formularz pokaże tylko
-              informacje potrzebne do zgłoszenia.
+              Wybierz miasto i rodzaj zajęć, a następnie podaj dane uczestnika. Po wysłaniu
+              Pozytywka sprawdzi zgłoszenie i skontaktuje się z Tobą, aby dobrać odpowiednią grupę
+              oraz termin.
             </p>
-
-            <ol className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-sm font-semibold text-neutral-600">
-              <li className="flex items-center gap-2">
-                <span className="flex size-6 items-center justify-center rounded-full bg-[var(--brand)] text-xs font-bold text-white">
-                  1
-                </span>
-                Zajęcia
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="flex size-6 items-center justify-center rounded-full bg-neutral-200 text-xs font-bold text-neutral-700">
-                  2
-                </span>
-                Uczestnik
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="flex size-6 items-center justify-center rounded-full bg-neutral-200 text-xs font-bold text-neutral-700">
-                  3
-                </span>
-                Kontakt
-              </li>
-            </ol>
           </div>
         </header>
 
