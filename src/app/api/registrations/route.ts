@@ -16,6 +16,8 @@ import { logger } from "@/lib/logger";
 
 const MAX_BODY_BYTES = 16_384;
 
+type SubmitStage = "environment" | "repositories" | "notifications" | "registration";
+
 function statusForApplicationError(code: string): number {
   switch (code) {
     case APPLICATION_ERROR_CODE.validation:
@@ -123,12 +125,18 @@ export async function POST(request: Request) {
   }
 
   const requestId = safeRequestId(raw);
+  let stage: SubmitStage = "environment";
 
   try {
     const env = getServerEnv();
+
+    stage = "repositories";
     const repositories = createApplicationRepositories();
+
+    stage = "notifications";
     const notificationDependencies = createRegistrationNotificationDependencies(env);
 
+    stage = "registration";
     const result = await submitRegistration(raw, {
       repositories,
       requirePrivacyConfiguration: env.APP_ENV === "production",
@@ -180,10 +188,14 @@ export async function POST(request: Request) {
       { status: result.idempotentReplay || result.businessDuplicate ? 200 : 201 },
     );
   } catch (error) {
+    const errorType = error instanceof Error ? error.name : typeof error;
+
     if (error instanceof ApplicationError) {
       logger.warn("registration.submit.rejected", {
         ...(requestId ? { requestId } : {}),
         code: error.code,
+        stage,
+        errorType,
       });
 
       return NextResponse.json(
@@ -201,6 +213,8 @@ export async function POST(request: Request) {
       logger.error("registration.submit.sheets_failed", {
         ...(requestId ? { requestId } : {}),
         status: error.status,
+        stage,
+        errorType,
       });
 
       return NextResponse.json(
@@ -215,6 +229,8 @@ export async function POST(request: Request) {
 
     logger.error("registration.submit.failed", {
       ...(requestId ? { requestId } : {}),
+      stage,
+      errorType,
     });
 
     return NextResponse.json(
