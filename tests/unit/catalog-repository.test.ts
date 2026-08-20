@@ -3,10 +3,7 @@ import { describe, expect, it } from "vitest";
 import { asSeasonId } from "@/domain/catalog";
 import { GoogleSheetsCatalogRepository } from "@/infrastructure/google/catalog.repository";
 import { SHEET, SHEET_SCHEMA } from "@/infrastructure/google/sheets-contracts";
-import type {
-  SheetsClient,
-  ValueRenderOption,
-} from "@/infrastructure/google/sheets-client";
+import type { SheetsClient, ValueRenderOption } from "@/infrastructure/google/sheets-client";
 
 function offeringRow(
   id: string,
@@ -57,9 +54,7 @@ function createClient(onGetValues?: (call: GetValuesCall) => void): SheetsClient
     async getValues(range, options) {
       onGetValues?.({
         range,
-        ...(options?.valueRenderOption
-          ? { valueRenderOption: options.valueRenderOption }
-          : {}),
+        ...(options?.valueRenderOption ? { valueRenderOption: options.valueRenderOption } : {}),
       });
       return values.get(range) ?? [];
     },
@@ -100,7 +95,9 @@ describe("GoogleSheetsCatalogRepository", () => {
     );
 
     await repository.getPublicCatalog("2026-08-19");
-    await expect(repository.findSeasonById(asSeasonId("test-2026-2027"))).resolves.toMatchObject({
+    await expect(
+      repository.findSeasonById(asSeasonId("test-2026-2027")),
+    ).resolves.toMatchObject({
       startDate: "2026-09-01",
       endDate: "2027-07-31",
     });
