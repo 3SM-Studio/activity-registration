@@ -55,7 +55,12 @@ type ApiSuccessResponse = Readonly<{
   duplicate: boolean;
 }>;
 
-type SuccessState = "created" | "duplicate" | null;
+type SuccessState = Readonly<{
+  kind: "created" | "duplicate";
+  participantName: string;
+  offeringName: string;
+  cityName: string;
+}> | null;
 
 function newRequestId(): string {
   return crypto.randomUUID();
@@ -97,6 +102,8 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
     setValue,
     setError,
     clearErrors,
+    reset,
+    getValues,
     formState: { errors, isSubmitting },
   } = useForm<RegistrationRequestInput, unknown, RegistrationRequest>({
     resolver: zodResolver(registrationRequestSchema),
@@ -202,12 +209,66 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
         return;
       }
 
-      setSuccessState(payload.duplicate ? "duplicate" : "created");
+      const cityName = catalog.cities.find((city) => city.id === data.cityId)?.name ?? data.cityId;
+      const offeringName =
+        catalog.offerings.find((offering) => offering.id === data.offeringId)?.name ??
+        data.offeringId;
+
+      setSuccessState({
+        kind: payload.duplicate ? "duplicate" : "created",
+        participantName: `${data.participantFirstName} ${data.participantLastName}`,
+        offeringName,
+        cityName,
+      });
     } catch {
       setGlobalError(
         "Nie udało się połączyć z systemem zapisów. Twoje dane pozostały w formularzu. Spróbuj ponownie.",
       );
     }
+  };
+
+  const beginAnotherChild = () => {
+    const current = getValues();
+    reset({
+      requestId: newRequestId(),
+      cityId: current.cityId,
+      offeringId: "",
+      participantFirstName: "",
+      participantLastName: "",
+      birthDate: "",
+      guardianFirstName: current.guardianFirstName ?? "",
+      guardianLastName: current.guardianLastName ?? "",
+      phone: current.phone,
+      email: current.email,
+      renderedAt: Date.now(),
+      website: "",
+    });
+    setSuccessState(null);
+    setGlobalError(null);
+    setShowValidationSummary(false);
+    requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }));
+  };
+
+  const beginAnotherOffering = () => {
+    const current = getValues();
+    reset({
+      requestId: newRequestId(),
+      cityId: current.cityId,
+      offeringId: "",
+      participantFirstName: current.participantFirstName,
+      participantLastName: current.participantLastName,
+      birthDate: current.birthDate,
+      guardianFirstName: current.guardianFirstName ?? "",
+      guardianLastName: current.guardianLastName ?? "",
+      phone: current.phone,
+      email: current.email,
+      renderedAt: Date.now(),
+      website: "",
+    });
+    setSuccessState(null);
+    setGlobalError(null);
+    setShowValidationSummary(false);
+    requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }));
   };
 
   if (!settings.registrationsOpen) {
@@ -229,6 +290,8 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
   }
 
   if (successState) {
+    const isDuplicate = successState.kind === "duplicate";
+
     return (
       <Card className="text-center" aria-live="polite">
         <div
@@ -238,15 +301,38 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
           ✓
         </div>
         <h2 className="text-xl font-semibold text-foreground">
-          {successState === "duplicate"
-            ? "Takie zgłoszenie jest już w systemie"
-            : "Zgłoszenie przyjęte"}
+          {isDuplicate ? "Takie zgłoszenie jest już w systemie" : "Dziękujemy, mamy zgłoszenie"}
         </h2>
-        <p className="mt-2 text-muted-foreground">
-          {successState === "duplicate"
+        <p className="mx-auto mt-3 max-w-xl text-muted-foreground">
+          {isDuplicate
             ? "Nie musisz wysyłać go ponownie. Pozytywka skontaktuje się z Tobą po jego weryfikacji."
-            : settings.successMessage}
+            : `Otrzymaliśmy zgłoszenie ${successState.participantName} na ${successState.offeringName} w ${successState.cityName}.`}
         </p>
+
+        {!isDuplicate ? (
+          <>
+            <div className="mx-auto mt-6 max-w-xl rounded-2xl border border-border bg-muted/45 p-4 text-left sm:p-5">
+              <h3 className="font-semibold text-foreground">Co dalej?</h3>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                Pozytywka sprawdzi dostępne grupy i skontaktuje się z Tobą, żeby ustalić odpowiednią
+                grupę oraz termin. Samo wysłanie formularza nie oznacza jeszcze potwierdzenia
+                miejsca.
+              </p>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                Potwierdzenie otrzymania zgłoszenia wysłaliśmy również na podany adres e-mail.
+              </p>
+            </div>
+
+            <div className="mx-auto mt-6 grid max-w-xl gap-3 sm:grid-cols-2">
+              <Button type="button" variant="outline" size="lg" onClick={beginAnotherChild}>
+                Zapisz kolejne dziecko
+              </Button>
+              <Button type="button" variant="outline" size="lg" onClick={beginAnotherOffering}>
+                Zgłoś inne zajęcia
+              </Button>
+            </div>
+          </>
+        ) : null}
       </Card>
     );
   }
@@ -417,7 +503,8 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
                   describedBy={fieldState.invalid ? "birthDate-error" : "birthDate-description"}
                 />
                 <FieldDescription id="birthDate-description">
-                  Na tej podstawie ustalamy wiek uczestnika i czy potrzebne są dane opiekuna.
+                  Data urodzenia pomaga nam dobrać odpowiednią grupę wiekową oraz ustalić, czy
+                  potrzebujemy danych rodzica lub opiekuna.
                 </FieldDescription>
                 <FieldError id="birthDate-error" errors={[fieldState.error]} />
               </Field>
@@ -542,6 +629,11 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
         />
         <input type="hidden" {...register("requestId")} />
         <input type="hidden" {...register("renderedAt", { valueAsNumber: true })} />
+
+        <div className="rounded-2xl border border-border bg-muted/45 p-4 text-sm leading-6 text-muted-foreground">
+          Wysłanie formularza jest zgłoszeniem na zajęcia. Pozytywka musi je najpierw zweryfikować i
+          skontaktuje się z Tobą, żeby potwierdzić odpowiednią grupę oraz termin.
+        </div>
 
         {settings.privacyNoticeUrl ? (
           <p className="text-sm leading-6 text-muted-foreground">

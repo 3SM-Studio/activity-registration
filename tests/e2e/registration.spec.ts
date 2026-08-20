@@ -42,7 +42,8 @@ function e2eIdentitySuffix(testInfo: TestInfo): string {
         ? "Mobilny"
         : "Desktop";
   const retry = testInfo.retry === 0 ? "Pierwszy" : testInfo.retry === 1 ? "Drugi" : "Trzeci";
-  return `${project} ${retry}`;
+  const run = Date.now().toString().slice(-6);
+  return `${project} ${retry} ${run}`;
 }
 
 async function fillAdultRegistration(page: Page, identitySuffix = "Standard") {
@@ -53,6 +54,20 @@ async function fillAdultRegistration(page: Page, identitySuffix = "Standard") {
   await chooseBirthDate(page, "2000", 0, "15");
   await page.getByLabel(/Numer telefonu/).fill("500 000 000");
   await page.getByLabel(/Adres e-mail/).fill("jan@example.com");
+}
+
+async function mockSuccessfulRegistration(page: Page) {
+  await page.route("**/api/registrations", async (route) => {
+    await route.fulfill({
+      status: 201,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        registrationId: crypto.randomUUID(),
+        duplicate: false,
+      }),
+    });
+  });
 }
 
 test("filters offerings by city and submits a minor registration", async ({ page }, testInfo) => {
@@ -82,7 +97,9 @@ test("filters offerings by city and submits a minor registration", async ({ page
   await page.waitForTimeout(850);
   await page.getByRole("button", { name: "Wyślij zgłoszenie" }).click();
 
-  await expect(page.getByText("Dziękujemy. Zgłoszenie zostało wysłane.")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Dziękujemy, mamy zgłoszenie" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Co dalej?" })).toBeVisible();
+  await expect(page.getByText(/nie oznacza jeszcze potwierdzenia miejsca/i)).toBeVisible();
 });
 
 test("selects a birth date with the shadcn date picker", async ({ page }) => {
@@ -201,10 +218,78 @@ test("reuses the same requestId after a temporary transport failure", async ({
   await expect(page.getByText("System jest chwilowo niedostępny. Spróbuj ponownie.")).toBeVisible();
 
   await submit.click();
-  await expect(page.getByText("Dziękujemy. Zgłoszenie zostało wysłane.")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Dziękujemy, mamy zgłoszenie" })).toBeVisible();
 
   expect(requestIds).toHaveLength(2);
   expect(requestIds[0]).toBe(requestIds[1]);
+});
+
+test("starts another child with preserved contact data and a fresh requestId", async ({ page }) => {
+  await mockSuccessfulRegistration(page);
+  await openRegistrationForm(page);
+
+  await chooseOption(page, /Miasto/, "Gdynia");
+  await chooseOption(page, /Zajęcia/, "Contemporary");
+  await page.getByLabel(/^Imię \*/).fill("Ola");
+  await page.getByLabel(/^Nazwisko \*/).fill("Testowa");
+  await chooseBirthDate(page, "2012", 0, "15");
+  await page.getByLabel(/Imię rodzica/).fill("Anna");
+  await page.getByLabel(/Nazwisko rodzica/).fill("Kowalska");
+  await page.getByLabel(/Numer telefonu/).fill("500 000 000");
+  await page.getByLabel(/Adres e-mail/).fill("anna@example.com");
+
+  const firstRequestId = await page.locator('input[name="requestId"]').inputValue();
+  await page.waitForTimeout(850);
+  await page.getByRole("button", { name: "Wyślij zgłoszenie" }).click();
+  await page.getByRole("button", { name: "Zapisz kolejne dziecko" }).click();
+
+  await expect(combobox(page, /Miasto/)).toContainText("Gdynia");
+  await expect(combobox(page, /Zajęcia/)).toContainText("Wybierz zajęcia");
+  await expect(page.getByLabel(/^Imię \*/)).toHaveValue("");
+  await expect(page.getByLabel(/^Nazwisko \*/)).toHaveValue("");
+  await expect(page.getByLabel(/Numer telefonu/)).toHaveValue("500 000 000");
+  await expect(page.getByLabel(/Adres e-mail/)).toHaveValue("anna@example.com");
+
+  await chooseBirthDate(page, "2014", 0, "15");
+  await expect(page.getByLabel(/Imię rodzica/)).toHaveValue("Anna");
+  await expect(page.getByLabel(/Nazwisko rodzica/)).toHaveValue("Kowalska");
+
+  const secondRequestId = await page.locator('input[name="requestId"]').inputValue();
+  expect(secondRequestId).not.toBe(firstRequestId);
+});
+
+test("starts another activity with participant data preserved and a fresh requestId", async ({
+  page,
+}) => {
+  await mockSuccessfulRegistration(page);
+  await openRegistrationForm(page);
+  await fillAdultRegistration(page, "Kolejne zajęcia");
+
+  const firstRequestId = await page.locator('input[name="requestId"]').inputValue();
+  await page.waitForTimeout(850);
+  await page.getByRole("button", { name: "Wyślij zgłoszenie" }).click();
+  await page.getByRole("button", { name: "Zgłoś inne zajęcia" }).click();
+
+  await expect(combobox(page, /Miasto/)).toContainText("Gdynia");
+  await expect(combobox(page, /Zajęcia/)).toContainText("Wybierz zajęcia");
+  await expect(page.getByLabel(/^Imię \*/)).toHaveValue("Jan");
+  await expect(page.getByLabel(/^Nazwisko \*/)).toHaveValue("Kowalski Kolejne zajęcia");
+  await expect(page.getByLabel(/Numer telefonu/)).toHaveValue("500 000 000");
+  await expect(page.getByLabel(/Adres e-mail/)).toHaveValue("jan@example.com");
+
+  const secondRequestId = await page.locator('input[name="requestId"]').inputValue();
+  expect(secondRequestId).not.toBe(firstRequestId);
+});
+
+test("keeps the main activity controls keyboard reachable", async ({ page }) => {
+  await openRegistrationForm(page);
+  await chooseOption(page, /Miasto/, "Gdynia");
+
+  const city = combobox(page, /Miasto/);
+  const offering = combobox(page, /Zajęcia/);
+  await city.focus();
+  await page.keyboard.press("Tab");
+  await expect(offering).toBeFocused();
 });
 
 test("shows validation summary without focusing an input after invalid submit", async ({

@@ -99,10 +99,10 @@ export function RegistrationConfirmationEmail({
               margin: "0 0 18px",
             }}
           >
-            Dziękujemy za zgłoszenie
+            Dziękujemy, mamy zgłoszenie
           </Heading>
           <Text style={{ fontSize: "16px", lineHeight: "26px", margin: "0 0 22px" }}>
-            Otrzymaliśmy Twoje zgłoszenie do Pracowni Twórczej Pozytywka.
+            Otrzymaliśmy zgłoszenie do Pracowni Twórczej Pozytywka.
           </Text>
 
           <Section
@@ -118,9 +118,20 @@ export function RegistrationConfirmationEmail({
             <DetailRow label="Numer zgłoszenia" value={registration.id} />
           </Section>
 
-          <Text style={{ fontSize: "15px", lineHeight: "24px", margin: "22px 0 0" }}>
-            Zgłoszenie zostało zapisane. Jeśli będziemy potrzebowali dodatkowych informacji,
-            skontaktujemy się z Tobą.
+          <Heading
+            as="h2"
+            style={{
+              color: colors.foreground,
+              fontSize: "18px",
+              lineHeight: "24px",
+              margin: "22px 0 8px",
+            }}
+          >
+            Co dalej?
+          </Heading>
+          <Text style={{ fontSize: "15px", lineHeight: "24px", margin: 0 }}>
+            Pozytywka sprawdzi zgłoszenie i skontaktuje się z Tobą, aby dobrać odpowiednią grupę
+            oraz termin.
           </Text>
           <Text
             style={{
