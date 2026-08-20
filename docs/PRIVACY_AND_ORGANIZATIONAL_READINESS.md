@@ -89,16 +89,23 @@ The current reviewed provider materials are listed in `docs/RODO_AND_RETENTION_P
 
 ## 6. Production access policy
 
-Persistent human access to participant PII is limited to Pozytywka operators who actually handle registrations.
+Persistent access is kept explicit and narrow.
 
-Default production model:
+Verified current Production Sheet access on 2026-08-20:
 
-- Iwona Pilarz: operator/owner access,
-- PROD service identity: application access only,
-- technical collaborators: no standing participant-data access; temporary minimum access only for a real incident when required,
-- no public-link sharing,
+- `pozanuta@gmail.com`: Drive owner, administrative custody of the file,
+- `pozytywka.boleslaw@gmail.com`: writer, Pozytywka operational access,
+- no public-link permission exists.
+
+Target runtime model after Google IAM finalization:
+
+- Pozytywka operational mailbox: normal human operator access,
+- PROD service identity: application-only access required by the runtime,
+- technical collaborators: no additional standing participant-data access; temporary minimum access only for a real incident when required,
 - TEST identity must not have access to PROD,
 - PROD identity must be separate from TEST.
+
+The administrative Drive owner does not change the controller role: Iwona Pilarz / Pozytywka remains the controller and decides the purposes and means of the registration process.
 
 Sharing is reviewed before opening production and after material team changes.
 
