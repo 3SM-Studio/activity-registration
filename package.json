@@ -24,6 +24,7 @@
     "sheet:validate": "tsx scripts/sheet-validate.ts",
     "sheet:migrate": "tsx scripts/sheet-migrate.ts",
     "seed:test": "tsx scripts/seed-test.ts",
+    "seed:production-catalog": "tsx scripts/seed-production-catalog.ts",
     "diagnostics": "tsx scripts/diagnostics.ts",
     "registrations:reconcile": "tsx scripts/reconcile-registrations.ts",
     "repo:validate": "node scripts/repo-validate.mjs",
