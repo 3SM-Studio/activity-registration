@@ -264,9 +264,7 @@ export function buildOperatorSheetRequests(
 
   const desiredConditionalFormats = [
     duplicateConditionalFormat(sheet.sheetId),
-    ...REGISTRATION_STATUS_FORMATS.map((status) =>
-      statusConditionalFormat(sheet.sheetId, status),
-    ),
+    ...REGISTRATION_STATUS_FORMATS.map((status) => statusConditionalFormat(sheet.sheetId, status)),
   ];
 
   desiredConditionalFormats.forEach((rule, index) => {
