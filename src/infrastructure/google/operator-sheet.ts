@@ -26,41 +26,41 @@ const TECHNICAL_COLUMN_RANGES = [
   { startIndex: 26, endIndex: 28 },
 ] as const;
 
-const STATUS_FORMATS = [
+export const REGISTRATION_STATUS_FORMATS = [
   {
     status: REGISTRATION_STATUS.new,
-    background: { red: 1, green: 0.949, blue: 0.8 },
-    foreground: { red: 0.45, green: 0.25, blue: 0.02 },
+    background: { red: 0.976, green: 0.91, blue: 0.937 },
+    foreground: { red: 0.541, green: 0.114, blue: 0.31 },
   },
   {
     status: REGISTRATION_STATUS.inReview,
-    background: { red: 0.89, green: 0.94, blue: 1 },
-    foreground: { red: 0.08, green: 0.28, blue: 0.52 },
+    background: { red: 0.91, green: 0.941, blue: 0.996 },
+    foreground: { red: 0.157, green: 0.333, blue: 0.651 },
   },
   {
     status: REGISTRATION_STATUS.contacted,
-    background: { red: 0.91, green: 0.88, blue: 1 },
-    foreground: { red: 0.3, green: 0.17, blue: 0.5 },
+    background: { red: 0.89, green: 0.953, blue: 0.937 },
+    foreground: { red: 0.059, green: 0.384, blue: 0.373 },
   },
   {
     status: REGISTRATION_STATUS.waitlisted,
-    background: { red: 1, green: 0.91, blue: 0.82 },
-    foreground: { red: 0.5, green: 0.24, blue: 0.04 },
+    background: { red: 1, green: 0.957, blue: 0.839 },
+    foreground: { red: 0.478, green: 0.302, blue: 0 },
   },
   {
     status: REGISTRATION_STATUS.confirmed,
-    background: { red: 0.86, green: 0.96, blue: 0.88 },
-    foreground: { red: 0.08, green: 0.35, blue: 0.16 },
+    background: { red: 0.89, green: 0.957, blue: 0.91 },
+    foreground: { red: 0.137, green: 0.424, blue: 0.231 },
   },
   {
     status: REGISTRATION_STATUS.rejected,
-    background: { red: 1, green: 0.88, blue: 0.88 },
-    foreground: { red: 0.55, green: 0.08, blue: 0.08 },
+    background: { red: 0.992, green: 0.91, blue: 0.91 },
+    foreground: { red: 0.608, green: 0.11, blue: 0.11 },
   },
   {
     status: REGISTRATION_STATUS.cancelled,
-    background: { red: 0.92, green: 0.92, blue: 0.92 },
-    foreground: { red: 0.3, green: 0.3, blue: 0.3 },
+    background: { red: 0.925, green: 0.922, blue: 0.929 },
+    foreground: { red: 0.345, green: 0.376, blue: 0.416 },
   },
 ] as const;
 
@@ -71,7 +71,7 @@ function statusFormula(status: string): string {
 export const POSSIBLE_DUPLICATE_FORMULA = '=$AA2<>""';
 
 export const OWNED_OPERATOR_FORMAT_FORMULAS = new Set([
-  ...STATUS_FORMATS.map(({ status }) => statusFormula(status)),
+  ...REGISTRATION_STATUS_FORMATS.map(({ status }) => statusFormula(status)),
   POSSIBLE_DUPLICATE_FORMULA,
 ]);
 
@@ -108,7 +108,48 @@ function desiredFilterViews() {
   ] as const;
 }
 
-function statusConditionalFormat(sheetId: number, status: (typeof STATUS_FORMATS)[number]) {
+function clearLegacyBodyVisualOverrides(sheetId: number) {
+  return {
+    repeatCell: {
+      range: {
+        sheetId,
+        startRowIndex: 1,
+        startColumnIndex: 0,
+        endColumnIndex: REGISTRATION_HEADERS.length,
+      },
+      cell: { userEnteredFormat: { textFormat: {} } },
+      fields:
+        "userEnteredFormat.backgroundColor,userEnteredFormat.backgroundColorStyle," +
+        "userEnteredFormat.textFormat.foregroundColor," +
+        "userEnteredFormat.textFormat.foregroundColorStyle,userEnteredFormat.textFormat.bold",
+    },
+  } as const;
+}
+
+function statusColumnAlignment(sheetId: number) {
+  return {
+    repeatCell: {
+      range: {
+        sheetId,
+        startRowIndex: 1,
+        startColumnIndex: STATUS_COLUMN_INDEX,
+        endColumnIndex: STATUS_COLUMN_INDEX + 1,
+      },
+      cell: {
+        userEnteredFormat: {
+          horizontalAlignment: "CENTER",
+          verticalAlignment: "MIDDLE",
+        },
+      },
+      fields: "userEnteredFormat.horizontalAlignment,userEnteredFormat.verticalAlignment",
+    },
+  } as const;
+}
+
+function statusConditionalFormat(
+  sheetId: number,
+  status: (typeof REGISTRATION_STATUS_FORMATS)[number],
+) {
   return {
     ranges: [
       {
@@ -151,7 +192,7 @@ function duplicateConditionalFormat(sheetId: number) {
       },
       format: {
         backgroundColorStyle: {
-          rgbColor: { red: 1, green: 0.95, blue: 0.86 },
+          rgbColor: { red: 1, green: 0.965, blue: 0.902 },
         },
       },
     },
@@ -169,6 +210,9 @@ export function buildOperatorSheetRequests(
   if (!registrationsTable) {
     throw new Error("Missing native Rejestracje table for operator console bootstrap.");
   }
+
+  requests.push(clearLegacyBodyVisualOverrides(sheet.sheetId));
+  requests.push(statusColumnAlignment(sheet.sheetId));
 
   for (const range of TECHNICAL_COLUMN_RANGES) {
     requests.push({
@@ -220,7 +264,7 @@ export function buildOperatorSheetRequests(
 
   const desiredConditionalFormats = [
     duplicateConditionalFormat(sheet.sheetId),
-    ...STATUS_FORMATS.map((status) => statusConditionalFormat(sheet.sheetId, status)),
+    ...REGISTRATION_STATUS_FORMATS.map((status) => statusConditionalFormat(sheet.sheetId, status)),
   ];
 
   desiredConditionalFormats.forEach((rule, index) => {
