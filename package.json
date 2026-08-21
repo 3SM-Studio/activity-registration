@@ -27,6 +27,7 @@
     "seed:production-catalog": "tsx scripts/seed-production-catalog.ts && tsx scripts/sheet-bootstrap.ts",
     "diagnostics": "tsx scripts/diagnostics.ts",
     "registrations:reconcile": "tsx scripts/reconcile-registrations.ts",
+    "retention:report": "tsx scripts/retention-report.ts",
     "repo:validate": "node scripts/repo-validate.mjs",
     "typegen": "next typegen"
   },
