@@ -3,6 +3,7 @@ import { cell, createHeaderMap } from "@/infrastructure/google/header-map";
 import { parseGroupRow } from "@/infrastructure/google/parsers";
 import {
   GROUP_HEADERS,
+  OFFERING_HEADERS,
   OPERATOR_DASHBOARD_SHEET,
   REGISTRATION_HEADERS,
   REGISTRATION_TABLE_COLUMNS,
@@ -96,6 +97,13 @@ export const CONFIRMED_WITHOUT_DATE_FORMULA = '=($P2="CONFIRMED")*($Z2="")';
 export const CLOSED_WITHOUT_DATE_FORMULA =
   '=OR(AND($P2="REJECTED";$AA2="");AND($P2="CANCELLED";$AA2=""))';
 export const POSSIBLE_DUPLICATE_COUNT_FORMULA = "=SUMPRODUCT(--(LEN(ZAPISY!AB2:AB)>0))";
+
+export const OPERATOR_DASHBOARD_LAYOUT = {
+  hiddenGroupIdColumnIndex: 0,
+  visibleStartColumnIndex: 1,
+  groupHeaderRow: 11,
+  groupStartRow: 12,
+} as const;
 
 export const OWNED_OPERATOR_FORMAT_FORMULAS = new Set([
   ...REGISTRATION_STATUS_FORMATS.map(({ status }) => statusFormula(status)),
@@ -269,11 +277,13 @@ function formulaCell(value: string) {
 }
 
 async function bootstrapDashboard(client: SheetsClient, dashboard: SheetMetadata): Promise<void> {
-  const [groupRows, settingsRows] = await Promise.all([
+  const [groupRows, offeringRows, settingsRows] = await Promise.all([
     client.getValues(`${SHEET.groups}!A:ZZ`, { valueRenderOption: "UNFORMATTED_VALUE" }),
+    client.getValues(`${SHEET.offerings}!A:ZZ`),
     client.getValues(`${SHEET.settings}!A:ZZ`),
   ]);
-  const headers = createHeaderMap(groupRows[0] ?? [], GROUP_HEADERS);
+  const groupHeaders = createHeaderMap(groupRows[0] ?? [], GROUP_HEADERS);
+  const offeringHeaders = createHeaderMap(offeringRows[0] ?? [], OFFERING_HEADERS);
   const settingsHeaders = createHeaderMap(settingsRows[0] ?? [], SETTINGS_HEADERS);
   const currentSeasonRows = settingsRows
     .slice(1)
@@ -286,50 +296,105 @@ async function bootstrapDashboard(client: SheetsClient, dashboard: SheetMetadata
     throw new Error("PANEL_OPERATORA requires CURRENT_SEASON_ID.");
   }
 
+  const offeringNames = new Map(
+    offeringRows.slice(1).flatMap((row) => {
+      const id = cell(row, offeringHeaders, "OFFERING_ID");
+      const name = cell(row, offeringHeaders, "NAME");
+      return id && name ? [[id, name] as const] : [];
+    }),
+  );
+
   const groups = groupRows
     .slice(1)
-    .map((row) => parseGroupRow(row, headers))
+    .map((row) => parseGroupRow(row, groupHeaders))
     .filter((group) => group !== null)
     .filter((group) => group.active && group.seasonId === currentSeasonId)
     .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, "pl"));
 
   await client.clearValues(`${OPERATOR_DASHBOARD_SHEET}!A:K`);
 
+  const firstGroupRow = OPERATOR_DASHBOARD_LAYOUT.groupStartRow;
+  const lastGroupRow = firstGroupRow + groups.length - 1;
+  const freePlacesFormula = groups.length > 0 ? `=SUM(H${firstGroupRow}:H${lastGroupRow})` : "=0";
+  const attentionFormula =
+    "=SUMPRODUCT(--(LEN(ZAPISY!AB2:AB)>0))" +
+    '+COUNTIFS(ZAPISY!P2:P;"CONFIRMED";ZAPISY!X2:X;"")' +
+    '+COUNTIFS(ZAPISY!P2:P;"CONTACTED";ZAPISY!Y2:Y;"")' +
+    '+COUNTIFS(ZAPISY!P2:P;"CONFIRMED";ZAPISY!Z2:Z;"")' +
+    '+COUNTIFS(ZAPISY!P2:P;"REJECTED";ZAPISY!AA2:AA;"")' +
+    '+COUNTIFS(ZAPISY!P2:P;"CANCELLED";ZAPISY!AA2:AA;"")';
+
   const summaryRows = [
-    [stringCell("PANEL OPERATORA - POZYTYWKA")],
-    [stringCell("Stan bieżących zapisów. Dane uczestników pozostają w zakładce ZAPISY.")],
-    [],
-    [stringCell("Nowe"), formulaCell('=COUNTIF(ZAPISY!P2:P;"NEW")')],
+    [stringCell(""), stringCell("PANEL OPERATORA - POZYTYWKA")],
     [
-      stringCell("W toku"),
+      stringCell(""),
+      stringCell(
+        `Bieżący stan zapisów • sezon ${currentSeasonId} • dane uczestników są w zakładce ZAPISY`,
+      ),
+    ],
+    [],
+    [
+      stringCell(""),
+      stringCell("NOWE"),
+      stringCell(""),
+      stringCell("W TOKU"),
+      stringCell(""),
+      stringCell("LISTA REZERWOWA"),
+      stringCell(""),
+      stringCell("POTWIERDZONE"),
+    ],
+    [
+      stringCell(""),
+      formulaCell('=COUNTIF(ZAPISY!P2:P;"NEW")'),
+      stringCell(""),
       formulaCell('=COUNTIF(ZAPISY!P2:P;"IN_REVIEW")+COUNTIF(ZAPISY!P2:P;"CONTACTED")'),
-    ],
-    [stringCell("Lista rezerwowa"), formulaCell('=COUNTIF(ZAPISY!P2:P;"WAITLISTED")')],
-    [stringCell("Potwierdzone"), formulaCell('=COUNTIF(ZAPISY!P2:P;"CONFIRMED")')],
-    [
-      stringCell("Zamknięte"),
-      formulaCell('=COUNTIF(ZAPISY!P2:P;"REJECTED")+COUNTIF(ZAPISY!P2:P;"CANCELLED")'),
-    ],
-    [stringCell("Możliwe duplikaty"), formulaCell(POSSIBLE_DUPLICATE_COUNT_FORMULA)],
-    [
-      stringCell("Potwierdzone bez grupy"),
-      formulaCell('=COUNTIFS(ZAPISY!P2:P;"CONFIRMED";ZAPISY!X2:X;"")'),
+      stringCell(""),
+      formulaCell('=COUNTIF(ZAPISY!P2:P;"WAITLISTED")'),
+      stringCell(""),
+      formulaCell('=COUNTIF(ZAPISY!P2:P;"CONFIRMED")'),
     ],
     [],
     [
-      stringCell("ID grupy"),
+      stringCell(""),
+      stringCell("WYMAGA UWAGI"),
+      stringCell(""),
+      stringCell("ZAMKNIĘTE"),
+      stringCell(""),
+      stringCell("AKTYWNE ZGŁOSZENIA"),
+      stringCell(""),
+      stringCell("WOLNE MIEJSCA"),
+    ],
+    [
+      stringCell(""),
+      formulaCell(attentionFormula),
+      stringCell(""),
+      formulaCell('=COUNTIF(ZAPISY!P2:P;"REJECTED")+COUNTIF(ZAPISY!P2:P;"CANCELLED")'),
+      stringCell(""),
+      formulaCell(
+        '=COUNTIF(ZAPISY!P2:P;"NEW")+COUNTIF(ZAPISY!P2:P;"IN_REVIEW")+' +
+          'COUNTIF(ZAPISY!P2:P;"CONTACTED")+COUNTIF(ZAPISY!P2:P;"WAITLISTED")+' +
+          'COUNTIF(ZAPISY!P2:P;"CONFIRMED")',
+      ),
+      stringCell(""),
+      formulaCell(freePlacesFormula),
+    ],
+    [],
+    [stringCell(""), stringCell("GRUPY I MIEJSCA")],
+    [
+      stringCell(""),
       stringCell("Grupa"),
-      stringCell("Oferta"),
+      stringCell("Zajęcia"),
       stringCell("Wiek"),
       stringCell("Termin"),
       stringCell("Pojemność"),
       stringCell("Potwierdzeni"),
       stringCell("Wolne"),
+      stringCell("Obłożenie"),
     ],
   ];
 
-  const groupDashboardRows = groups.map((group) => {
-    const rowNumber = groups.indexOf(group) + summaryRows.length + 1;
+  const groupDashboardRows = groups.map((group, index) => {
+    const rowNumber = firstGroupRow + index;
     const ageLabel =
       group.ageMin === null && group.ageMax === null
         ? "bez limitu"
@@ -337,21 +402,79 @@ async function bootstrapDashboard(client: SheetsClient, dashboard: SheetMetadata
     const termLabel = [group.dayOfWeek, group.startTime, group.endTime ? `-${group.endTime}` : null]
       .filter(Boolean)
       .join(" ");
+    const capacityCell = group.capacity === null ? stringCell("-") : numberCell(group.capacity);
+    const confirmedCell = formulaCell(
+      `=COUNTIFS(ZAPISY!X2:X;$A${rowNumber};ZAPISY!P2:P;"CONFIRMED")`,
+    );
+    const freeCell =
+      group.capacity === null
+        ? stringCell("-")
+        : formulaCell(`=MAX(0;F${rowNumber}-G${rowNumber})`);
+    const occupancyCell =
+      group.capacity === null
+        ? stringCell("")
+        : formulaCell(`=IF(F${rowNumber}=0;0;G${rowNumber}/F${rowNumber})`);
+
     return [
       stringCell(group.id),
       stringCell(group.name),
-      stringCell(group.offeringId),
+      stringCell(offeringNames.get(group.offeringId) ?? group.offeringId),
       stringCell(ageLabel),
       stringCell(termLabel || "do ustalenia"),
-      group.capacity === null ? stringCell("-") : numberCell(group.capacity),
-      formulaCell(`=COUNTIFS(ZAPISY!X2:X;A${rowNumber};ZAPISY!P2:P;"CONFIRMED")`),
-      group.capacity === null
-        ? stringCell("-")
-        : formulaCell(`=MAX(0;F${rowNumber}-G${rowNumber})`),
+      capacityCell,
+      confirmedCell,
+      freeCell,
+      occupancyCell,
     ];
   });
 
-  await client.batchUpdate([
+  const requests: Record<string, unknown>[] = [];
+  for (const rule of [...(dashboard.conditionalFormats ?? [])].sort(
+    (left, right) => right.index - left.index,
+  )) {
+    requests.push({
+      deleteConditionalFormatRule: { sheetId: dashboard.sheetId, index: rule.index },
+    });
+  }
+
+  requests.push(
+    {
+      unmergeCells: {
+        range: {
+          sheetId: dashboard.sheetId,
+          startRowIndex: 0,
+          endRowIndex: 30,
+          startColumnIndex: 0,
+          endColumnIndex: 9,
+        },
+      },
+    },
+    {
+      repeatCell: {
+        range: {
+          sheetId: dashboard.sheetId,
+          startRowIndex: 0,
+          endRowIndex: 1000,
+          startColumnIndex: 0,
+          endColumnIndex: 11,
+        },
+        cell: {
+          userEnteredFormat: {
+            backgroundColorStyle: { rgbColor: { red: 1, green: 1, blue: 1 } },
+            textFormat: {
+              foregroundColorStyle: { rgbColor: { red: 0.2, green: 0.2, blue: 0.2 } },
+              fontFamily: "Roboto",
+              fontSize: 10,
+              bold: false,
+            },
+            horizontalAlignment: "LEFT",
+            verticalAlignment: "MIDDLE",
+            wrapStrategy: "CLIP",
+          },
+        },
+        fields: "userEnteredFormat",
+      },
+    },
     {
       updateCells: {
         start: { sheetId: dashboard.sheetId, rowIndex: 0, columnIndex: 0 },
@@ -363,7 +486,7 @@ async function bootstrapDashboard(client: SheetsClient, dashboard: SheetMetadata
       updateSheetProperties: {
         properties: {
           sheetId: dashboard.sheetId,
-          gridProperties: { frozenRowCount: 12 },
+          gridProperties: { frozenRowCount: OPERATOR_DASHBOARD_LAYOUT.groupHeaderRow },
         },
         fields: "gridProperties.frozenRowCount",
       },
@@ -373,32 +496,130 @@ async function bootstrapDashboard(client: SheetsClient, dashboard: SheetMetadata
         range: {
           sheetId: dashboard.sheetId,
           dimension: "COLUMNS",
-          startIndex: 0,
-          endIndex: 1,
+          startIndex: OPERATOR_DASHBOARD_LAYOUT.hiddenGroupIdColumnIndex,
+          endIndex: OPERATOR_DASHBOARD_LAYOUT.hiddenGroupIdColumnIndex + 1,
         },
         properties: { hiddenByUser: true },
         fields: "hiddenByUser",
       },
     },
+  );
+
+  const columnWidths = [150, 210, 80, 190, 100, 115, 90, 100];
+  columnWidths.forEach((pixelSize, index) => {
+    requests.push({
+      updateDimensionProperties: {
+        range: {
+          sheetId: dashboard.sheetId,
+          dimension: "COLUMNS",
+          startIndex: index + 1,
+          endIndex: index + 2,
+        },
+        properties: { pixelSize },
+        fields: "pixelSize",
+      },
+    });
+  });
+
+  const merge = (rowIndex: number, startColumnIndex: number, endColumnIndex: number) => ({
+    mergeCells: {
+      range: {
+        sheetId: dashboard.sheetId,
+        startRowIndex: rowIndex,
+        endRowIndex: rowIndex + 1,
+        startColumnIndex,
+        endColumnIndex,
+      },
+      mergeType: "MERGE_ALL",
+    },
+  });
+  requests.push(merge(0, 1, 9), merge(1, 1, 9), merge(9, 1, 9));
+  for (const rowIndex of [3, 4, 6, 7]) {
+    for (const startColumnIndex of [1, 3, 5, 7]) {
+      requests.push(merge(rowIndex, startColumnIndex, startColumnIndex + 2));
+    }
+  }
+
+  requests.push(
     {
       repeatCell: {
         range: {
           sheetId: dashboard.sheetId,
           startRowIndex: 0,
           endRowIndex: 1,
-          startColumnIndex: 0,
-          endColumnIndex: 8,
+          startColumnIndex: 1,
+          endColumnIndex: 9,
         },
         cell: {
           userEnteredFormat: {
-            backgroundColorStyle: { rgbColor: { red: 0.161, green: 0.09, blue: 0.176 } },
+            backgroundColorStyle: { rgbColor: { red: 0.184, green: 0.122, blue: 0.184 } },
             textFormat: {
-              bold: true,
               foregroundColorStyle: { rgbColor: { red: 1, green: 1, blue: 1 } },
+              fontFamily: "Roboto",
+              fontSize: 16,
+              bold: true,
             },
           },
         },
-        fields: "userEnteredFormat.backgroundColorStyle,userEnteredFormat.textFormat",
+        fields: "userEnteredFormat",
+      },
+    },
+    {
+      repeatCell: {
+        range: {
+          sheetId: dashboard.sheetId,
+          startRowIndex: 1,
+          endRowIndex: 2,
+          startColumnIndex: 1,
+          endColumnIndex: 9,
+        },
+        cell: {
+          userEnteredFormat: {
+            backgroundColorStyle: { rgbColor: { red: 1, green: 0.976, blue: 0.949 } },
+          },
+        },
+        fields: "userEnteredFormat.backgroundColorStyle",
+      },
+    },
+    {
+      repeatCell: {
+        range: {
+          sheetId: dashboard.sheetId,
+          startRowIndex: 9,
+          endRowIndex: 10,
+          startColumnIndex: 1,
+          endColumnIndex: 9,
+        },
+        cell: {
+          userEnteredFormat: {
+            backgroundColorStyle: { rgbColor: { red: 0.184, green: 0.122, blue: 0.184 } },
+            textFormat: {
+              foregroundColorStyle: { rgbColor: { red: 1, green: 1, blue: 1 } },
+              bold: true,
+            },
+          },
+        },
+        fields: "userEnteredFormat",
+      },
+    },
+    {
+      repeatCell: {
+        range: {
+          sheetId: dashboard.sheetId,
+          startRowIndex: 10,
+          endRowIndex: 11,
+          startColumnIndex: 1,
+          endColumnIndex: 9,
+        },
+        cell: {
+          userEnteredFormat: {
+            backgroundColorStyle: { rgbColor: { red: 0.945, green: 0.839, blue: 0.776 } },
+            textFormat: { bold: true },
+            horizontalAlignment: "CENTER",
+            wrapStrategy: "WRAP",
+          },
+        },
+        fields: "userEnteredFormat",
       },
     },
     {
@@ -406,27 +627,85 @@ async function bootstrapDashboard(client: SheetsClient, dashboard: SheetMetadata
         range: {
           sheetId: dashboard.sheetId,
           startRowIndex: 11,
-          endRowIndex: 12,
-          startColumnIndex: 0,
-          endColumnIndex: 8,
+          endRowIndex: Math.max(11 + groups.length, 12),
+          startColumnIndex: 1,
+          endColumnIndex: 9,
+        },
+        cell: { userEnteredFormat: { verticalAlignment: "MIDDLE", wrapStrategy: "WRAP" } },
+        fields: "userEnteredFormat.verticalAlignment,userEnteredFormat.wrapStrategy",
+      },
+    },
+  );
+
+  const cardFormats = [
+    [3, 1, { red: 0.976, green: 0.91, blue: 0.937 }, { red: 0.541, green: 0.114, blue: 0.31 }],
+    [3, 3, { red: 0.91, green: 0.941, blue: 0.996 }, { red: 0.157, green: 0.333, blue: 0.651 }],
+    [3, 5, { red: 1, green: 0.957, blue: 0.839 }, { red: 0.478, green: 0.302, blue: 0 }],
+    [3, 7, { red: 0.89, green: 0.957, blue: 0.91 }, { red: 0.137, green: 0.424, blue: 0.231 }],
+    [6, 1, { red: 0.992, green: 0.91, blue: 0.91 }, { red: 0.608, green: 0.11, blue: 0.11 }],
+    [6, 3, { red: 0.925, green: 0.922, blue: 0.929 }, { red: 0.345, green: 0.376, blue: 0.416 }],
+    [6, 5, { red: 0.93, green: 0.96, blue: 0.95 }, { red: 0.08, green: 0.35, blue: 0.32 }],
+    [6, 7, { red: 1, green: 0.976, blue: 0.949 }, { red: 0.35, green: 0.25, blue: 0.2 }],
+  ] as const;
+  for (const [rowIndex, columnIndex, background, foreground] of cardFormats) {
+    requests.push({
+      repeatCell: {
+        range: {
+          sheetId: dashboard.sheetId,
+          startRowIndex: rowIndex,
+          endRowIndex: rowIndex + 2,
+          startColumnIndex: columnIndex,
+          endColumnIndex: columnIndex + 2,
         },
         cell: {
           userEnteredFormat: {
-            backgroundColorStyle: { rgbColor: { red: 0.945, green: 0.839, blue: 0.776 } },
-            textFormat: { bold: true },
+            backgroundColorStyle: { rgbColor: background },
+            textFormat: { foregroundColorStyle: { rgbColor: foreground }, bold: true },
+            horizontalAlignment: "CENTER",
+            verticalAlignment: "MIDDLE",
           },
         },
-        fields: "userEnteredFormat.backgroundColorStyle,userEnteredFormat.textFormat",
+        fields: "userEnteredFormat",
       },
-    },
-    {
+    });
+    requests.push({
+      repeatCell: {
+        range: {
+          sheetId: dashboard.sheetId,
+          startRowIndex: rowIndex + 1,
+          endRowIndex: rowIndex + 2,
+          startColumnIndex: columnIndex,
+          endColumnIndex: columnIndex + 2,
+        },
+        cell: { userEnteredFormat: { textFormat: { fontSize: 18, bold: true } } },
+        fields: "userEnteredFormat.textFormat",
+      },
+    });
+  }
+
+  if (groups.length > 0) {
+    requests.push({
+      repeatCell: {
+        range: {
+          sheetId: dashboard.sheetId,
+          startRowIndex: firstGroupRow - 1,
+          endRowIndex: lastGroupRow,
+          startColumnIndex: 8,
+          endColumnIndex: 9,
+        },
+        cell: { userEnteredFormat: { numberFormat: { type: "PERCENT", pattern: "0%" } } },
+        fields: "userEnteredFormat.numberFormat",
+      },
+    });
+    requests.push({
       addConditionalFormatRule: {
         index: 0,
         rule: {
           ranges: [
             {
               sheetId: dashboard.sheetId,
-              startRowIndex: 12,
+              startRowIndex: firstGroupRow - 1,
+              endRowIndex: lastGroupRow,
               startColumnIndex: 7,
               endColumnIndex: 8,
             },
@@ -434,7 +713,11 @@ async function bootstrapDashboard(client: SheetsClient, dashboard: SheetMetadata
           booleanRule: {
             condition: {
               type: "CUSTOM_FORMULA",
-              values: [{ userEnteredValue: '=AND($F13<>"-";$H13=0)' }],
+              values: [
+                {
+                  userEnteredValue: `=AND($F${firstGroupRow}<>"";$F${firstGroupRow}<>"-";$H${firstGroupRow}=0)`,
+                },
+              ],
             },
             format: {
               backgroundColorStyle: { rgbColor: { red: 0.992, green: 0.91, blue: 0.91 } },
@@ -443,8 +726,36 @@ async function bootstrapDashboard(client: SheetsClient, dashboard: SheetMetadata
           },
         },
       },
-    },
-  ]);
+    });
+    requests.push({
+      addConditionalFormatRule: {
+        index: 1,
+        rule: {
+          ranges: [
+            {
+              sheetId: dashboard.sheetId,
+              startRowIndex: firstGroupRow - 1,
+              endRowIndex: lastGroupRow,
+              startColumnIndex: 8,
+              endColumnIndex: 9,
+            },
+          ],
+          booleanRule: {
+            condition: {
+              type: "CUSTOM_FORMULA",
+              values: [{ userEnteredValue: `=$I${firstGroupRow}>=90%` }],
+            },
+            format: {
+              backgroundColorStyle: { rgbColor: { red: 1, green: 0.957, blue: 0.839 } },
+              textFormat: { bold: true },
+            },
+          },
+        },
+      },
+    });
+  }
+
+  await client.batchUpdate(requests);
 }
 
 export function buildAssignedGroupTableRequest(activeGroupIds: readonly string[]) {
@@ -479,7 +790,7 @@ export function buildAssignedGroupTableRequest(activeGroupIds: readonly string[]
 }
 
 async function readDashboardGroupIds(client: SheetsClient): Promise<readonly string[]> {
-  const rows = await client.getValues(`${OPERATOR_DASHBOARD_SHEET}!A13:A1000`);
+  const rows = await client.getValues(`${OPERATOR_DASHBOARD_SHEET}!A12:A1000`);
   return rows.map((row) => String(row[0] ?? "").trim()).filter((value) => value.length > 0);
 }
 
@@ -700,7 +1011,7 @@ export async function validateOperatorSheetExperience(client: SheetsClient): Pro
     }
   }
 
-  const dashboardHeader = await client.getValues(`${OPERATOR_DASHBOARD_SHEET}!A1:B1`);
+  const dashboardHeader = await client.getValues(`${OPERATOR_DASHBOARD_SHEET}!B1:I1`);
   if (dashboardHeader[0]?.[0] !== "PANEL OPERATORA - POZYTYWKA") {
     throw new Error("PANEL_OPERATORA dashboard content is missing.");
   }
