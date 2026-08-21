@@ -10,7 +10,6 @@ test("keeps the birth date calendar physically anchored to its field during scro
   await trigger.scrollIntoViewIfNeeded();
   await trigger.click();
 
-  const picker = page.locator('[data-slot="birth-date-picker"]');
   const calendar = page.locator('[data-slot="birth-date-calendar"]');
 
   await expect(calendar).toBeVisible();
