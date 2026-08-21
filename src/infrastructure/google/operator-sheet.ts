@@ -430,7 +430,9 @@ async function bootstrapDashboard(client: SheetsClient, dashboard: SheetMetadata
   ]);
 }
 
-function buildOperatorSheetRequests(sheet: SheetMetadata): readonly Record<string, unknown>[] {
+export function buildOperatorSheetRequests(
+  sheet: SheetMetadata,
+): readonly Record<string, unknown>[] {
   const requests: Record<string, unknown>[] = [];
 
   const registrationsTable = (sheet.tables ?? []).find(

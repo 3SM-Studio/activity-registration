@@ -123,9 +123,8 @@ function workflowIssues(
       confirmedWithoutGroup.push(registration.id);
     }
     if (
-      [REGISTRATION_STATUS.contacted, REGISTRATION_STATUS.confirmed].includes(
-        registration.status,
-      ) &&
+      (registration.status === REGISTRATION_STATUS.contacted ||
+        registration.status === REGISTRATION_STATUS.confirmed) &&
       !registration.contactedAt
     ) {
       contactedWithoutDate.push(registration.id);

@@ -22,7 +22,10 @@ async function main() {
       : undefined;
 
   console.info("Bootstrapping Google Sheet structure...");
-  await bootstrapSheetStructure(client, { hardProtectionEditorEmails });
+  await bootstrapSheetStructure(
+    client,
+    hardProtectionEditorEmails ? { hardProtectionEditorEmails } : {},
+  );
   await bootstrapSupportingSheetTables(client);
   await bootstrapOperatorSheetExperience(client);
 

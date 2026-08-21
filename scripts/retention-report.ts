@@ -76,12 +76,11 @@ async function main() {
   for (const { rowNumber, registration } of registrations) {
     const season = registration.seasonId ? seasonById.get(registration.seasonId) : undefined;
     const deadline = retentionDeadline(registration, season);
-    const retentionStatus = [
-      REGISTRATION_STATUS.rejected,
-      REGISTRATION_STATUS.cancelled,
-      REGISTRATION_STATUS.waitlisted,
-      REGISTRATION_STATUS.confirmed,
-    ].includes(registration.status);
+    const retentionStatus =
+      registration.status === REGISTRATION_STATUS.rejected ||
+      registration.status === REGISTRATION_STATUS.cancelled ||
+      registration.status === REGISTRATION_STATUS.waitlisted ||
+      registration.status === REGISTRATION_STATUS.confirmed;
 
     if (retentionStatus && !deadline) {
       missingRetentionAnchor.push({

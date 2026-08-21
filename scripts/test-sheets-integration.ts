@@ -85,10 +85,19 @@ async function main() {
   const settingsRepository = new GoogleSheetsSettingsRepository(client);
   const registrationRepository = new GoogleSheetsRegistrationRepository(client);
   const nowDate = new Date();
-  const [catalog, settings] = await Promise.all([
-    catalogRepository.getPublicCatalog(dateOnlyInPoland(nowDate)),
-    settingsRepository.getPublicSettings(),
+  const settings = await settingsRepository.getPublicSettings();
+  if (!settings.currentSeasonId) {
+    throw new Error("TEST settings have no CURRENT_SEASON_ID for the integration test.");
+  }
+
+  const [catalog, season] = await Promise.all([
+    catalogRepository.getPublicCatalog(dateOnlyInPoland(nowDate), settings.currentSeasonId),
+    catalogRepository.findSeasonById(settings.currentSeasonId),
   ]);
+  if (!season || !season.active) {
+    throw new Error("TEST CURRENT_SEASON_ID does not resolve to an active season.");
+  }
+
   const offering = catalog.offerings.find(
     (candidate) => candidate.intakeStatus === "OPEN" || candidate.intakeStatus === "WAITLIST_ONLY",
   );
@@ -102,15 +111,6 @@ async function main() {
   const city = catalog.cities.find((candidate) => candidate.id === offering.cityId);
   if (!city) {
     throw new Error("TEST catalog offering references a city that is not public.");
-  }
-
-  if (!settings.currentSeasonId) {
-    throw new Error("TEST settings have no CURRENT_SEASON_ID for the integration test.");
-  }
-
-  const season = await catalogRepository.findSeasonById(settings.currentSeasonId);
-  if (!season || !season.active) {
-    throw new Error("TEST CURRENT_SEASON_ID does not resolve to an active season.");
   }
 
   const now = nowDate.toISOString();
@@ -140,6 +140,7 @@ async function main() {
     assignedGroupId: null,
     contactedAt: null,
     confirmedAt: null,
+    closedAt: null,
     possibleDuplicateOf: null,
     notes: "synthetic integration test",
     privacyNoticeVersion: "integration-test",

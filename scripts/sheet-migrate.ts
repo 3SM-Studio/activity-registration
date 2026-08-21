@@ -400,7 +400,10 @@ async function main() {
     env.APP_ENV === "production" && env.GCP_SERVICE_ACCOUNT_EMAIL
       ? [env.GCP_SERVICE_ACCOUNT_EMAIL]
       : undefined;
-  await bootstrapSheetStructure(client, { hardProtectionEditorEmails });
+  await bootstrapSheetStructure(
+    client,
+    hardProtectionEditorEmails ? { hardProtectionEditorEmails } : {},
+  );
   console.info(
     `Sheet schema is at version ${SYSTEM_SCHEMA_VERSION}. Workflow status migration updated ${migratedStatuses} row(s).`,
   );
