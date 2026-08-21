@@ -1,5 +1,10 @@
 import { parseServerEnv } from "../src/lib/env";
 
+const PRODUCTION_SPREADSHEET_ID = "1DRcWvY8xfZDGjJLWOr8Ax1XsyBw4dWU8C6u9WGNvFfM";
+const PRODUCTION_SERVICE_ACCOUNT_EMAIL =
+  "activity-registration-prod@pozytywka-reg-3sm-260819.iam.gserviceaccount.com";
+const PRODUCTION_ADMIN_EMAIL = "pozytywka.boleslaw@gmail.com";
+
 const REQUIRED_PRODUCTION_KEYS = [
   "GOOGLE_SPREADSHEET_ID",
   "GCP_PROJECT_NUMBER",
@@ -17,6 +22,10 @@ const VALIDATION_FAILED_MESSAGE = "Production environment validation failed.";
 
 function missingRequiredKeys(raw: NodeJS.ProcessEnv): string[] {
   return REQUIRED_PRODUCTION_KEYS.filter((key) => !raw[key]?.trim());
+}
+
+function usesResendTestingDomain(value: string | undefined): boolean {
+  return value?.toLowerCase().includes("@resend.dev") ?? false;
 }
 
 function main(): void {
@@ -50,6 +59,26 @@ function main(): void {
     problems.push("ALLOW_TEST_SEED must be false");
   }
 
+  if (process.env.ALLOW_PRODUCTION_CATALOG_SEED === "true") {
+    problems.push("ALLOW_PRODUCTION_CATALOG_SEED must not be true during normal runtime");
+  }
+
+  if (env.GOOGLE_SPREADSHEET_ID !== PRODUCTION_SPREADSHEET_ID) {
+    problems.push("GOOGLE_SPREADSHEET_ID must point to the canonical PROD Sheet");
+  }
+
+  if (env.GCP_SERVICE_ACCOUNT_EMAIL !== PRODUCTION_SERVICE_ACCOUNT_EMAIL) {
+    problems.push("GCP_SERVICE_ACCOUNT_EMAIL must be the dedicated PROD service account");
+  }
+
+  if (usesResendTestingDomain(env.EMAIL_FROM)) {
+    problems.push("EMAIL_FROM must not use the resend.dev testing domain");
+  }
+
+  if (!env.REGISTRATION_ADMIN_EMAILS?.includes(PRODUCTION_ADMIN_EMAIL)) {
+    problems.push(`REGISTRATION_ADMIN_EMAILS must include ${PRODUCTION_ADMIN_EMAIL}`);
+  }
+
   if (problems.length > 0) {
     const details = problems.join("; ");
     throw new Error(`${INVALID_ENV_PREFIX} ${details}`);
@@ -57,9 +86,9 @@ function main(): void {
 
   const wifConfigured = Boolean(
     env.GCP_PROJECT_NUMBER &&
-    env.GCP_SERVICE_ACCOUNT_EMAIL &&
-    env.GCP_WORKLOAD_IDENTITY_POOL_ID &&
-    env.GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID,
+      env.GCP_SERVICE_ACCOUNT_EMAIL &&
+      env.GCP_WORKLOAD_IDENTITY_POOL_ID &&
+      env.GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID,
   );
   const adminRecipientCount = env.REGISTRATION_ADMIN_EMAILS?.length ?? 0;
 
@@ -71,9 +100,12 @@ function main(): void {
         dataBackend: env.DATA_BACKEND,
         emailProvider: env.EMAIL_PROVIDER,
         adminRecipientCount,
-        spreadsheetConfigured: Boolean(env.GOOGLE_SPREADSHEET_ID),
+        canonicalSpreadsheet: env.GOOGLE_SPREADSHEET_ID === PRODUCTION_SPREADSHEET_ID,
+        dedicatedProdIdentity: env.GCP_SERVICE_ACCOUNT_EMAIL === PRODUCTION_SERVICE_ACCOUNT_EMAIL,
         wifConfigured,
         testSeedDisabled: env.ALLOW_TEST_SEED === "false",
+        productionCatalogSeedDisabled: process.env.ALLOW_PRODUCTION_CATALOG_SEED !== "true",
+        resendTestingDomainRejected: !usesResendTestingDomain(env.EMAIL_FROM),
       },
       null,
       2,
