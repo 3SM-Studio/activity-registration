@@ -186,7 +186,7 @@ const serverEnvSchema = z
         context.addIssue({
           code: "custom",
           path: ["REGISTRATION_ADMIN_EMAILS"],
-          message: "Production admin recipients must include the approved production admin mailbox.",
+          message: "Production admin recipients must include the approved admin mailbox.",
         });
       }
     }
