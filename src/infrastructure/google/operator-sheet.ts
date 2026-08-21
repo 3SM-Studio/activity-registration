@@ -95,6 +95,7 @@ export const CONTACTED_WITHOUT_DATE_FORMULA = '=($P2="CONTACTED")*($Y2="")';
 export const CONFIRMED_WITHOUT_DATE_FORMULA = '=($P2="CONFIRMED")*($Z2="")';
 export const CLOSED_WITHOUT_DATE_FORMULA =
   '=OR(AND($P2="REJECTED";$AA2="");AND($P2="CANCELLED";$AA2=""))';
+export const POSSIBLE_DUPLICATE_COUNT_FORMULA = "=SUMPRODUCT(--(LEN(ZAPISY!AB2:AB)>0))";
 
 export const OWNED_OPERATOR_FORMAT_FORMULAS = new Set([
   ...REGISTRATION_STATUS_FORMATS.map(({ status }) => statusFormula(status)),
@@ -309,7 +310,7 @@ async function bootstrapDashboard(client: SheetsClient, dashboard: SheetMetadata
       stringCell("Zamknięte"),
       formulaCell('=COUNTIF(ZAPISY!P2:P;"REJECTED")+COUNTIF(ZAPISY!P2:P;"CANCELLED")'),
     ],
-    [stringCell("Możliwe duplikaty"), formulaCell('=COUNTIF(ZAPISY!AB2:AB;"<>")')],
+    [stringCell("Możliwe duplikaty"), formulaCell(POSSIBLE_DUPLICATE_COUNT_FORMULA)],
     [
       stringCell("Potwierdzone bez grupy"),
       formulaCell('=COUNTIFS(ZAPISY!P2:P;"CONFIRMED";ZAPISY!X2:X;"")'),
