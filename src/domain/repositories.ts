@@ -1,11 +1,21 @@
-import type { PublicCatalog, Season, SeasonId } from "@/domain/catalog";
+import type {
+  InternalGroup,
+  OfferingId,
+  PublicCatalog,
+  Season,
+  SeasonId,
+} from "@/domain/catalog";
 import type { RegistrationDuplicateCriteria } from "@/domain/registration-duplicates";
 import type { Registration, RequestId } from "@/domain/registration";
 import type { PublicSettings } from "@/domain/settings";
 
 export interface CatalogRepository {
-  getPublicCatalog(currentDate: string): Promise<PublicCatalog>;
+  getPublicCatalog(currentDate: string, seasonId: SeasonId): Promise<PublicCatalog>;
   findSeasonById(seasonId: SeasonId): Promise<Season | null>;
+  findGroupsForOffering(
+    seasonId: SeasonId,
+    offeringId: OfferingId,
+  ): Promise<readonly InternalGroup[]>;
 }
 
 export interface RegistrationRepository {
