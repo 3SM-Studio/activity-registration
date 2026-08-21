@@ -19,22 +19,18 @@ type RegistrationAdminEmailProps = Readonly<{
 }>;
 
 export function RegistrationAdminEmail({ registration }: RegistrationAdminEmailProps) {
-  const participantName = `${registration.participantFirstName} ${registration.participantLastName}`;
-  const guardian =
-    registration.guardianFirstName && registration.guardianLastName
-      ? `${registration.guardianFirstName} ${registration.guardianLastName}`
-      : null;
+  const participantKind = registration.guardianFirstName ? "osoba małoletnia" : "osoba pełnoletnia";
 
   return (
     <EmailLayout
-      preview={`Nowe zgłoszenie: ${participantName} - ${registration.offeringNameSnapshot}`}
+      preview={`Nowe zgłoszenie do obsługi - ${registration.offeringNameSnapshot}`}
       maxWidth={680}
     >
       <BrandHeader />
 
       <Hero
         eyebrow="Nowe zgłoszenie"
-        title={participantName}
+        title="Nowe zgłoszenie do obsługi"
         description={
           <>
             {registration.offeringNameSnapshot} · {registration.cityNameSnapshot}
@@ -44,53 +40,38 @@ export function RegistrationAdminEmail({ registration }: RegistrationAdminEmailP
 
       {registration.possibleDuplicateOf ? (
         <WarningNotice title="Możliwy duplikat wcześniejszego zgłoszenia">
-          Porównaj dane z wcześniejszym rekordem przed dalszą obsługą. Informacja o możliwym
-          duplikacie jest widoczna tylko administracyjnie.
+          Otwórz chroniony arkusz ZAPISY i porównaj rekordy przed dalszą obsługą.
         </WarningNotice>
       ) : null}
 
       <EmailCard>
-        <SectionTitle>Uczestnik</SectionTitle>
-        <DetailRow label="Imię i nazwisko" value={participantName} />
-        {registration.birthDate ? (
-          <DetailRow label="Data urodzenia" value={registration.birthDate} />
-        ) : null}
-        <DetailRow label="Wiek przy zapisie" value={`${registration.ageAtSubmission} lat`} last />
-      </EmailCard>
-
-      <EmailCard>
-        <SectionTitle>Zajęcia</SectionTitle>
+        <SectionTitle>Informacje operacyjne</SectionTitle>
         <DetailRow label="Oferta" value={registration.offeringNameSnapshot} />
         <DetailRow label="Miasto" value={registration.cityNameSnapshot} />
         {registration.seasonNameSnapshot ? (
           <DetailRow label="Sezon" value={registration.seasonNameSnapshot} />
         ) : null}
-        <DetailRow label="Status obsługi" value={registration.status} last />
-      </EmailCard>
-
-      <EmailCard>
-        <SectionTitle>Kontakt</SectionTitle>
-        {guardian ? <DetailRow label="Rodzic/opiekun" value={guardian} /> : null}
-        <DetailRow label="Telefon" value={registration.phone} />
-        <DetailRow label="E-mail" value={registration.email} last />
+        <DetailRow label="Uczestnik" value={participantKind} />
+        <DetailRow label="Wiek przy zapisie" value={`${registration.ageAtSubmission} lat`} />
+        <DetailRow label="Status" value={registration.status} last />
       </EmailCard>
 
       <EmailCard tone="muted">
-        <SectionTitle>Obsługa zgłoszenia</SectionTitle>
+        <SectionTitle>Co zrobić</SectionTitle>
         <StepRow
           number={1}
-          title="Zweryfikuj dane"
-          description="Sprawdź uczestnika, ofertę i ewentualny duplikat."
+          title="Otwórz chroniony arkusz ZAPISY"
+          description="Pełne dane kontaktowe i dane uczestnika pozostają wyłącznie w kontrolowanym rejestrze operacyjnym."
         />
         <StepRow
           number={2}
-          title="Dobierz grupę"
-          description="Przypisz właściwą grupę dopiero po potwierdzeniu realnych warunków zapisu."
+          title="Zweryfikuj zgłoszenie i dobierz grupę"
+          description="Sprawdź wiek, ofertę, dostępność miejsc i ewentualny duplikat."
         />
         <StepRow
           number={3}
-          title="Skontaktuj się i zaktualizuj status"
-          description="Po kontakcie zapisz aktualny status obsługi w arkuszu ZAPISY."
+          title="Skontaktuj się i zaktualizuj workflow"
+          description="Po obsłudze ustaw status, grupę i wymagane daty w arkuszu."
           last
         />
       </EmailCard>
@@ -109,7 +90,7 @@ export function RegistrationAdminEmail({ registration }: RegistrationAdminEmailP
             paddingTop: "14px",
           }}
         >
-          Odpowiedź na tę wiadomość trafi bezpośrednio na adres kontaktowy ze zgłoszenia.
+          Ta wiadomość celowo nie zawiera pełnych danych uczestnika ani danych kontaktowych.
         </Text>
       </EmailCard>
 
