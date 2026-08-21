@@ -1,9 +1,9 @@
-import { parseServerEnv } from "../src/lib/env";
-
-const PRODUCTION_SPREADSHEET_ID = "1DRcWvY8xfZDGjJLWOr8Ax1XsyBw4dWU8C6u9WGNvFfM";
-const PRODUCTION_SERVICE_ACCOUNT_EMAIL =
-  "activity-registration-prod@pozytywka-reg-3sm-260819.iam.gserviceaccount.com";
-const PRODUCTION_ADMIN_EMAIL = "pozytywka.boleslaw@gmail.com";
+import {
+  PRODUCTION_ADMIN_EMAIL,
+  PRODUCTION_SERVICE_ACCOUNT_EMAIL,
+  PRODUCTION_SPREADSHEET_ID,
+  parseServerEnv,
+} from "../src/lib/env";
 
 const REQUIRED_PRODUCTION_KEYS = [
   "GOOGLE_SPREADSHEET_ID",
