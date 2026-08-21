@@ -1,0 +1,48 @@
+name: Format hardening branch
+
+on:
+  push:
+    branches:
+      - fix/production-hardening-2026-08-21
+
+permissions:
+  contents: write
+
+concurrency:
+  group: format-hardening-branch
+  cancel-in-progress: true
+
+jobs:
+  format:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: fix/production-hardening-2026-08-21
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11.20.0
+          run_install: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24.19.0
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Format repository
+        run: pnpm format
+      - name: Commit canonical formatting
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo "No formatting changes required."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "style: format production hardening"
+          git push origin HEAD:fix/production-hardening-2026-08-21
