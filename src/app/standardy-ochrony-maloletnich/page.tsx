@@ -13,7 +13,7 @@ export default function ChildProtectionStandardsPage() {
     <DocumentShell
       eyebrow="Pracownia Twórcza Pozytywka · Iwona Pilarz"
       title="Standardy Ochrony Małoletnich"
-      meta="Wersja 1.0 · przyjęta 20 sierpnia 2026 r. · osoba odpowiedzialna: Iwona Pilarz · przegląd nie rzadziej niż raz na 2 lata oraz po poważnym zdarzeniu lub zmianie prawa albo procesu."
+      meta="Wersja 1.1 · przyjęta i obowiązująca od 21 sierpnia 2026 r. · osoba odpowiedzialna: Iwona Pilarz · przegląd nie rzadziej niż raz na 2 lata oraz po poważnym zdarzeniu lub zmianie prawa albo procesu."
     >
       <p className="not-typeset mt-6 rounded-2xl border border-border bg-muted/45 p-4 text-sm leading-6">
         Dla dzieci i młodzieży przygotowaliśmy także{" "}
@@ -48,7 +48,7 @@ export default function ChildProtectionStandardsPage() {
       </section>
 
       <section>
-        <h2>2. Odpowiedzialność</h2>
+        <h2>2. Odpowiedzialność i kanał zgłoszeń</h2>
         <p>Iwona Pilarz:</p>
         <ul>
           <li>odpowiada za wdrożenie i przegląd Standardów,</li>
@@ -60,6 +60,11 @@ export default function ChildProtectionStandardsPage() {
             kontroluje wykonanie procedury weryfikacji osób dopuszczanych do pracy z małoletnimi.
           </li>
         </ul>
+        <p>
+          Zgłoszenie dotyczące bezpieczeństwa małoletniego można przekazać Iwonie Pilarz osobiście,
+          telefonicznie pod numerem <a href="tel:+48602753268">602 753 268</a> lub e-mailem na{" "}
+          <a href="mailto:pozytywka.boleslaw@gmail.com">pozytywka.boleslaw@gmail.com</a>.
+        </p>
         <p>
           Jeżeli zgłoszenie dotyczy Iwony Pilarz lub zachodzi konflikt interesów, osoba zgłaszająca
           nie przekazuje sprawy osobie, której dotyczy podejrzenie. Zgłoszenie należy skierować
@@ -126,7 +131,44 @@ export default function ChildProtectionStandardsPage() {
       </section>
 
       <section>
-        <h2>5. Zachowania niedozwolone</h2>
+        <h2>5. Dzieci z niepełnosprawnościami i specjalnymi potrzebami edukacyjnymi</h2>
+        <p>
+          Pozytywka stosuje Standardy wobec każdego małoletniego i dostosowuje sposób komunikacji,
+          przyjęcia zgłoszenia, interwencji i udzielania wsparcia do indywidualnych możliwości
+          dziecka.
+        </p>
+        <p>W szczególności personel:</p>
+        <ul>
+          <li>
+            nie zakłada, że trudność w mowie, komunikacji, rozumieniu, poruszaniu się albo regulacji
+            emocji obniża wiarygodność zgłoszenia,
+          </li>
+          <li>
+            umożliwia dziecku przekazanie informacji w dostępny dla niego sposób i, gdy jest to
+            potrzebne, zapewnia więcej czasu oraz spokojne warunki rozmowy,
+          </li>
+          <li>
+            używa języka odpowiedniego do możliwości rozumienia dziecka i sprawdza, czy przekazana
+            informacja została zrozumiana,
+          </li>
+          <li>
+            uwzględnia potrzebę wsparcia komunikacyjnego lub pomocy zaufanej osoby, o ile nie
+            zagraża to bezpieczeństwu dziecka ani rzetelności interwencji,
+          </li>
+          <li>respektuje potrzeby sensoryczne, ruchowe i poznawcze dziecka,</li>
+          <li>
+            nie izoluje, nie zawstydza i nie karze dziecka za zachowania wynikające z jego
+            niepełnosprawności lub szczególnych potrzeb,
+          </li>
+          <li>
+            przy planie wsparcia uwzględnia realne bariery, które mogą utrudniać dziecku zgłoszenie
+            problemu, opuszczenie niebezpiecznej sytuacji lub uzyskanie pomocy.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>6. Zachowania niedozwolone</h2>
         <p>Niedozwolone są w szczególności:</p>
         <ul>
           <li>jakakolwiek przemoc fizyczna lub psychiczna,</li>
@@ -158,7 +200,7 @@ export default function ChildProtectionStandardsPage() {
       </section>
 
       <section>
-        <h2>6. Komunikacja elektroniczna</h2>
+        <h2>7. Komunikacja elektroniczna</h2>
         <ul>
           <li>
             komunikacja organizacyjna z małoletnimi powinna w miarę możliwości odbywać się przez
@@ -178,7 +220,7 @@ export default function ChildProtectionStandardsPage() {
       </section>
 
       <section>
-        <h2>7. Relacje między małoletnimi</h2>
+        <h2>8. Relacje między małoletnimi</h2>
         <p>Pozytywka nie akceptuje:</p>
         <ul>
           <li>przemocy fizycznej,</li>
@@ -197,7 +239,7 @@ export default function ChildProtectionStandardsPage() {
       </section>
 
       <section>
-        <h2>8. Urządzenia i Internet</h2>
+        <h2>9. Urządzenia i Internet</h2>
         <p>Jeżeli Pozytywka udostępnia dzieciom urządzenia lub dostęp do sieci:</p>
         <ul>
           <li>dostęp jest związany z celem zajęć,</li>
@@ -219,7 +261,7 @@ export default function ChildProtectionStandardsPage() {
       </section>
 
       <section>
-        <h2>9. Przyjęcie zgłoszenia o krzywdzeniu</h2>
+        <h2>10. Przyjęcie zgłoszenia o krzywdzeniu</h2>
         <p>Każde zgłoszenie traktuje się poważnie.</p>
         <p>Osoba przyjmująca zgłoszenie:</p>
         <ol>
@@ -242,20 +284,20 @@ export default function ChildProtectionStandardsPage() {
       </section>
 
       <section>
-        <h2>10. Interwencja</h2>
-        <h3>10.1 Bezpośrednie zagrożenie</h3>
+        <h2>11. Interwencja</h2>
+        <h3>11.1 Bezpośrednie zagrożenie</h3>
         <p>
           Jeżeli istnieje bezpośrednie zagrożenie życia, zdrowia lub bezpieczeństwa dziecka,
           priorytetem jest niezwłoczne zapewnienie bezpieczeństwa i kontakt z właściwymi służbami
           publicznymi.
         </p>
-        <h3>10.2 Podejrzenie przestępstwa</h3>
+        <h3>11.2 Podejrzenie przestępstwa</h3>
         <p>
           Jeżeli informacje wskazują na możliwość popełnienia przestępstwa na szkodę małoletniego,
           Pozytywka nie prowadzi dochodzenia na własną rękę. Osoba odpowiedzialna zabezpiecza
           podstawowe informacje i wykonuje wymagane zawiadomienie do właściwego organu.
         </p>
-        <h3>10.3 Zagrożenie dobra dziecka bez oczywistego podejrzenia przestępstwa</h3>
+        <h3>11.3 Zagrożenie dobra dziecka bez oczywistego podejrzenia przestępstwa</h3>
         <p>Pozytywka:</p>
         <ul>
           <li>ocenia pilność i potrzebę ochrony,</li>
@@ -267,7 +309,7 @@ export default function ChildProtectionStandardsPage() {
       </section>
 
       <section>
-        <h2>11. Zawiadomienia i odpowiedzialność</h2>
+        <h2>12. Zawiadomienia i odpowiedzialność</h2>
         <p>
           Iwona Pilarz odpowiada za koordynowanie wymaganych zawiadomień dotyczących podejrzenia
           przestępstwa na szkodę małoletniego, potrzeby zawiadomienia sądu opiekuńczego oraz innych
@@ -280,7 +322,7 @@ export default function ChildProtectionStandardsPage() {
       </section>
 
       <section>
-        <h2>12. Plan wsparcia dziecka</h2>
+        <h2>13. Plan wsparcia dziecka</h2>
         <p>
           Po ujawnieniu krzywdzenia lub poważnego zdarzenia, w zakresie adekwatnym do roli
           Pozytywki, ustala się:
@@ -297,7 +339,7 @@ export default function ChildProtectionStandardsPage() {
       </section>
 
       <section>
-        <h2>13. Dokumentowanie incydentów</h2>
+        <h2>14. Dokumentowanie incydentów</h2>
         <p>Dokumentacja incydentu zawiera tylko dane niezbędne do:</p>
         <ul>
           <li>ochrony dziecka,</li>
@@ -317,7 +359,7 @@ export default function ChildProtectionStandardsPage() {
       </section>
 
       <section>
-        <h2>14. Przygotowanie personelu</h2>
+        <h2>15. Przygotowanie personelu</h2>
         <p>Przed dopuszczeniem do samodzielnej pracy z małoletnimi personel:</p>
         <ul>
           <li>otrzymuje Standardy,</li>
@@ -337,16 +379,21 @@ export default function ChildProtectionStandardsPage() {
       </section>
 
       <section>
-        <h2>15. Udostępnianie Standardów</h2>
+        <h2>16. Udostępnianie Standardów</h2>
         <ul>
-          <li>pełna wersja jest dostępna personelowi i rodzicom lub opiekunom,</li>
+          <li>
+            pełna wersja jest dostępna personelowi, rodzicom, opiekunom i małoletnim na tej stronie,
+          </li>
           <li>
             skrócona wersja przyjazna małoletnim jest dostępna na stronie{" "}
             <Link href="/standardy-ochrony-maloletnich/dla-dzieci">
               Zasady bezpieczeństwa dla dzieci i młodzieży
-            </Link>{" "}
-            i powinna być również udostępniana w miejscu prowadzenia zajęć lub innym łatwo dostępnym
-            kanale,
+            </Link>
+            ,
+          </li>
+          <li>
+            obie wersje są wywieszane w widocznym miejscu w lokalu Pozytywki zgodnie z art. 22c ust.
+            7,
           </li>
           <li>
             na prośbę dziecka zasady wyjaśnia się językiem adekwatnym do wieku i możliwości
@@ -356,7 +403,7 @@ export default function ChildProtectionStandardsPage() {
       </section>
 
       <section>
-        <h2>16. Przegląd</h2>
+        <h2>17. Przegląd</h2>
         <p>Przegląd obejmuje:</p>
         <ul>
           <li>zgłoszone incydenty i wnioski bez ujawniania zbędnych danych,</li>
@@ -364,27 +411,33 @@ export default function ChildProtectionStandardsPage() {
           <li>zmiany personelu i działalności,</li>
           <li>adekwatność zasad Internetu i urządzeń,</li>
           <li>aktualność odpowiedzialności i kontaktów,</li>
+          <li>potrzeby dzieci z niepełnosprawnościami i specjalnymi potrzebami edukacyjnymi,</li>
           <li>zmiany prawa i oficjalnych wytycznych.</li>
         </ul>
-        <p>Zmiany są wersjonowane z datą wejścia w życie.</p>
+        <p>
+          Ocena jest dokonywana co najmniej raz na dwa lata. Wnioski z oceny są dokumentowane
+          pisemnie. Zmiany są wersjonowane z datą wejścia w życie.
+        </p>
       </section>
 
       <section>
-        <h2>17. Podstawa prawna i źródła</h2>
+        <h2>18. Podstawa prawna i źródła</h2>
         <ul>
           <li>
-            <a href="https://eli.gov.pl/eli/DU/2024/560/ogl" rel="noreferrer">
+            <a href="https://eli.gov.pl/eli/DU/2026/110/ogl" rel="noreferrer">
               ustawa z 13 maja 2016 r. o przeciwdziałaniu zagrożeniom przestępczością na tle
-              seksualnym i ochronie małoletnich, w szczególności art. 21, 22b i 22c
+              seksualnym i ochronie małoletnich, tekst jednolity Dz. U. z 2026 r. poz. 110 z późn.
+              zm., w szczególności art. 21, 22b i 22c
             </a>
             ,
           </li>
           <li>
             <a
-              href="https://www.gov.pl/web/sprawiedliwosc/jakie-obowiazki-wynikaja-z-art-21-ustawy-o-ochronie-maloletnich"
+              href="https://www.gov.pl/web/sprawiedliwosc/wytyczne-do-sod-dzieci-ze-specjalnymi-potrzebami-edukacyjnymi-w-tym-z-niepelnosprawnosciami"
               rel="noreferrer"
             >
-              wyjaśnienia Ministerstwa Sprawiedliwości dotyczące art. 21
+              wytyczne Ministerstwa Sprawiedliwości dotyczące dzieci ze specjalnymi potrzebami
+              edukacyjnymi, w tym z niepełnosprawnościami
             </a>
             ,
           </li>

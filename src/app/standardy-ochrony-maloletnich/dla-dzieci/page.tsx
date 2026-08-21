@@ -14,7 +14,7 @@ export default function ChildFriendlyStandardsPage() {
     <DocumentShell
       eyebrow="Pracownia Twórcza Pozytywka"
       title="Zasady bezpieczeństwa dla dzieci i młodzieży"
-      meta="Wersja skrócona Standardów Ochrony Małoletnich · przyjęta 20 sierpnia 2026 r."
+      meta="Wersja 1.1 · skrócona wersja Standardów Ochrony Małoletnich · przyjęta i obowiązująca od 21 sierpnia 2026 r."
       backHref="/standardy-ochrony-maloletnich"
       backLabel="Zobacz pełne Standardy"
     >
@@ -35,6 +35,19 @@ export default function ChildFriendlyStandardsPage() {
           <li>publikować Twojego wizerunku bez odpowiedniej zgody,</li>
           <li>ignorować sytuacji, w której ktoś Cię krzywdzi.</li>
         </ul>
+      </section>
+
+      <section>
+        <h2>Twoje potrzeby mają znaczenie</h2>
+        <p>
+          Jeśli masz niepełnosprawność, specjalne potrzeby edukacyjne albo potrzebujesz innego
+          sposobu komunikacji, zasady bezpieczeństwa nadal dotyczą Cię w pełni.
+        </p>
+        <p>
+          Możesz poprosić o prostsze wyjaśnienie, więcej czasu, spokojniejsze miejsce rozmowy albo
+          inny dostępny sposób przekazania informacji. Osoba dorosła powinna dostosować sposób
+          rozmowy i pomocy do Twoich potrzeb, bez zawstydzania i bez ignorowania zgłoszenia.
+        </p>
       </section>
 
       <section>
@@ -69,6 +82,11 @@ export default function ChildFriendlyStandardsPage() {
           <li>innej zaufanej osobie dorosłej.</li>
         </ul>
         <p>
+          Do Iwony Pilarz możesz też napisać na{" "}
+          <a href="mailto:pozytywka.boleslaw@gmail.com">pozytywka.boleslaw@gmail.com</a> albo
+          zadzwonić pod numer <a href="tel:+48602753268">602 753 268</a>.
+        </p>
+        <p>
           Możesz powiedzieć to własnymi słowami. Nie musisz znać nazwy tego, co się wydarzyło, ani
           mieć dowodów, żeby poprosić o pomoc.
         </p>
@@ -98,6 +116,10 @@ export default function ChildFriendlyStandardsPage() {
         <p>
           To, że zgłaszasz coś niepokojącego, nie oznacza, że robisz komuś problem. Mówienie o
           sytuacji, która Cię martwi, jest właściwe.
+        </p>
+        <p>
+          Pełna i skrócona wersja Standardów są również udostępniane w widocznym miejscu w lokalu
+          Pozytywki.
         </p>
         <p className="not-typeset mt-5 rounded-2xl border border-border bg-muted/45 p-4 text-sm leading-6">
           <Link

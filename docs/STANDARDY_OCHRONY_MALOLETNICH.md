@@ -2,8 +2,9 @@
 
 Pracownia Twórcza Pozytywka. Iwona Pilarz
 
-Wersja: 1.0
-Data przyjęcia: 2026-08-20
+Wersja: 1.1
+Data przyjęcia: 2026-08-21
+Data wejścia w życie: 2026-08-21
 Osoba odpowiedzialna za Standardy: Iwona Pilarz
 Przegląd: nie rzadziej niż raz na 2 lata oraz po poważnym zdarzeniu lub zmianie prawa/procesu
 
@@ -21,7 +22,7 @@ Celem jest:
 
 Standardy są niezależne od publicznego systemu zapisów. Dokumentacja incydentów, rejestry sprawdzeń i informacje z KRK nie są przechowywane w `ZAPISY`.
 
-## 2. Odpowiedzialność
+## 2. Odpowiedzialność i kanał zgłoszeń
 
 Iwona Pilarz:
 
@@ -31,6 +32,8 @@ Iwona Pilarz:
 - koordynuje interwencje i dokumentowanie zdarzeń,
 - odpowiada za wymagane zawiadomienia do właściwych instytucji,
 - kontroluje wykonanie procedury weryfikacji osób dopuszczanych do pracy z małoletnimi.
+
+Zgłoszenie dotyczące bezpieczeństwa małoletniego można przekazać Iwonie Pilarz osobiście, telefonicznie pod numerem `602 753 268` lub e-mailem na `pozytywka.boleslaw@gmail.com`.
 
 Jeżeli zgłoszenie dotyczy Iwony Pilarz lub zachodzi konflikt interesów, osoba zgłaszająca nie przekazuje sprawy osobie, której dotyczy podejrzenie. Zgłoszenie należy skierować bezpośrednio do właściwego organu publicznego odpowiedniego do charakteru zagrożenia, a dokumentację wewnętrzną zabezpiecza osoba nieobjęta podejrzeniem upoważniona do tego zadania.
 
@@ -60,7 +63,21 @@ Personel:
 - stosuje kontakt fizyczny wyłącznie wtedy, gdy jest bezpieczny, adekwatny do zajęć i sytuacji oraz nie narusza godności dziecka,
 - prowadzi komunikację z uczestnikiem w sposób profesjonalny i możliwy do wyjaśnienia rodzicowi/opiekunowi.
 
-## 5. Zachowania niedozwolone
+## 5. Dzieci z niepełnosprawnościami i specjalnymi potrzebami edukacyjnymi
+
+Pozytywka stosuje Standardy wobec każdego małoletniego i dostosowuje sposób komunikacji, przyjęcia zgłoszenia, interwencji i udzielania wsparcia do indywidualnych możliwości dziecka.
+
+W szczególności personel:
+
+- nie zakłada, że trudność w mowie, komunikacji, rozumieniu, poruszaniu się albo regulacji emocji obniża wiarygodność zgłoszenia,
+- umożliwia dziecku przekazanie informacji w dostępny dla niego sposób i, gdy jest to potrzebne, zapewnia więcej czasu oraz spokojne warunki rozmowy,
+- używa języka odpowiedniego do możliwości rozumienia dziecka i sprawdza, czy przekazana informacja została zrozumiana,
+- uwzględnia potrzebę wsparcia komunikacyjnego lub pomocy zaufanej osoby, o ile nie zagraża to bezpieczeństwu dziecka ani rzetelności interwencji,
+- respektuje potrzeby sensoryczne, ruchowe i poznawcze dziecka,
+- nie izoluje, nie zawstydza i nie karze dziecka za zachowania wynikające z jego niepełnosprawności lub szczególnych potrzeb,
+- przy planie wsparcia uwzględnia realne bariery, które mogą utrudniać dziecku zgłoszenie problemu, opuszczenie niebezpiecznej sytuacji lub uzyskanie pomocy.
+
+## 6. Zachowania niedozwolone
 
 Niedozwolone są w szczególności:
 
@@ -75,7 +92,7 @@ Niedozwolone są w szczególności:
 - fotografowanie lub publikowanie wizerunku poza odrębnym, zgodnym z prawem procesem,
 - ujawnianie innym uczestnikom lub osobom postronnym prywatnych informacji o dziecku lub jego rodzinie.
 
-## 6. Komunikacja elektroniczna
+## 7. Komunikacja elektroniczna
 
 - komunikacja organizacyjna z małoletnimi powinna w miarę możliwości odbywać się przez kanał znany rodzicowi/opiekunowi,
 - wiadomości muszą mieć związek z działalnością Pozytywki,
@@ -83,7 +100,7 @@ Niedozwolone są w szczególności:
 - nie wymaga się od dziecka przesyłania prywatnych zdjęć lub materiałów niezwiązanych z zajęciami,
 - jeżeli uczestnik zgłasza zagrożenie w wiadomości, personel zachowuje treść w zakresie niezbędnym do interwencji i nie rozpowszechnia jej dalej bez potrzeby.
 
-## 7. Relacje między małoletnimi
+## 8. Relacje między małoletnimi
 
 Pozytywka nie akceptuje:
 
@@ -98,7 +115,7 @@ Pozytywka nie akceptuje:
 
 Personel reaguje możliwie wcześnie, zatrzymuje niebezpieczne zachowanie i oddziela działania ochronne od późniejszego wyjaśniania sytuacji.
 
-## 8. Urządzenia i Internet
+## 9. Urządzenia i Internet
 
 Jeżeli Pozytywka udostępnia dzieciom urządzenia lub dostęp do sieci:
 
@@ -110,7 +127,7 @@ Jeżeli Pozytywka udostępnia dzieciom urządzenia lub dostęp do sieci:
 
 Jeżeli Pozytywka nie zapewnia uczestnikom urządzeń lub sieci, zasady te stosuje się odpowiednio do incydentów ujawnionych podczas zajęć.
 
-## 9. Przyjęcie zgłoszenia o krzywdzeniu
+## 10. Przyjęcie zgłoszenia o krzywdzeniu
 
 Każde zgłoszenie traktuje się poważnie.
 
@@ -123,17 +140,17 @@ Osoba przyjmująca zgłoszenie:
 5. nie kontaktuje osoby podejrzewanej w sposób, który mógłby zwiększyć ryzyko dla dziecka lub utrudnić działania właściwych organów,
 6. niezwłocznie przekazuje sprawę osobie odpowiedzialnej za interwencję, chyba że konflikt interesów wymaga pominięcia tej osoby.
 
-## 10. Interwencja
+## 11. Interwencja
 
-### 10.1 Bezpośrednie zagrożenie
+### 11.1 Bezpośrednie zagrożenie
 
 Jeżeli istnieje bezpośrednie zagrożenie życia, zdrowia lub bezpieczeństwa dziecka, priorytetem jest niezwłoczne zapewnienie bezpieczeństwa i kontakt z właściwymi służbami publicznymi.
 
-### 10.2 Podejrzenie przestępstwa
+### 11.2 Podejrzenie przestępstwa
 
 Jeżeli informacje wskazują na możliwość popełnienia przestępstwa na szkodę małoletniego, Pozytywka nie prowadzi dochodzenia na własną rękę. Osoba odpowiedzialna zabezpiecza podstawowe informacje i wykonuje wymagane zawiadomienie do właściwego organu.
 
-### 10.3 Zagrożenie dobra dziecka bez oczywistego podejrzenia przestępstwa
+### 11.3 Zagrożenie dobra dziecka bez oczywistego podejrzenia przestępstwa
 
 Pozytywka:
 
@@ -143,13 +160,13 @@ Pozytywka:
 - kieruje sprawę do właściwej instytucji, gdy wymaga tego dobro dziecka lub prawo,
 - ustala prosty plan wsparcia i osobę odpowiedzialną za jego wykonanie.
 
-## 11. Zawiadomienia i odpowiedzialność
+## 12. Zawiadomienia i odpowiedzialność
 
 Iwona Pilarz odpowiada za koordynowanie wymaganych zawiadomień dotyczących podejrzenia przestępstwa na szkodę małoletniego, potrzeby zawiadomienia sądu opiekuńczego oraz innych działań wymaganych przepisami, o ile nie dotyczy jej konflikt interesów.
 
 Personel ma obowiązek niezwłocznie przekazać informację, a brak pewności co do kwalifikacji prawnej nie jest powodem do zignorowania zagrożenia.
 
-## 12. Plan wsparcia dziecka
+## 13. Plan wsparcia dziecka
 
 Po ujawnieniu krzywdzenia lub poważnego zdarzenia, w zakresie adekwatnym do roli Pozytywki, ustala się:
 
@@ -162,7 +179,7 @@ Po ujawnieniu krzywdzenia lub poważnego zdarzenia, w zakresie adekwatnym do rol
 
 Pozytywka nie zastępuje psychoterapii, pomocy społecznej ani organów ścigania.
 
-## 13. Dokumentowanie incydentów
+## 14. Dokumentowanie incydentów
 
 Dokumentacja incydentu zawiera tylko dane niezbędne do:
 
@@ -175,7 +192,7 @@ Dokumentacja jest przechowywana oddzielnie od rejestru zapisów, z ograniczonym 
 
 Przyjęta retencja wewnętrznej dokumentacji incydentu: 3 lata od zamknięcia sprawy, chyba że postępowanie, obowiązek prawny, zalecenie właściwego organu lub realna potrzeba ochrony dziecka uzasadnia dłuższy okres. Zakres przechowywanych informacji podlega okresowej minimalizacji.
 
-## 14. Przygotowanie personelu
+## 15. Przygotowanie personelu
 
 Przed dopuszczeniem do samodzielnej pracy z małoletnimi personel:
 
@@ -188,13 +205,14 @@ Przed dopuszczeniem do samodzielnej pracy z małoletnimi personel:
 
 Potwierdzenie zapoznania przechowuje się w dokumentacji personelu, nie w `ZAPISY`.
 
-## 15. Udostępnianie Standardów
+## 16. Udostępnianie Standardów
 
-- pełna wersja jest dostępna personelowi i rodzicom/opiekunom,
-- skrócona wersja przyjazna małoletnim jest dostępna w `docs/STANDARDY_OCHRONY_MALOLETNICH_SKROT.md` i powinna być udostępniana w miejscu prowadzenia zajęć lub innym łatwo dostępnym kanale,
+- pełna wersja jest dostępna personelowi, rodzicom/opiekunom i małoletnim na stronie `/standardy-ochrony-maloletnich`,
+- skrócona wersja przyjazna małoletnim jest dostępna na stronie `/standardy-ochrony-maloletnich/dla-dzieci`,
+- obie wersje są wywieszane w widocznym miejscu w lokalu Pozytywki zgodnie z art. 22c ust. 7,
 - na prośbę dziecka zasady wyjaśnia się językiem adekwatnym do wieku i możliwości rozumienia.
 
-## 16. Przegląd
+## 17. Przegląd
 
 Przegląd obejmuje:
 
@@ -203,12 +221,13 @@ Przegląd obejmuje:
 - zmiany personelu i działalności,
 - adekwatność zasad Internetu/urządzeń,
 - aktualność odpowiedzialności i kontaktów,
+- potrzeby dzieci z niepełnosprawnościami i specjalnymi potrzebami edukacyjnymi,
 - zmiany prawa i oficjalnych wytycznych.
 
-Zmiany są wersjonowane z datą wejścia w życie.
+Ocena jest dokonywana co najmniej raz na dwa lata. Wnioski z oceny są dokumentowane pisemnie. Zmiany są wersjonowane z datą wejścia w życie.
 
-## 17. Podstawa prawna i źródła
+## 18. Podstawa prawna i źródła
 
-- ustawa z 13 maja 2016 r. o przeciwdziałaniu zagrożeniom przestępczością na tle seksualnym i ochronie małoletnich, w szczególności art. 21, 22b i 22c: https://eli.gov.pl/eli/DU/2024/560/ogl
-- wyjaśnienia Ministerstwa Sprawiedliwości dotyczące art. 21: https://www.gov.pl/web/sprawiedliwosc/jakie-obowiazki-wynikaja-z-art-21-ustawy-o-ochronie-maloletnich
+- ustawa z 13 maja 2016 r. o przeciwdziałaniu zagrożeniom przestępczością na tle seksualnym i ochronie małoletnich, tekst jednolity Dz. U. z 2026 r. poz. 110 z późn. zm., w szczególności art. 21, 22b i 22c: https://eli.gov.pl/eli/DU/2026/110/ogl
+- wytyczne Ministerstwa Sprawiedliwości dotyczące dzieci ze specjalnymi potrzebami edukacyjnymi, w tym z niepełnosprawnościami: https://www.gov.pl/web/sprawiedliwosc/wytyczne-do-sod-dzieci-ze-specjalnymi-potrzebami-edukacyjnymi-w-tym-z-niepelnosprawnosciami
 - materiały Centrum Edukacji Artystycznej: https://www.gov.pl/web/cea/standardy-ochrony-maloletnich
