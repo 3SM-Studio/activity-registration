@@ -948,10 +948,36 @@ export async function bootstrapOperatorSheetExperience(client: SheetsClient): Pr
 
   const activeGroupIds = await readDashboardGroupIds(client);
   let metadata = await client.getSheetMetadata();
-  await client.batchUpdate([buildAssignedGroupTableRequest(activeGroupIds)]);
+  let sheet = registrationSheet(metadata);
+  const registrationTable = (sheet.tables ?? []).find(
+    (table) => table.tableId === REGISTRATIONS_TABLE_ID,
+  );
+  if (!registrationTable) {
+    throw new Error("Missing native Rejestracje table for operator console bootstrap.");
+  }
 
-  metadata = await client.getSheetMetadata();
-  await client.batchUpdate(buildOperatorSheetRequests(registrationSheet(metadata)));
+  const expectedGroupIds = [...new Set(activeGroupIds.map((id) => id.trim()).filter(Boolean))];
+  const groupColumn = registrationTable.columnProperties.find(
+    (column) => column.columnIndex === GROUP_COLUMN_INDEX,
+  );
+  const actualGroupIds = new Set(groupColumn?.dropdownValues ?? []);
+  const groupDropdownIsCurrent =
+    expectedGroupIds.length === 0
+      ? groupColumn?.columnType === "TEXT"
+      : groupColumn?.columnType === "DROPDOWN" &&
+        actualGroupIds.size === expectedGroupIds.length &&
+        expectedGroupIds.every((id) => actualGroupIds.has(id));
+
+  // Google Sheets does not expose native dropdown option colors through the public API.
+  // Avoid rewriting table columnProperties when the group dropdown is already current,
+  // so operator-configured chip colors on STATUS survive routine bootstrap runs.
+  if (!groupDropdownIsCurrent) {
+    await client.batchUpdate([buildAssignedGroupTableRequest(activeGroupIds)]);
+    metadata = await client.getSheetMetadata();
+    sheet = registrationSheet(metadata);
+  }
+
+  await client.batchUpdate(buildOperatorSheetRequests(sheet));
 }
 
 export async function validateOperatorSheetExperience(client: SheetsClient): Promise<void> {
