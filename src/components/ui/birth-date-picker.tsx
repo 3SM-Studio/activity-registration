@@ -3,7 +3,7 @@
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
 import { CalendarIcon } from "lucide-react";
-import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -35,7 +35,6 @@ type BirthDatePickerProps = Readonly<{
 
 type CalendarPlacement = "top" | "bottom";
 
-const CALENDAR_GAP_PX = 8;
 const VIEWPORT_PADDING_PX = 12;
 
 export function BirthDatePicker({
@@ -60,13 +59,16 @@ export function BirthDatePicker({
   const earliest = new Date(today.getFullYear() - 120, today.getMonth(), today.getDate());
   const initialMonth = selected ?? new Date(today.getFullYear() - 10, 0, 1);
 
-  const close = (restoreFocus = false) => {
-    setOpen(false);
-    onBlur?.();
-    if (restoreFocus) {
-      requestAnimationFrame(() => triggerRef.current?.focus());
-    }
-  };
+  const close = useCallback(
+    (restoreFocus = false) => {
+      setOpen(false);
+      onBlur?.();
+      if (restoreFocus) {
+        requestAnimationFrame(() => triggerRef.current?.focus());
+      }
+    },
+    [onBlur],
+  );
 
   useLayoutEffect(() => {
     if (!open) {
@@ -115,13 +117,13 @@ export function BirthDatePicker({
       document.removeEventListener("pointerdown", handlePointerDown, true);
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [open]);
+  }, [close, open]);
 
   useEffect(() => {
     if (disabled && open) {
       close();
     }
-  }, [disabled, open]);
+  }, [close, disabled, open]);
 
   return (
     <div ref={rootRef} data-slot="birth-date-picker" className="relative w-full">
