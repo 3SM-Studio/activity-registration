@@ -4,6 +4,7 @@ import {
   asCityId,
   asOfferingId,
   type City,
+  type InternalGroup,
   type PublicOffering,
 } from "@/domain/catalog";
 import { offeringAcceptsRegistration } from "@/domain/offering-intake";
@@ -96,6 +97,10 @@ function unavailableOfferingMessage(offering: PublicOffering): string {
   return "Zapisy na wybrane zajęcia są obecnie zamknięte.";
 }
 
+function groupSupportsAge(group: InternalGroup, age: number): boolean {
+  return (group.ageMin === null || age >= group.ageMin) && (group.ageMax === null || age <= group.ageMax);
+}
+
 export async function submitRegistration(
   rawInput: unknown,
   dependencies: SubmitRegistrationDependencies,
@@ -166,10 +171,7 @@ export async function submitRegistration(
   }
 
   const currentDate = dateOnlyInPoland(nowDate);
-  const [catalog, settings] = await Promise.all([
-    dependencies.repositories.catalog.getPublicCatalog(currentDate),
-    dependencies.repositories.settings.getPublicSettings(),
-  ]);
+  const settings = await dependencies.repositories.settings.getPublicSettings();
 
   if (!settings.registrationsOpen) {
     throw new ApplicationError(
@@ -203,6 +205,7 @@ export async function submitRegistration(
     );
   }
 
+  const catalog = await dependencies.repositories.catalog.getPublicCatalog(currentDate, season.id);
   const city = findCity(catalog.cities, normalized.cityId);
   if (!city) {
     throw new ApplicationError(
@@ -233,9 +236,24 @@ export async function submitRegistration(
     );
   }
 
+  const offeringId = asOfferingId(offering.id);
+  const ageAtSeasonStart = calculateAgeAtDate(normalized.birthDate, season.startDate);
+  const groups = await dependencies.repositories.catalog.findGroupsForOffering(season.id, offeringId);
+  const hasEligibleGroup = groups.some((group) => groupSupportsAge(group, ageAtSeasonStart));
+
+  if (!hasEligibleGroup) {
+    const message = "Dla wieku uczestnika nie ma obecnie aktywnej grupy w wybranych zajęciach.";
+    throw new ApplicationError(APPLICATION_ERROR_CODE.participantAgeNotEligible, message, {
+      fieldErrors: {
+        birthDate: [message],
+        offeringId: ["Wybierz zajęcia dostępne dla wieku uczestnika."],
+      },
+    });
+  }
+
   const duplicateCriteria: RegistrationDuplicateCriteria = {
     seasonId: season.id,
-    offeringId: asOfferingId(offering.id),
+    offeringId,
     cityId: asCityId(city.id),
     participantFirstName: normalized.participantFirstName,
     participantLastName: normalized.participantLastName,
@@ -263,7 +281,7 @@ export async function submitRegistration(
     submittedAt: now,
     seasonId: season.id,
     seasonNameSnapshot: season.name,
-    offeringId: asOfferingId(offering.id),
+    offeringId,
     cityIdSnapshot: asCityId(city.id),
     cityNameSnapshot: city.name,
     offeringNameSnapshot: offering.name,
@@ -275,10 +293,14 @@ export async function submitRegistration(
     guardianLastName: normalized.guardianLastName,
     phone: normalized.phone,
     email: normalized.email,
-    status: REGISTRATION_STATUS.new,
+    status:
+      offering.intakeStatus === PUBLIC_INTAKE_STATUS.waitlistOnly
+        ? REGISTRATION_STATUS.waitlisted
+        : REGISTRATION_STATUS.new,
     assignedGroupId: null,
     contactedAt: null,
     confirmedAt: null,
+    closedAt: null,
     possibleDuplicateOf: possibleDuplicateRegistrationId(duplicateMatch),
     notes: "",
     privacyNoticeVersion: settings.privacyNoticeVersion ?? "unconfigured",
