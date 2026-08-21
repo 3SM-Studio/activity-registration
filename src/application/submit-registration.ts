@@ -98,7 +98,9 @@ function unavailableOfferingMessage(offering: PublicOffering): string {
 }
 
 function groupSupportsAge(group: InternalGroup, age: number): boolean {
-  return (group.ageMin === null || age >= group.ageMin) && (group.ageMax === null || age <= group.ageMax);
+  return (
+    (group.ageMin === null || age >= group.ageMin) && (group.ageMax === null || age <= group.ageMax)
+  );
 }
 
 export async function submitRegistration(
@@ -238,7 +240,10 @@ export async function submitRegistration(
 
   const offeringId = asOfferingId(offering.id);
   const ageAtSeasonStart = calculateAgeAtDate(normalized.birthDate, season.startDate);
-  const groups = await dependencies.repositories.catalog.findGroupsForOffering(season.id, offeringId);
+  const groups = await dependencies.repositories.catalog.findGroupsForOffering(
+    season.id,
+    offeringId,
+  );
   const hasEligibleGroup = groups.some((group) => groupSupportsAge(group, ageAtSeasonStart));
 
   if (!hasEligibleGroup) {

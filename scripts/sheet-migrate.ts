@@ -100,10 +100,9 @@ async function setSystemSchemaVersion(client: SheetsClient, version: number): Pr
     throw new Error(`Missing ${SETTING_KEY.systemSchemaVersion} location.`);
   }
 
-  await client.updateValues(
-    `${SHEET.settings}!${columnLetter(versionValueColumn)}${rowNumber}`,
-    [[String(version)]],
-  );
+  await client.updateValues(`${SHEET.settings}!${columnLetter(versionValueColumn)}${rowNumber}`, [
+    [String(version)],
+  ]);
 }
 
 async function migrateV1ToV2(client: SheetsClient): Promise<void> {
@@ -336,10 +335,9 @@ async function migrateRegistrationWorkflowStatuses(client: SheetsClient): Promis
       continue;
     }
 
-    await client.updateValues(
-      `${SHEET.registrations}!${columnLetter(statusColumn)}${offset + 2}`,
-      [[nextStatus]],
-    );
+    await client.updateValues(`${SHEET.registrations}!${columnLetter(statusColumn)}${offset + 2}`, [
+      [nextStatus],
+    ]);
     migratedCount += 1;
   }
 

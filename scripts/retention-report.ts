@@ -61,7 +61,9 @@ async function main() {
   const seasonById = new Map(seasons.map((season) => [season.id, season]));
   const today = dateOnlyInPoland(new Date());
 
-  const missingRetentionAnchor: Array<Readonly<{ rowNumber: number; registrationId: string; status: string }>> = [];
+  const missingRetentionAnchor: Array<
+    Readonly<{ rowNumber: number; registrationId: string; status: string }>
+  > = [];
   const due: Array<
     Readonly<{
       rowNumber: number;

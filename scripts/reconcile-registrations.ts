@@ -75,7 +75,9 @@ function businessDuplicatePairs(registrations: readonly Registration[]) {
 }
 
 function groupSupportsAge(group: InternalGroup, age: number): boolean {
-  return (group.ageMin === null || age >= group.ageMin) && (group.ageMax === null || age <= group.ageMax);
+  return (
+    (group.ageMin === null || age >= group.ageMin) && (group.ageMax === null || age <= group.ageMax)
+  );
 }
 
 function timestampOrderInvalid(left: string | null, right: string | null): boolean {
@@ -121,7 +123,9 @@ function workflowIssues(
       confirmedWithoutGroup.push(registration.id);
     }
     if (
-      [REGISTRATION_STATUS.contacted, REGISTRATION_STATUS.confirmed].includes(registration.status) &&
+      [REGISTRATION_STATUS.contacted, REGISTRATION_STATUS.confirmed].includes(
+        registration.status,
+      ) &&
       !registration.contactedAt
     ) {
       contactedWithoutDate.push(registration.id);

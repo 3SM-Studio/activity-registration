@@ -328,7 +328,9 @@ async function bootstrapDashboard(client: SheetsClient, dashboard: SheetMetadata
       stringCell(termLabel || "do ustalenia"),
       group.capacity === null ? stringCell("-") : numberCell(group.capacity),
       formulaCell(`=COUNTIFS(ZAPISY!X2:X;A${rowNumber};ZAPISY!P2:P;"CONFIRMED")`),
-      group.capacity === null ? stringCell("-") : formulaCell(`=MAX(0;F${rowNumber}-G${rowNumber})`),
+      group.capacity === null
+        ? stringCell("-")
+        : formulaCell(`=MAX(0;F${rowNumber}-G${rowNumber})`),
     ];
   });
 
@@ -363,11 +365,20 @@ async function bootstrapDashboard(client: SheetsClient, dashboard: SheetMetadata
     },
     {
       repeatCell: {
-        range: { sheetId: dashboard.sheetId, startRowIndex: 0, endRowIndex: 1, startColumnIndex: 0, endColumnIndex: 8 },
+        range: {
+          sheetId: dashboard.sheetId,
+          startRowIndex: 0,
+          endRowIndex: 1,
+          startColumnIndex: 0,
+          endColumnIndex: 8,
+        },
         cell: {
           userEnteredFormat: {
             backgroundColorStyle: { rgbColor: { red: 0.161, green: 0.09, blue: 0.176 } },
-            textFormat: { bold: true, foregroundColorStyle: { rgbColor: { red: 1, green: 1, blue: 1 } } },
+            textFormat: {
+              bold: true,
+              foregroundColorStyle: { rgbColor: { red: 1, green: 1, blue: 1 } },
+            },
           },
         },
         fields: "userEnteredFormat.backgroundColorStyle,userEnteredFormat.textFormat",
@@ -375,7 +386,13 @@ async function bootstrapDashboard(client: SheetsClient, dashboard: SheetMetadata
     },
     {
       repeatCell: {
-        range: { sheetId: dashboard.sheetId, startRowIndex: 11, endRowIndex: 12, startColumnIndex: 0, endColumnIndex: 8 },
+        range: {
+          sheetId: dashboard.sheetId,
+          startRowIndex: 11,
+          endRowIndex: 12,
+          startColumnIndex: 0,
+          endColumnIndex: 8,
+        },
         cell: {
           userEnteredFormat: {
             backgroundColorStyle: { rgbColor: { red: 0.945, green: 0.839, blue: 0.776 } },
@@ -454,7 +471,8 @@ function buildOperatorSheetRequests(sheet: SheetMetadata): readonly Record<strin
           type: "ONE_OF_RANGE",
           values: [{ userEnteredValue: "GRUPY!A2:A1000" }],
         },
-        inputMessage: "Wybierz aktywną grupę z zakładki GRUPY. Po przypisaniu sprawdź zgodność wieku i oferty.",
+        inputMessage:
+          "Wybierz aktywną grupę z zakładki GRUPY. Po przypisaniu sprawdź zgodność wieku i oferty.",
         strict: true,
         showCustomUi: true,
       },
@@ -470,10 +488,16 @@ function buildOperatorSheetRequests(sheet: SheetMetadata): readonly Record<strin
       REGISTRATION_HEADERS.indexOf("NOTES"),
       "Tylko neutralne informacje organizacyjne. Nie wpisuj danych zdrowotnych, diagnoz, leków, niepełnosprawności, religii, konfliktów rodzinnych ani innych danych wrażliwych.",
     ],
-    [GROUP_COLUMN_INDEX, "Wybierz ID grupy z listy. Grupa musi pasować do sezonu, oferty i wieku uczestnika."],
+    [
+      GROUP_COLUMN_INDEX,
+      "Wybierz ID grupy z listy. Grupa musi pasować do sezonu, oferty i wieku uczestnika.",
+    ],
     [CONTACTED_COLUMN_INDEX, "Data pierwszego skutecznego kontaktu z uczestnikiem lub opiekunem."],
     [CONFIRMED_COLUMN_INDEX, "Data potwierdzenia miejsca."],
-    [CLOSED_COLUMN_INDEX, "Wymagane przy REJECTED i CANCELLED. Od tej daty liczona jest retencja zamkniętego zgłoszenia."],
+    [
+      CLOSED_COLUMN_INDEX,
+      "Wymagane przy REJECTED i CANCELLED. Od tej daty liczona jest retencja zamkniętego zgłoszenia.",
+    ],
   ]);
 
   for (const [columnIndex, note] of headerNotes) {

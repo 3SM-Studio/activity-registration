@@ -133,10 +133,7 @@ describe("GoogleSheetsCatalogRepository", () => {
     const repository = new GoogleSheetsCatalogRepository(createClient());
 
     await expect(
-      repository.findGroupsForOffering(
-        asSeasonId("test-2026-2027"),
-        asOfferingId("gdynia-hiphop"),
-      ),
+      repository.findGroupsForOffering(asSeasonId("test-2026-2027"), asOfferingId("gdynia-hiphop")),
     ).resolves.toHaveLength(2);
   });
 

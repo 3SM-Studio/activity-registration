@@ -39,7 +39,10 @@ function publicAgeRanges(groups: readonly InternalGroup[]): readonly PublicAgeRa
       seen.add(key);
       return true;
     })
-    .sort((left, right) => (left.min ?? -1) - (right.min ?? -1) || (left.max ?? 999) - (right.max ?? 999));
+    .sort(
+      (left, right) =>
+        (left.min ?? -1) - (right.min ?? -1) || (left.max ?? 999) - (right.max ?? 999),
+    );
 }
 
 export class GoogleSheetsCatalogRepository implements CatalogRepository {
@@ -97,16 +100,23 @@ export class GoogleSheetsCatalogRepository implements CatalogRepository {
   }
 
   async getPublicCatalog(currentDate: string, seasonId: SeasonId): Promise<PublicCatalog> {
-    const [{ cities, offerings }, groups] = await Promise.all([this.readCatalog(), this.readGroups()]);
+    const [{ cities, offerings }, groups] = await Promise.all([
+      this.readCatalog(),
+      this.readGroups(),
+    ]);
 
     const activeCities = cities.filter((city) => city.active);
     const activeCityIds = new Set(activeCities.map((city) => city.id));
-    const activeSeasonGroups = groups.filter((group) => group.active && group.seasonId === seasonId);
+    const activeSeasonGroups = groups.filter(
+      (group) => group.active && group.seasonId === seasonId,
+    );
 
     const publicOfferings = offerings
       .filter((offering) => offering.active && activeCityIds.has(offering.cityId))
       .flatMap((offering) => {
-        const offeringGroups = activeSeasonGroups.filter((group) => group.offeringId === offering.id);
+        const offeringGroups = activeSeasonGroups.filter(
+          (group) => group.offeringId === offering.id,
+        );
         if (offeringGroups.length === 0) {
           return [];
         }

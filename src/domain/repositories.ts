@@ -1,10 +1,4 @@
-import type {
-  InternalGroup,
-  OfferingId,
-  PublicCatalog,
-  Season,
-  SeasonId,
-} from "@/domain/catalog";
+import type { InternalGroup, OfferingId, PublicCatalog, Season, SeasonId } from "@/domain/catalog";
 import type { RegistrationDuplicateCriteria } from "@/domain/registration-duplicates";
 import type { Registration, RequestId } from "@/domain/registration";
 import type { PublicSettings } from "@/domain/settings";
