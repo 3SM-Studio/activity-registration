@@ -50,10 +50,7 @@ test("keeps the birth date calendar physically anchored to its field during scro
 
       const triggerDelta = triggerNode.getBoundingClientRect().top - beforeTriggerTop;
       const calendarDelta = calendarNode.getBoundingClientRect().top - beforeCalendarTop;
-      maximumFrameDrift = Math.max(
-        maximumFrameDrift,
-        Math.abs(triggerDelta - calendarDelta),
-      );
+      maximumFrameDrift = Math.max(maximumFrameDrift, Math.abs(triggerDelta - calendarDelta));
     }
 
     const finalTriggerRect = triggerNode.getBoundingClientRect();
