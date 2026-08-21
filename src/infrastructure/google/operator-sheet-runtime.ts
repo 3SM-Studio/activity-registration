@@ -1,4 +1,5 @@
 import { REGISTRATION_STATUS } from "@/domain/registration";
+import { cell, createHeaderMap } from "@/infrastructure/google/header-map";
 import {
   bootstrapOperatorSheetExperience,
   buildOperatorSheetRequests,
@@ -9,13 +10,20 @@ import {
   POSSIBLE_DUPLICATE_FORMULA,
   REGISTRATION_OPERATOR_FILTER_VIEW_TITLES,
 } from "@/infrastructure/google/operator-sheet";
+import { parseGroupRow } from "@/infrastructure/google/parsers";
 import {
+  GROUP_HEADERS,
   OPERATOR_DASHBOARD_SHEET,
   REGISTRATION_HEADERS,
   REGISTRATIONS_TABLE_ID,
+  SETTING_KEY,
+  SETTINGS_HEADERS,
   SHEET,
 } from "@/infrastructure/google/sheets-contracts";
-import type { SheetMetadata, SheetsClient } from "@/infrastructure/google/sheets-client";
+import type {
+  SheetMetadata,
+  SheetsClient,
+} from "@/infrastructure/google/sheets-client";
 
 const STATUS_COLUMN_INDEX = REGISTRATION_HEADERS.indexOf("STATUS");
 const GROUP_COLUMN_INDEX = REGISTRATION_HEADERS.indexOf("ASSIGNED_GROUP_ID");
@@ -68,6 +76,35 @@ async function readDashboardGroupIds(client: SheetsClient): Promise<readonly str
   return rows.map((row) => String(row[0] ?? "").trim()).filter((value) => value.length > 0);
 }
 
+async function readExpectedActiveGroupIds(client: SheetsClient): Promise<readonly string[]> {
+  const [groupRows, settingsRows] = await Promise.all([
+    client.getValues(`${SHEET.groups}!A:ZZ`, { valueRenderOption: "UNFORMATTED_VALUE" }),
+    client.getValues(`${SHEET.settings}!A:ZZ`),
+  ]);
+  const groupHeaders = createHeaderMap(groupRows[0] ?? [], GROUP_HEADERS);
+  const settingsHeaders = createHeaderMap(settingsRows[0] ?? [], SETTINGS_HEADERS);
+  const currentSeasonRows = settingsRows
+    .slice(1)
+    .filter((row) => cell(row, settingsHeaders, "KEY") === SETTING_KEY.currentSeasonId);
+
+  if (currentSeasonRows.length !== 1) {
+    throw new Error("Operator schema validation requires exactly one CURRENT_SEASON_ID setting.");
+  }
+
+  const currentSeasonId = cell(currentSeasonRows[0] ?? [], settingsHeaders, "VALUE");
+  if (!currentSeasonId) {
+    throw new Error("Operator schema validation requires CURRENT_SEASON_ID.");
+  }
+
+  return groupRows
+    .slice(1)
+    .map((row) => parseGroupRow(row, groupHeaders))
+    .filter((group) => group !== null)
+    .filter((group) => group.active && group.seasonId === currentSeasonId)
+    .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, "pl"))
+    .map((group) => group.id);
+}
+
 /**
  * Runtime-safe operator requests deliberately exclude the legacy status
  * conditional formats. Native Google Table dropdown chips own STATUS
@@ -96,7 +133,12 @@ export async function refreshOperatorSheetRuntime(client: SheetsClient): Promise
   const sheet = registrationSheet(metadata);
   const requests = buildSafeOperatorRuntimeRequests(sheet);
 
-  if (requests.some((request) => "updateTable" in request || "addTable" in request || "deleteTable" in request)) {
+  if (
+    requests.some(
+      (request) =>
+        "updateTable" in request || "addTable" in request || "deleteTable" in request,
+    )
+  ) {
     throw new Error("Safe operator runtime attempted a structural Table mutation.");
   }
 
@@ -146,7 +188,17 @@ export async function validateSafeOperatorSheetExperience(client: SheetsClient):
     throw new Error("ZAPISY STATUS dropdown is stale. Run sheet:schema-sync.");
   }
 
-  const activeGroupIds = await readDashboardGroupIds(client);
+  const [expectedGroupIds, dashboardGroupIds] = await Promise.all([
+    readExpectedActiveGroupIds(client),
+    readDashboardGroupIds(client),
+  ]);
+  if (
+    expectedGroupIds.length !== dashboardGroupIds.length ||
+    expectedGroupIds.some((groupId, index) => dashboardGroupIds[index] !== groupId)
+  ) {
+    throw new Error("PANEL_OPERATORA group catalog is stale. Run sheet:schema-sync.");
+  }
+
   const groupColumn = registrationTable.columnProperties.find(
     (column) => column.columnIndex === GROUP_COLUMN_INDEX,
   );
@@ -154,7 +206,7 @@ export async function validateSafeOperatorSheetExperience(client: SheetsClient):
     throw new Error("ZAPISY ASSIGNED_GROUP_ID table column is missing. Run sheet:schema-sync.");
   }
 
-  if (activeGroupIds.length === 0) {
+  if (expectedGroupIds.length === 0) {
     if (groupColumn.columnType !== "TEXT") {
       throw new Error("ZAPISY ASSIGNED_GROUP_ID schema is stale. Run sheet:schema-sync.");
     }
@@ -163,11 +215,11 @@ export async function validateSafeOperatorSheetExperience(client: SheetsClient):
       throw new Error("ZAPISY ASSIGNED_GROUP_ID is not a native dropdown. Run sheet:schema-sync.");
     }
 
-    const expectedGroupIds = new Set(activeGroupIds);
-    const actualGroupIds = new Set(groupColumn.dropdownValues ?? []);
+    const expectedGroups = new Set(expectedGroupIds);
+    const actualGroups = new Set(groupColumn.dropdownValues ?? []);
     if (
-      actualGroupIds.size !== expectedGroupIds.size ||
-      [...expectedGroupIds].some((groupId) => !actualGroupIds.has(groupId))
+      actualGroups.size !== expectedGroups.size ||
+      [...expectedGroups].some((groupId) => !actualGroups.has(groupId))
     ) {
       throw new Error("ZAPISY ASSIGNED_GROUP_ID dropdown is stale. Run sheet:schema-sync.");
     }
