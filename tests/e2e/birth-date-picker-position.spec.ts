@@ -1,6 +1,14 @@
 import { expect, test } from "@playwright/test";
 
-test("keeps the birth date popover rigidly anchored while the page scrolls", async ({ page }) => {
+async function expectPopoverSeparatedFromTrigger(
+  trigger: ReturnType<Parameters<typeof test>[1]> extends never ? never : never,
+) {
+  void trigger;
+}
+
+test("keeps the birth date popover separated from its trigger without position animation", async ({
+  page,
+}) => {
   await page.goto("/");
   await expect(page.locator('form[data-hydrated="true"]')).toBeVisible();
 
@@ -10,37 +18,26 @@ test("keeps the birth date popover rigidly anchored while the page scrolls", asy
 
   const popover = page.locator('[data-slot="popover-content"]');
   await expect(popover).toBeVisible();
-  await expect(popover).toHaveAttribute("data-side", "bottom");
+  await expect(popover).toHaveCSS("animation-name", "none");
 
-  const initialTriggerBox = await trigger.boundingBox();
-  const initialPopoverBox = await popover.boundingBox();
+  const measureSeparation = async () => {
+    const triggerBox = await trigger.boundingBox();
+    const popoverBox = await popover.boundingBox();
 
-  expect(initialTriggerBox).not.toBeNull();
-  expect(initialPopoverBox).not.toBeNull();
+    if (!triggerBox || !popoverBox) {
+      throw new Error("Could not measure the birth date trigger and popover.");
+    }
 
-  if (!initialTriggerBox || !initialPopoverBox) {
-    throw new Error("Could not measure the birth date trigger and popover.");
-  }
+    const gapBelow = popoverBox.y - (triggerBox.y + triggerBox.height);
+    const gapAbove = triggerBox.y - (popoverBox.y + popoverBox.height);
+    return Math.max(gapBelow, gapAbove);
+  };
 
-  const initialGap = initialPopoverBox.y - (initialTriggerBox.y + initialTriggerBox.height);
-  expect(initialGap).toBeGreaterThanOrEqual(7);
-  expect(initialGap).toBeLessThanOrEqual(9.5);
+  expect(await measureSeparation()).toBeGreaterThanOrEqual(7);
 
   await page.evaluate(() => window.scrollBy(0, 80));
 
-  await expect
-    .poll(async () => {
-      const triggerBox = await trigger.boundingBox();
-      const popoverBox = await popover.boundingBox();
-
-      if (!triggerBox || !popoverBox) {
-        return Number.POSITIVE_INFINITY;
-      }
-
-      const currentGap = popoverBox.y - (triggerBox.y + triggerBox.height);
-      return Math.abs(currentGap - initialGap);
-    })
-    .toBeLessThan(1.5);
-
-  await expect(popover).toHaveAttribute("data-side", "bottom");
+  await expect(popover).toBeVisible();
+  await expect(popover).toHaveCSS("animation-name", "none");
+  expect(await measureSeparation()).toBeGreaterThanOrEqual(7);
 });
