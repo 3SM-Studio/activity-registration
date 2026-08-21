@@ -10,7 +10,9 @@ export default function LoadingPage() {
           <div className="h-5 w-3/5 animate-pulse rounded bg-neutral-200" />
         </div>
         <Card>
-          <p className="text-sm text-neutral-600">Ładowanie formularza...</p>
+          <div className="typeset typeset-pozytywka">
+            <p className="text-neutral-600">Ładowanie formularza...</p>
+          </div>
         </Card>
       </div>
     </main>
