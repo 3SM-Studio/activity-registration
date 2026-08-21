@@ -11,7 +11,7 @@
     "build": "next build",
     "start": "next start",
     "format": "prettier --write .",
-    "format:check": "prettier --write src/infrastructure/google/operator-sheet-runtime.ts tests/unit/operator-sheet-runtime.test.ts && git diff -- src/infrastructure/google/operator-sheet-runtime.ts tests/unit/operator-sheet-runtime.test.ts && false",
+    "format:check": "prettier --check .",
     "lint": "eslint .",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest",
