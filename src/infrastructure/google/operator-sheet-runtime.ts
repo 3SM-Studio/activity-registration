@@ -20,18 +20,13 @@ import {
   SETTINGS_HEADERS,
   SHEET,
 } from "@/infrastructure/google/sheets-contracts";
-import type {
-  SheetMetadata,
-  SheetsClient,
-} from "@/infrastructure/google/sheets-client";
+import type { SheetMetadata, SheetsClient } from "@/infrastructure/google/sheets-client";
 
 const STATUS_COLUMN_INDEX = REGISTRATION_HEADERS.indexOf("STATUS");
 const GROUP_COLUMN_INDEX = REGISTRATION_HEADERS.indexOf("ASSIGNED_GROUP_ID");
 
 if (STATUS_COLUMN_INDEX < 0 || GROUP_COLUMN_INDEX < 0) {
-  throw new Error(
-    "Registration operator columns are missing from the sheet contract.",
-  );
+  throw new Error("Registration operator columns are missing from the sheet contract.");
 }
 
 function statusFormula(status: string): string {
@@ -60,12 +55,8 @@ type AddConditionalFormatRequest = {
   };
 };
 
-function addedConditionalFormatFormula(
-  request: Record<string, unknown>,
-): string | null {
-  const add = request.addConditionalFormatRule as
-    | AddConditionalFormatRequest
-    | undefined;
+function addedConditionalFormatFormula(request: Record<string, unknown>): string | null {
+  const add = request.addConditionalFormatRule as AddConditionalFormatRequest | undefined;
   return add?.rule?.booleanRule?.condition?.values?.[0]?.userEnteredValue ?? null;
 }
 
@@ -77,18 +68,12 @@ function registrationSheet(metadata: readonly SheetMetadata[]): SheetMetadata {
   return sheet;
 }
 
-async function readDashboardGroupIds(
-  client: SheetsClient,
-): Promise<readonly string[]> {
+async function readDashboardGroupIds(client: SheetsClient): Promise<readonly string[]> {
   const rows = await client.getValues(`${OPERATOR_DASHBOARD_SHEET}!A12:A1000`);
-  return rows
-    .map((row) => String(row[0] ?? "").trim())
-    .filter((value) => value.length > 0);
+  return rows.map((row) => String(row[0] ?? "").trim()).filter((value) => value.length > 0);
 }
 
-async function readExpectedActiveGroupIds(
-  client: SheetsClient,
-): Promise<readonly string[]> {
+async function readExpectedActiveGroupIds(client: SheetsClient): Promise<readonly string[]> {
   const [groupRows, settingsRows] = await Promise.all([
     client.getValues(`${SHEET.groups}!A:ZZ`, {
       valueRenderOption: "UNFORMATTED_VALUE",
@@ -102,9 +87,7 @@ async function readExpectedActiveGroupIds(
     .filter((row) => cell(row, settingsHeaders, "KEY") === SETTING_KEY.currentSeasonId);
 
   if (currentSeasonRows.length !== 1) {
-    throw new Error(
-      "Operator schema validation requires exactly one CURRENT_SEASON_ID setting.",
-    );
+    throw new Error("Operator schema validation requires exactly one CURRENT_SEASON_ID setting.");
   }
 
   const currentSeasonId = cell(currentSeasonRows[0] ?? [], settingsHeaders, "VALUE");
@@ -144,19 +127,14 @@ export function buildSafeOperatorRuntimeRequests(
  * colors. It does not rebuild Tables, protections, dropdown values or the
  * dashboard structure.
  */
-export async function refreshOperatorSheetRuntime(
-  client: SheetsClient,
-): Promise<void> {
+export async function refreshOperatorSheetRuntime(client: SheetsClient): Promise<void> {
   const metadata = await client.getSheetMetadata();
   const sheet = registrationSheet(metadata);
   const requests = buildSafeOperatorRuntimeRequests(sheet);
 
   if (
     requests.some(
-      (request) =>
-        "updateTable" in request ||
-        "addTable" in request ||
-        "deleteTable" in request,
+      (request) => "updateTable" in request || "addTable" in request || "deleteTable" in request,
     )
   ) {
     throw new Error("Safe operator runtime attempted a structural Table mutation.");
@@ -176,14 +154,10 @@ export async function syncOperatorSheetSchema(client: SheetsClient): Promise<voi
   await refreshOperatorSheetRuntime(client);
 }
 
-export async function validateSafeOperatorSheetExperience(
-  client: SheetsClient,
-): Promise<void> {
+export async function validateSafeOperatorSheetExperience(client: SheetsClient): Promise<void> {
   const metadata = await client.getSheetMetadata();
   const sheet = registrationSheet(metadata);
-  const dashboard = metadata.find(
-    (candidate) => candidate.title === OPERATOR_DASHBOARD_SHEET,
-  );
+  const dashboard = metadata.find((candidate) => candidate.title === OPERATOR_DASHBOARD_SHEET);
 
   if (!dashboard) {
     throw new Error("PANEL_OPERATORA sheet is missing. Run sheet:schema-sync.");
@@ -227,9 +201,7 @@ export async function validateSafeOperatorSheetExperience(
     (column) => column.columnIndex === GROUP_COLUMN_INDEX,
   );
   if (!groupColumn) {
-    throw new Error(
-      "ZAPISY ASSIGNED_GROUP_ID table column is missing. Run sheet:schema-sync.",
-    );
+    throw new Error("ZAPISY ASSIGNED_GROUP_ID table column is missing. Run sheet:schema-sync.");
   }
 
   if (expectedGroupIds.length === 0) {
@@ -238,9 +210,7 @@ export async function validateSafeOperatorSheetExperience(
     }
   } else {
     if (groupColumn.columnType !== "DROPDOWN") {
-      throw new Error(
-        "ZAPISY ASSIGNED_GROUP_ID is not a native dropdown. Run sheet:schema-sync.",
-      );
+      throw new Error("ZAPISY ASSIGNED_GROUP_ID is not a native dropdown. Run sheet:schema-sync.");
     }
 
     const expectedGroups = new Set(expectedGroupIds);
@@ -249,9 +219,7 @@ export async function validateSafeOperatorSheetExperience(
       actualGroups.size !== expectedGroups.size ||
       [...expectedGroups].some((groupId) => !actualGroups.has(groupId))
     ) {
-      throw new Error(
-        "ZAPISY ASSIGNED_GROUP_ID dropdown is stale. Run sheet:schema-sync.",
-      );
+      throw new Error("ZAPISY ASSIGNED_GROUP_ID dropdown is stale. Run sheet:schema-sync.");
     }
   }
 
@@ -282,9 +250,7 @@ export async function validateSafeOperatorSheetExperience(
     }
   }
 
-  const dashboardHeader = await client.getValues(
-    `${OPERATOR_DASHBOARD_SHEET}!B1:I1`,
-  );
+  const dashboardHeader = await client.getValues(`${OPERATOR_DASHBOARD_SHEET}!B1:I1`);
   if (dashboardHeader[0]?.[0] !== "PANEL OPERATORA - POZYTYWKA") {
     throw new Error("PANEL_OPERATORA dashboard content is missing. Run sheet:schema-sync.");
   }
