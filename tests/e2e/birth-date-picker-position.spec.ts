@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("keeps the birth date popover separated from its trigger without position animation", async ({
+test("keeps the birth date calendar physically anchored to its field during scroll", async ({
   page,
 }) => {
   await page.goto("/");
@@ -10,28 +10,69 @@ test("keeps the birth date popover separated from its trigger without position a
   await trigger.scrollIntoViewIfNeeded();
   await trigger.click();
 
-  const popover = page.locator('[data-slot="popover-content"]');
-  await expect(popover).toBeVisible();
-  await expect(popover).toHaveCSS("animation-name", "none");
+  const picker = page.locator('[data-slot="birth-date-picker"]');
+  const calendar = page.locator('[data-slot="birth-date-calendar"]');
 
-  const measureSeparation = async () => {
-    const triggerBox = await trigger.boundingBox();
-    const popoverBox = await popover.boundingBox();
+  await expect(calendar).toBeVisible();
+  await expect(calendar).toHaveCSS("position", "absolute");
+  await expect(calendar).toHaveAttribute("data-placement", /^(top|bottom)$/);
 
-    if (!triggerBox || !popoverBox) {
-      throw new Error("Could not measure the birth date trigger and popover.");
+  expect(
+    await calendar.evaluate((node) => node.parentElement?.getAttribute("data-slot") ?? null),
+  ).toBe("birth-date-picker");
+
+  const result = await page.evaluate(() => {
+    const pickerNode = document.querySelector<HTMLElement>('[data-slot="birth-date-picker"]');
+    const triggerNode = pickerNode?.querySelector<HTMLElement>("button");
+    const calendarNode = pickerNode?.querySelector<HTMLElement>('[data-slot="birth-date-calendar"]');
+
+    if (!pickerNode || !triggerNode || !calendarNode) {
+      throw new Error("Could not find the birth date picker geometry nodes.");
     }
 
-    const gapBelow = popoverBox.y - (triggerBox.y + triggerBox.height);
-    const gapAbove = triggerBox.y - (popoverBox.y + popoverBox.height);
-    return Math.max(gapBelow, gapAbove);
-  };
+    const placement = calendarNode.dataset.placement;
+    const initialTriggerRect = triggerNode.getBoundingClientRect();
+    const initialCalendarRect = calendarNode.getBoundingClientRect();
+    const initialGap =
+      placement === "top"
+        ? initialTriggerRect.top - initialCalendarRect.bottom
+        : initialCalendarRect.top - initialTriggerRect.bottom;
 
-  expect(await measureSeparation()).toBeGreaterThanOrEqual(7);
+    let maximumFrameDrift = 0;
 
-  await page.evaluate(() => window.scrollBy(0, 80));
+    for (let index = 0; index < 8; index += 1) {
+      const beforeTriggerTop = triggerNode.getBoundingClientRect().top;
+      const beforeCalendarTop = calendarNode.getBoundingClientRect().top;
 
-  await expect(popover).toBeVisible();
-  await expect(popover).toHaveCSS("animation-name", "none");
-  expect(await measureSeparation()).toBeGreaterThanOrEqual(7);
+      window.scrollBy(0, 12);
+
+      const triggerDelta = triggerNode.getBoundingClientRect().top - beforeTriggerTop;
+      const calendarDelta = calendarNode.getBoundingClientRect().top - beforeCalendarTop;
+      maximumFrameDrift = Math.max(maximumFrameDrift, Math.abs(triggerDelta - calendarDelta));
+    }
+
+    const finalTriggerRect = triggerNode.getBoundingClientRect();
+    const finalCalendarRect = calendarNode.getBoundingClientRect();
+    const finalGap =
+      placement === "top"
+        ? finalTriggerRect.top - finalCalendarRect.bottom
+        : finalCalendarRect.top - finalTriggerRect.bottom;
+
+    return {
+      initialGap,
+      finalGap,
+      maximumFrameDrift,
+    };
+  });
+
+  expect(result.initialGap).toBeGreaterThanOrEqual(7);
+  expect(result.initialGap).toBeLessThanOrEqual(9);
+  expect(result.finalGap).toBeGreaterThanOrEqual(7);
+  expect(result.finalGap).toBeLessThanOrEqual(9);
+  expect(result.maximumFrameDrift).toBeLessThan(0.5);
+
+  await expect(calendar).toBeVisible();
+
+  await page.mouse.click(4, 4);
+  await expect(calendar).toBeHidden();
 });
