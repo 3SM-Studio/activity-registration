@@ -257,7 +257,7 @@ async function ensureRegistrationTable(
     {
       updateTable: {
         table: tableDefinition,
-        fields: "name,range,rowsProperties,columnProperties",
+        fields: "name,range,rowsProperties",
       },
     },
   ]);
