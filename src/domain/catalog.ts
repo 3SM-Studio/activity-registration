@@ -80,6 +80,15 @@ export type InternalGroup = Readonly<{
   sortOrder: number;
 }>;
 
+export type PublicAgeRange = Readonly<{
+  min: number | null;
+  max: number | null;
+}>;
+
+export function ageRangeContains(age: number, range: PublicAgeRange): boolean {
+  return (range.min === null || age >= range.min) && (range.max === null || age <= range.max);
+}
+
 export type PublicCity = Pick<City, "id" | "name" | "sortOrder">;
 export type PublicOffering = Pick<
   ClassOffering,
@@ -87,7 +96,12 @@ export type PublicOffering = Pick<
 > &
   Readonly<{
     intakeStatus: PublicIntakeStatus;
+    ageRanges: readonly PublicAgeRange[];
   }>;
+
+export function offeringSupportsAge(offering: PublicOffering, age: number): boolean {
+  return offering.ageRanges.some((range) => ageRangeContains(age, range));
+}
 
 export type PublicCatalog = Readonly<{
   cities: readonly PublicCity[];
