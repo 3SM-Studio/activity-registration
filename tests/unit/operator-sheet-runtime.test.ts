@@ -24,7 +24,9 @@ function sheet(overrides: Partial<SheetMetadata> = {}): SheetMetadata {
   };
 }
 
-function addedConditionalFormatFormulas(requests: readonly Record<string, unknown>[]) {
+function addedConditionalFormatFormulas(
+  requests: readonly Record<string, unknown>[],
+) {
   return requests.flatMap((request) => {
     const add = request.addConditionalFormatRule as
       | {
@@ -35,7 +37,8 @@ function addedConditionalFormatFormulas(requests: readonly Record<string, unknow
           };
         }
       | undefined;
-    const formula = add?.rule?.booleanRule?.condition?.values?.[0]?.userEnteredValue;
+    const formula =
+      add?.rule?.booleanRule?.condition?.values?.[0]?.userEnteredValue;
     return formula ? [formula] : [];
   });
 }
@@ -46,13 +49,18 @@ describe("safe operator Sheets runtime", () => {
 
     expect(
       requests.some(
-        (request) => "updateTable" in request || "addTable" in request || "deleteTable" in request,
+        (request) =>
+          "updateTable" in request ||
+          "addTable" in request ||
+          "deleteTable" in request,
       ),
     ).toBe(false);
   });
 
   it("keeps warning formats but does not add whole-cell STATUS colors", () => {
-    const formulas = new Set(addedConditionalFormatFormulas(buildSafeOperatorRuntimeRequests(sheet())));
+    const formulas = new Set(
+      addedConditionalFormatFormulas(buildSafeOperatorRuntimeRequests(sheet())),
+    );
 
     for (const formula of REQUIRED_OPERATOR_WARNING_FORMULAS) {
       expect(formulas.has(formula)).toBe(true);
