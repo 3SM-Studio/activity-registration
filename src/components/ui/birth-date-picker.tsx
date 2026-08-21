@@ -3,11 +3,10 @@
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
 import { CalendarIcon } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { formatIsoDateOnly, parseIsoDateOnly } from "@/lib/birth-date";
 import { cn } from "@/lib/cn";
 
@@ -34,6 +33,11 @@ type BirthDatePickerProps = Readonly<{
   disabled?: boolean;
 }>;
 
+type CalendarPlacement = "top" | "bottom";
+
+const CALENDAR_GAP_PX = 8;
+const VIEWPORT_PADDING_PX = 12;
+
 export function BirthDatePicker({
   id,
   value,
@@ -44,69 +48,150 @@ export function BirthDatePicker({
   disabled = false,
 }: BirthDatePickerProps) {
   const [open, setOpen] = useState(false);
+  const [placement, setPlacement] = useState<CalendarPlacement>("bottom");
+  const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const generatedPanelId = useId();
+  const panelId = `${id ?? "birth-date"}-${generatedPanelId}-calendar`;
+
   const selected = isoToLocalDate(value);
   const today = new Date();
   const earliest = new Date(today.getFullYear() - 120, today.getMonth(), today.getDate());
   const initialMonth = selected ?? new Date(today.getFullYear() - 10, 0, 1);
 
+  const close = (restoreFocus = false) => {
+    setOpen(false);
+    onBlur?.();
+    if (restoreFocus) {
+      requestAnimationFrame(() => triggerRef.current?.focus());
+    }
+  };
+
+  useLayoutEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const trigger = triggerRef.current;
+    const panel = panelRef.current;
+    if (!trigger || !panel) {
+      return;
+    }
+
+    const triggerRect = trigger.getBoundingClientRect();
+    const panelRect = panel.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - triggerRect.bottom - VIEWPORT_PADDING_PX;
+    const spaceAbove = triggerRect.top - VIEWPORT_PADDING_PX;
+
+    setPlacement(panelRect.height > spaceBelow && spaceAbove > spaceBelow ? "top" : "bottom");
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node) || rootRef.current?.contains(target)) {
+        return;
+      }
+      close();
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") {
+        return;
+      }
+      event.preventDefault();
+      close(true);
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown, true);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown, true);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (disabled && open) {
+      close();
+    }
+  }, [disabled, open]);
+
   return (
-    <Popover
-      open={open}
-      onOpenChange={(nextOpen) => {
-        setOpen(nextOpen);
-        if (!nextOpen) {
-          onBlur?.();
-        }
-      }}
-    >
-      <PopoverTrigger asChild>
-        <Button
-          id={id}
-          type="button"
-          variant="outline"
-          disabled={disabled}
-          aria-invalid={invalid}
-          aria-describedby={describedBy}
-          data-empty={!selected}
-          className={cn(
-            "h-12 w-full justify-start rounded-xl px-3 text-left font-normal",
-            !selected && "text-muted-foreground",
-          )}
-        >
-          <CalendarIcon aria-hidden="true" />
-          {selected ? format(selected, "d MMMM yyyy", { locale: pl }) : "Wybierz datę urodzenia"}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent
-        className="w-auto overflow-hidden p-0"
-        align="start"
-        side="bottom"
-        sideOffset={8}
-        collisionPadding={12}
-        hideWhenDetached
-        style={{ animation: "none" }}
+    <div ref={rootRef} data-slot="birth-date-picker" className="relative w-full">
+      <Button
+        ref={triggerRef}
+        id={id}
+        type="button"
+        variant="outline"
+        disabled={disabled}
+        aria-invalid={invalid}
+        aria-describedby={describedBy}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-controls={open ? panelId : undefined}
+        data-empty={!selected}
+        className={cn(
+          "h-12 w-full justify-start rounded-xl px-3 text-left font-normal",
+          !selected && "text-muted-foreground",
+        )}
+        onClick={() => {
+          if (open) {
+            close();
+          } else {
+            setPlacement("bottom");
+            setOpen(true);
+          }
+        }}
       >
-        <Calendar
-          mode="single"
-          selected={selected}
-          defaultMonth={initialMonth}
-          onSelect={(date) => {
-            if (!date) {
-              return;
-            }
-            onChange(localDateToIso(date));
-            setOpen(false);
+        <CalendarIcon aria-hidden="true" />
+        {selected ? format(selected, "d MMMM yyyy", { locale: pl }) : "Wybierz datę urodzenia"}
+      </Button>
+
+      {open ? (
+        <div
+          ref={panelRef}
+          id={panelId}
+          role="dialog"
+          aria-label="Wybierz datę urodzenia"
+          data-slot="birth-date-calendar"
+          data-placement={placement}
+          className={cn(
+            "absolute left-0 z-50 w-auto overflow-hidden rounded-md border bg-popover p-0 text-popover-foreground shadow-md",
+            placement === "bottom" ? "top-full mt-2" : "bottom-full mb-2",
+          )}
+          style={{
+            maxWidth: `calc(100vw - ${VIEWPORT_PADDING_PX * 2}px)`,
           }}
-          captionLayout="dropdown"
-          startMonth={earliest}
-          endMonth={today}
-          disabled={{ before: earliest, after: today }}
-          locale={pl}
-          formatters={{
-            formatMonthDropdown: (date) => format(date, "LLLL", { locale: pl }),
-          }}
-        />
-      </PopoverContent>
-    </Popover>
+        >
+          <Calendar
+            mode="single"
+            selected={selected}
+            defaultMonth={initialMonth}
+            onSelect={(date) => {
+              if (!date) {
+                return;
+              }
+              onChange(localDateToIso(date));
+              close(true);
+            }}
+            captionLayout="dropdown"
+            startMonth={earliest}
+            endMonth={today}
+            disabled={{ before: earliest, after: today }}
+            locale={pl}
+            formatters={{
+              formatMonthDropdown: (date) => format(date, "LLLL", { locale: pl }),
+            }}
+          />
+        </div>
+      ) : null}
+    </div>
   );
 }
