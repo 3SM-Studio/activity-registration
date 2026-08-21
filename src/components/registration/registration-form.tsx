@@ -58,12 +58,17 @@ type ApiSuccessResponse = Readonly<{
 type SuccessState = Readonly<{
   kind: "created" | "duplicate";
   participantName: string;
+  participantIsMinor: boolean;
   offeringName: string;
   cityName: string;
 }> | null;
 
 function newRequestId(): string {
   return crypto.randomUUID();
+}
+
+function preferredScrollBehavior(): ScrollBehavior {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
 }
 
 function offeringLabel(offering: PublicOffering): string {
@@ -128,7 +133,8 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
   const offeringId = useWatch({ control, name: "offeringId" });
   const birthDate = useWatch({ control, name: "birthDate" });
   const age = birthDate ? calculateAgeToday(birthDate) : null;
-  const isMinor = typeof age === "number" && age >= 0 && age < 18;
+  const hasKnownAge = typeof age === "number" && age >= 0;
+  const isMinor = hasKnownAge && age < 18;
 
   const availableOfferings = useMemo(
     () => catalog.offerings.filter((offering) => offering.cityId === cityId),
@@ -146,7 +152,10 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
 
     const frame = requestAnimationFrame(() => {
       validationSummaryRef.current?.focus({ preventScroll: true });
-      validationSummaryRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      validationSummaryRef.current?.scrollIntoView({
+        behavior: preferredScrollBehavior(),
+        block: "center",
+      });
     });
 
     return () => cancelAnimationFrame(frame);
@@ -217,6 +226,7 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
       setSuccessState({
         kind: payload.duplicate ? "duplicate" : "created",
         participantName: `${data.participantFirstName} ${data.participantLastName}`,
+        participantIsMinor: calculateAgeToday(data.birthDate) < 18,
         offeringName,
         cityName,
       });
@@ -246,7 +256,7 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
     setSuccessState(null);
     setGlobalError(null);
     setShowValidationSummary(false);
-    requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }));
+    requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: preferredScrollBehavior() }));
   };
 
   const beginAnotherOffering = () => {
@@ -268,7 +278,7 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
     setSuccessState(null);
     setGlobalError(null);
     setShowValidationSummary(false);
-    requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }));
+    requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: preferredScrollBehavior() }));
   };
 
   if (!settings.registrationsOpen) {
@@ -325,7 +335,7 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
 
             <div className="mx-auto mt-6 grid max-w-xl gap-3 sm:grid-cols-2">
               <Button type="button" variant="outline" size="lg" onClick={beginAnotherChild}>
-                Zapisz kolejne dziecko
+                {successState.participantIsMinor ? "Zapisz kolejne dziecko" : "Zgłoś kolejną osobę"}
               </Button>
               <Button type="button" variant="outline" size="lg" onClick={beginAnotherOffering}>
                 Zgłoś inne zajęcia
@@ -349,94 +359,105 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
         onSubmit={handleSubmit(submit, invalid)}
         className="space-y-8"
       >
-        <div className="grid gap-5 sm:grid-cols-2">
-          <Controller
-            name="cityId"
-            control={control}
-            render={({ field, fieldState }) => (
-              <Field data-invalid={fieldState.invalid}>
-                <FieldLabel htmlFor="cityId">
-                  Miasto <span aria-hidden="true">*</span>
-                </FieldLabel>
-                <Select
-                  name={field.name}
-                  value={field.value ?? ""}
-                  onValueChange={(nextCityId) => {
-                    field.onChange(nextCityId);
-                    setValue("offeringId", "", {
-                      shouldDirty: true,
-                      shouldValidate: false,
-                    });
-                    clearErrors("offeringId");
-                  }}
-                >
-                  <SelectTrigger
-                    id="cityId"
-                    aria-invalid={fieldState.invalid}
-                    {...(fieldState.invalid ? { "aria-describedby": "cityId-error" } : {})}
-                  >
-                    <SelectValue placeholder="Wybierz miasto" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {catalog.cities.map((city) => (
-                      <SelectItem key={city.id} value={city.id}>
-                        {city.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FieldError id="cityId-error" errors={[fieldState.error]} />
-              </Field>
-            )}
-          />
+        <p className="text-sm leading-6 text-muted-foreground">
+          Pola oznaczone <span aria-hidden="true">*</span> są wymagane.
+        </p>
 
-          <Controller
-            name="offeringId"
-            control={control}
-            render={({ field, fieldState }) => (
-              <Field data-invalid={fieldState.invalid}>
-                <FieldLabel htmlFor="offeringId">
-                  Zajęcia <span aria-hidden="true">*</span>
-                </FieldLabel>
-                <Select
-                  name={field.name}
-                  value={field.value ?? ""}
-                  onValueChange={field.onChange}
-                  disabled={!cityId}
-                >
-                  <SelectTrigger
-                    id="offeringId"
-                    aria-invalid={fieldState.invalid}
-                    {...(fieldState.invalid ? { "aria-describedby": "offeringId-error" } : {})}
+        <FieldSet>
+          <FieldLegend>Zajęcia</FieldLegend>
+          <div className="grid gap-5 sm:grid-cols-2">
+            <Controller
+              name="cityId"
+              control={control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="cityId">
+                    Miasto <span aria-hidden="true">*</span>
+                  </FieldLabel>
+                  <Select
+                    name={field.name}
+                    value={field.value ?? ""}
+                    required
+                    onValueChange={(nextCityId) => {
+                      field.onChange(nextCityId);
+                      setValue("offeringId", "", {
+                        shouldDirty: true,
+                        shouldValidate: false,
+                      });
+                      clearErrors("offeringId");
+                    }}
                   >
-                    <SelectValue
-                      placeholder={cityId ? "Wybierz zajęcia" : "Najpierw wybierz miasto"}
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableOfferings.map((offering) => (
-                      <SelectItem
-                        key={offering.id}
-                        value={offering.id}
-                        disabled={!offeringIsSelectable(offering)}
-                      >
-                        {offeringLabel(offering)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {selectedOffering?.intakeStatus === PUBLIC_INTAKE_STATUS.waitlistOnly ? (
-                  <FieldDescription>
-                    Na te zajęcia przyjmujemy teraz zgłoszenia na listę rezerwową.
-                  </FieldDescription>
-                ) : selectedOffering?.publicDescription ? (
-                  <FieldDescription>{selectedOffering.publicDescription}</FieldDescription>
-                ) : null}
-                <FieldError id="offeringId-error" errors={[fieldState.error]} />
-              </Field>
-            )}
-          />
-        </div>
+                    <SelectTrigger
+                      id="cityId"
+                      aria-required="true"
+                      aria-invalid={fieldState.invalid}
+                      {...(fieldState.invalid ? { "aria-describedby": "cityId-error" } : {})}
+                    >
+                      <SelectValue placeholder="Wybierz miasto" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {catalog.cities.map((city) => (
+                        <SelectItem key={city.id} value={city.id}>
+                          {city.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FieldError id="cityId-error" errors={[fieldState.error]} />
+                </Field>
+              )}
+            />
+
+            <Controller
+              name="offeringId"
+              control={control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="offeringId">
+                    Zajęcia <span aria-hidden="true">*</span>
+                  </FieldLabel>
+                  <Select
+                    name={field.name}
+                    value={field.value ?? ""}
+                    onValueChange={field.onChange}
+                    disabled={!cityId}
+                    required
+                  >
+                    <SelectTrigger
+                      id="offeringId"
+                      aria-required="true"
+                      aria-invalid={fieldState.invalid}
+                      {...(fieldState.invalid ? { "aria-describedby": "offeringId-error" } : {})}
+                    >
+                      <SelectValue
+                        placeholder={cityId ? "Wybierz zajęcia" : "Najpierw wybierz miasto"}
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableOfferings.map((offering) => (
+                        <SelectItem
+                          key={offering.id}
+                          value={offering.id}
+                          disabled={!offeringIsSelectable(offering)}
+                        >
+                          {offeringLabel(offering)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {selectedOffering?.intakeStatus === PUBLIC_INTAKE_STATUS.waitlistOnly ? (
+                    <FieldDescription>
+                      Na te zajęcia przyjmujemy teraz zgłoszenia na listę rezerwową.
+                    </FieldDescription>
+                  ) : selectedOffering?.publicDescription ? (
+                    <FieldDescription>{selectedOffering.publicDescription}</FieldDescription>
+                  ) : null}
+                  <FieldError id="offeringId-error" errors={[fieldState.error]} />
+                </Field>
+              )}
+            />
+          </div>
+        </FieldSet>
 
         <FieldSet>
           <FieldLegend>Dane uczestnika</FieldLegend>
@@ -490,6 +511,7 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
                 <BirthDatePicker
                   id="birthDate"
                   value={field.value ?? ""}
+                  required
                   onChange={(nextBirthDate) => {
                     field.onChange(nextBirthDate);
                     if (calculateAgeToday(nextBirthDate) >= 18) {
@@ -561,9 +583,11 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
         <FieldSet>
           <FieldLegend>Dane kontaktowe</FieldLegend>
           <FieldDescription>
-            {isMinor
-              ? "Podaj telefon i e-mail rodzica lub opiekuna odpowiedzialnego za zgłoszenie."
-              : "Podaj telefon i e-mail uczestnika."}
+            {!hasKnownAge
+              ? "Podaj telefon i e-mail osoby odpowiedzialnej za zgłoszenie."
+              : isMinor
+                ? "Podaj telefon i e-mail rodzica lub opiekuna odpowiedzialnego za zgłoszenie."
+                : "Podaj telefon i e-mail uczestnika."}
           </FieldDescription>
 
           <div className="grid gap-5 sm:grid-cols-2">
@@ -640,8 +664,6 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
             Przed wysłaniem zapoznaj się z{" "}
             <a
               href={settings.privacyNoticeUrl}
-              target="_blank"
-              rel="noreferrer"
               className="font-medium text-foreground underline underline-offset-4 hover:text-primary"
             >
               informacją o przetwarzaniu danych
@@ -688,8 +710,6 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
               ? "Wyślij zgłoszenie"
               : "Zapisy są zamknięte"}
         </Button>
-
-        <p className="text-center text-xs text-muted-foreground">Pola oznaczone * są wymagane.</p>
       </form>
     </Card>
   );

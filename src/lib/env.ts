@@ -1,6 +1,10 @@
 import { z } from "zod";
 
 export const CANONICAL_PREVIEW_BRANCH = "preview";
+export const PRODUCTION_SPREADSHEET_ID = "1DRcWvY8xfZDGjJLWOr8Ax1XsyBw4dWU8C6u9WGNvFfM";
+export const PRODUCTION_SERVICE_ACCOUNT_EMAIL =
+  "activity-registration-prod@pozytywka-reg-3sm-260819.iam.gserviceaccount.com";
+export const PRODUCTION_ADMIN_EMAIL = "pozytywka.boleslaw@gmail.com";
 
 const oidcKeys = [
   "GCP_PROJECT_NUMBER",
@@ -39,6 +43,10 @@ function isVercelTarget(env: Record<string, unknown>, target: "preview" | "produ
 
 function hasNonEmptyString(value: unknown): boolean {
   return typeof value === "string" && value.trim().length > 0;
+}
+
+function usesResendTestingDomain(value: string | undefined): boolean {
+  return value?.toLowerCase().includes("@resend.dev") ?? false;
 }
 
 const optionalTrimmedStringSchema = z.preprocess(
@@ -133,20 +141,54 @@ const serverEnvSchema = z
       }
     }
 
-    if (env.APP_ENV === "production" && env.DATA_BACKEND !== "google-sheets") {
-      context.addIssue({
-        code: "custom",
-        path: ["DATA_BACKEND"],
-        message: "Production must use the google-sheets backend.",
-      });
-    }
+    if (env.APP_ENV === "production") {
+      if (env.DATA_BACKEND !== "google-sheets") {
+        context.addIssue({
+          code: "custom",
+          path: ["DATA_BACKEND"],
+          message: "Production must use the google-sheets backend.",
+        });
+      }
 
-    if (env.APP_ENV === "production" && env.EMAIL_PROVIDER !== "resend") {
-      context.addIssue({
-        code: "custom",
-        path: ["EMAIL_PROVIDER"],
-        message: "Production must use the Resend email provider.",
-      });
+      if (env.EMAIL_PROVIDER !== "resend") {
+        context.addIssue({
+          code: "custom",
+          path: ["EMAIL_PROVIDER"],
+          message: "Production must use the Resend email provider.",
+        });
+      }
+
+      if (env.GOOGLE_SPREADSHEET_ID !== PRODUCTION_SPREADSHEET_ID) {
+        context.addIssue({
+          code: "custom",
+          path: ["GOOGLE_SPREADSHEET_ID"],
+          message: "Production must use the canonical PROD spreadsheet.",
+        });
+      }
+
+      if (env.GCP_SERVICE_ACCOUNT_EMAIL !== PRODUCTION_SERVICE_ACCOUNT_EMAIL) {
+        context.addIssue({
+          code: "custom",
+          path: ["GCP_SERVICE_ACCOUNT_EMAIL"],
+          message: "Production must use the dedicated PROD service account.",
+        });
+      }
+
+      if (usesResendTestingDomain(env.EMAIL_FROM)) {
+        context.addIssue({
+          code: "custom",
+          path: ["EMAIL_FROM"],
+          message: "Production EMAIL_FROM must use a verified production domain.",
+        });
+      }
+
+      if (!env.REGISTRATION_ADMIN_EMAILS?.includes(PRODUCTION_ADMIN_EMAIL)) {
+        context.addIssue({
+          code: "custom",
+          path: ["REGISTRATION_ADMIN_EMAILS"],
+          message: "Production admin recipients must include the approved Pozytywka mailbox.",
+        });
+      }
     }
   });
 
@@ -154,11 +196,28 @@ export type ServerEnv = z.output<typeof serverEnvSchema>;
 
 export function isUnconfiguredVercelProduction(input: unknown = process.env): boolean {
   const env = asEnvironmentRecord(input);
-  if (!env) {
+  if (!env || !isVercelTarget(env, "production")) {
     return false;
   }
 
-  return isVercelTarget(env, "production") && env.APP_ENV !== "production";
+  if (
+    env.APP_ENV !== "production" ||
+    env.DATA_BACKEND !== "google-sheets" ||
+    env.EMAIL_PROVIDER !== "resend" ||
+    env.GOOGLE_SPREADSHEET_ID !== PRODUCTION_SPREADSHEET_ID ||
+    env.GCP_SERVICE_ACCOUNT_EMAIL !== PRODUCTION_SERVICE_ACCOUNT_EMAIL
+  ) {
+    return true;
+  }
+
+  return [
+    "GCP_PROJECT_NUMBER",
+    "GCP_WORKLOAD_IDENTITY_POOL_ID",
+    "GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID",
+    "RESEND_API_KEY",
+    "EMAIL_FROM",
+    "REGISTRATION_ADMIN_EMAILS",
+  ].some((key) => !hasNonEmptyString(env[key]));
 }
 
 export function isUnconfiguredVercelPreview(input: unknown = process.env): boolean {

@@ -32,6 +32,7 @@ type BirthDatePickerProps = Readonly<{
   invalid?: boolean;
   describedBy?: string;
   disabled?: boolean;
+  required?: boolean;
 }>;
 
 export function BirthDatePicker({
@@ -42,6 +43,7 @@ export function BirthDatePicker({
   invalid = false,
   describedBy,
   disabled = false,
+  required = false,
 }: BirthDatePickerProps) {
   const [open, setOpen] = useState(false);
   const selected = isoToLocalDate(value);
@@ -67,6 +69,7 @@ export function BirthDatePicker({
           variant="outline"
           disabled={disabled}
           aria-invalid={invalid}
+          aria-required={required || undefined}
           aria-describedby={describedBy}
           data-empty={!selected}
           className={cn(
@@ -95,7 +98,6 @@ export function BirthDatePicker({
             }
             onChange(localDateToIso(date));
             setOpen(false);
-            onBlur?.();
           }}
           captionLayout="dropdown"
           startMonth={earliest}
