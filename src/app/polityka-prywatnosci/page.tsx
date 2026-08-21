@@ -10,7 +10,9 @@ export default function PrivacyPage() {
     <main className="mx-auto w-full max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
       <article className="typeset typeset-legal rounded-3xl border bg-card p-6 shadow-sm sm:p-10 lg:p-12">
         <header className="max-w-3xl border-b pb-8">
-          <p className="not-typeset text-sm font-semibold text-primary">Pracownia Twórcza Pozytywka</p>
+          <p className="not-typeset text-sm font-semibold text-primary">
+            Pracownia Twórcza Pozytywka
+          </p>
           <h1 className="mt-3 text-balance text-3xl tracking-tight sm:text-4xl">
             Informacja o przetwarzaniu danych osobowych
           </h1>
@@ -24,8 +26,8 @@ export default function PrivacyPage() {
           <section className="mt-8">
             <h2>1. Administrator danych</h2>
             <p>
-              Administratorem danych jest Pracownia Twórcza Pozytywka. Iwona Pilarz, NIP
-              6371975064, REGON 122726372. Adres do kontaktu: ul. Browarna 6a, 32-329 Bolesław.
+              Administratorem danych jest Pracownia Twórcza Pozytywka. Iwona Pilarz, NIP 6371975064,
+              REGON 122726372. Adres do kontaktu: ul. Browarna 6a, 32-329 Bolesław.
             </p>
             <p>
               W sprawach dotyczących danych osobowych możesz napisać na{" "}
@@ -63,17 +65,17 @@ export default function PrivacyPage() {
                 osoby przed zawarciem umowy,
               </li>
               <li>
-                dopasowanie uczestnika do odpowiedniej grupy wiekowej, organizacja procesu
-                zapisów, zapobieganie oczywistym duplikatom i zapewnienie bezpieczeństwa systemu,
-                art. 6 ust. 1 lit. f RODO, czyli prawnie uzasadniony interes administratora,
+                dopasowanie uczestnika do odpowiedniej grupy wiekowej, organizacja procesu zapisów,
+                zapobieganie oczywistym duplikatom i zapewnienie bezpieczeństwa systemu, art. 6 ust.
+                1 lit. f RODO, czyli prawnie uzasadniony interes administratora,
               </li>
               <li>
                 ustalenie, dochodzenie lub obrona roszczeń oraz zapewnienie rozliczalności procesu,
                 art. 6 ust. 1 lit. f RODO,
               </li>
               <li>
-                realizacja obowiązków wynikających z przepisów prawa, gdy mają zastosowanie, art.
-                6 ust. 1 lit. c RODO.
+                realizacja obowiązków wynikających z przepisów prawa, gdy mają zastosowanie, art. 6
+                ust. 1 lit. c RODO.
               </li>
             </ul>
             <p>
@@ -110,8 +112,8 @@ export default function PrivacyPage() {
                 potwierdzenia uczestnictwa: do 12 miesięcy od zamknięcia sprawy,
               </li>
               <li>
-                zgłoszenia pozostające na liście rezerwowej: do 3 miesięcy po zakończeniu
-                właściwego sezonu,
+                zgłoszenia pozostające na liście rezerwowej: do 3 miesięcy po zakończeniu właściwego
+                sezonu,
               </li>
               <li>
                 zgłoszenia potwierdzone: do końca roku kalendarzowego przypadającego trzy lata po
