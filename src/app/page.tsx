@@ -77,12 +77,9 @@ export default async function HomePage() {
   }
 
   const env = getServerEnv();
-  const { catalog, settings, ageReferenceDate } = await getPublicFormConfig(
-    createApplicationRepositories(),
-    {
-      requirePrivacyConfiguration: env.APP_ENV === "production",
-    },
-  );
+  const { catalog, settings } = await getPublicFormConfig(createApplicationRepositories(), {
+    requirePrivacyConfiguration: env.APP_ENV === "production",
+  });
 
   return (
     <main className="relative min-h-screen overflow-hidden px-4 py-6 sm:px-6 sm:py-10 lg:py-14">
@@ -120,11 +117,7 @@ export default async function HomePage() {
         </header>
 
         <div className="not-typeset">
-          <RegistrationForm
-            catalog={catalog}
-            settings={settings}
-            ageReferenceDate={ageReferenceDate}
-          />
+          <RegistrationForm catalog={catalog} settings={settings} />
         </div>
 
         <PublicFooter />
