@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  PRODUCTION_ADMIN_EMAIL,
+  PRODUCTION_SERVICE_ACCOUNT_EMAIL,
+  PRODUCTION_SPREADSHEET_ID,
   isUnconfiguredVercelPreview,
   isUnconfiguredVercelProduction,
   parseServerEnv,
@@ -9,8 +12,8 @@ import {
 const emailProductionConfig = {
   EMAIL_PROVIDER: "resend",
   RESEND_API_KEY: "re_test",
-  EMAIL_FROM: "Pozytywka <zapisy@example.com>",
-  REGISTRATION_ADMIN_EMAILS: "biuro@example.com, zapisy@example.com",
+  EMAIL_FROM: "Pozytywka <zapisy@pozytywka.example>",
+  REGISTRATION_ADMIN_EMAILS: `${PRODUCTION_ADMIN_EMAIL}, zapisy@example.com`,
 } as const;
 
 const vercelWifConfig = {
@@ -18,6 +21,21 @@ const vercelWifConfig = {
   GCP_SERVICE_ACCOUNT_EMAIL: "activity@example.iam.gserviceaccount.com",
   GCP_WORKLOAD_IDENTITY_POOL_ID: "vercel",
   GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID: "vercel",
+} as const;
+
+const productionWifConfig = {
+  ...vercelWifConfig,
+  GCP_SERVICE_ACCOUNT_EMAIL: PRODUCTION_SERVICE_ACCOUNT_EMAIL,
+} as const;
+
+const canonicalProductionConfig = {
+  VERCEL_ENV: "production",
+  APP_ENV: "production",
+  DATA_BACKEND: "google-sheets",
+  GOOGLE_SPREADSHEET_ID: PRODUCTION_SPREADSHEET_ID,
+  VERCEL: "1",
+  ...productionWifConfig,
+  ...emailProductionConfig,
 } as const;
 
 const canonicalPreviewConfig = {
@@ -80,7 +98,7 @@ describe("server environment", () => {
       parseServerEnv({
         APP_ENV: "production",
         DATA_BACKEND: "google-sheets",
-        GOOGLE_SPREADSHEET_ID: "sheet-prod",
+        GOOGLE_SPREADSHEET_ID: PRODUCTION_SPREADSHEET_ID,
       }),
     ).toThrow();
   });
@@ -101,7 +119,7 @@ describe("server environment", () => {
       parseServerEnv({
         APP_ENV: "production",
         DATA_BACKEND: "google-sheets",
-        GOOGLE_SPREADSHEET_ID: "sheet-prod",
+        GOOGLE_SPREADSHEET_ID: PRODUCTION_SPREADSHEET_ID,
         VERCEL: "1",
         ...emailProductionConfig,
       }),
@@ -124,22 +142,40 @@ describe("server environment", () => {
     });
   });
 
-  it("accepts complete production Vercel configuration", () => {
-    expect(
-      parseServerEnv({
-        APP_ENV: "production",
-        DATA_BACKEND: "google-sheets",
-        GOOGLE_SPREADSHEET_ID: "sheet-prod",
-        VERCEL: "1",
-        ...vercelWifConfig,
-        ...emailProductionConfig,
-      }),
-    ).toMatchObject({
+  it("accepts only the canonical production Vercel configuration", () => {
+    expect(parseServerEnv(canonicalProductionConfig)).toMatchObject({
       APP_ENV: "production",
       DATA_BACKEND: "google-sheets",
       EMAIL_PROVIDER: "resend",
-      REGISTRATION_ADMIN_EMAILS: ["biuro@example.com", "zapisy@example.com"],
+      GOOGLE_SPREADSHEET_ID: PRODUCTION_SPREADSHEET_ID,
+      GCP_SERVICE_ACCOUNT_EMAIL: PRODUCTION_SERVICE_ACCOUNT_EMAIL,
+      REGISTRATION_ADMIN_EMAILS: [PRODUCTION_ADMIN_EMAIL, "zapisy@example.com"],
     });
+  });
+
+  it("rejects production pointed at the wrong Sheet or service account", () => {
+    expect(() =>
+      parseServerEnv({
+        ...canonicalProductionConfig,
+        GOOGLE_SPREADSHEET_ID: "sheet-wrong",
+      }),
+    ).toThrow();
+
+    expect(() =>
+      parseServerEnv({
+        ...canonicalProductionConfig,
+        GCP_SERVICE_ACCOUNT_EMAIL: "activity@example.iam.gserviceaccount.com",
+      }),
+    ).toThrow();
+  });
+
+  it("rejects the Resend testing domain in production", () => {
+    expect(() =>
+      parseServerEnv({
+        ...canonicalProductionConfig,
+        EMAIL_FROM: "Pozytywka <onboarding@resend.dev>",
+      }),
+    ).toThrow();
   });
 
   it("rejects an invalid admin email list", () => {
@@ -158,13 +194,23 @@ describe("server environment", () => {
     expect(isUnconfiguredVercelProduction({ VERCEL_TARGET_ENV: "production" })).toBe(true);
   });
 
-  it("does not block explicit production or non-production targets", () => {
+  it("accepts only a fully configured canonical production deployment", () => {
+    expect(isUnconfiguredVercelProduction(canonicalProductionConfig)).toBe(false);
     expect(
       isUnconfiguredVercelProduction({
-        VERCEL_ENV: "production",
-        APP_ENV: "production",
+        ...canonicalProductionConfig,
+        GOOGLE_SPREADSHEET_ID: "sheet-wrong",
       }),
-    ).toBe(false);
+    ).toBe(true);
+    expect(
+      isUnconfiguredVercelProduction({
+        ...canonicalProductionConfig,
+        GCP_SERVICE_ACCOUNT_EMAIL: "activity@example.iam.gserviceaccount.com",
+      }),
+    ).toBe(true);
+  });
+
+  it("does not apply the production guard outside Vercel Production", () => {
     expect(isUnconfiguredVercelProduction({ VERCEL_ENV: "preview" })).toBe(false);
     expect(isUnconfiguredVercelProduction({})).toBe(false);
   });
