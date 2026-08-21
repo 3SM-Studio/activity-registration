@@ -36,7 +36,7 @@ export async function getPublicFormConfig(
       );
     }
 
-    return { catalog: EMPTY_CATALOG, settings } as const;
+    return { catalog: EMPTY_CATALOG, settings, ageReferenceDate: null } as const;
   }
 
   const season = await repositories.catalog.findSeasonById(settings.currentSeasonId);
@@ -48,7 +48,7 @@ export async function getPublicFormConfig(
       );
     }
 
-    return { catalog: EMPTY_CATALOG, settings } as const;
+    return { catalog: EMPTY_CATALOG, settings, ageReferenceDate: null } as const;
   }
 
   const catalog = await repositories.catalog.getPublicCatalog(currentDate, season.id);
@@ -56,5 +56,6 @@ export async function getPublicFormConfig(
   return {
     catalog,
     settings,
+    ageReferenceDate: season.startDate,
   } as const;
 }
