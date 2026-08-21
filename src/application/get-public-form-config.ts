@@ -1,4 +1,5 @@
 import { APPLICATION_ERROR_CODE, ApplicationError } from "@/application/errors";
+import type { PublicCatalog } from "@/domain/catalog";
 import type { ApplicationRepositories } from "@/domain/repositories";
 import { dateOnlyInPoland } from "@/lib/birth-date";
 
@@ -7,16 +8,15 @@ export type GetPublicFormConfigOptions = Readonly<{
   now?: () => Date;
 }>;
 
+const EMPTY_CATALOG: PublicCatalog = { cities: [], offerings: [] };
+
 export async function getPublicFormConfig(
   repositories: ApplicationRepositories,
   options: GetPublicFormConfigOptions = {},
 ) {
   const nowDate = (options.now ?? (() => new Date()))();
   const currentDate = dateOnlyInPoland(nowDate);
-  const [catalog, settings] = await Promise.all([
-    repositories.catalog.getPublicCatalog(currentDate),
-    repositories.settings.getPublicSettings(),
-  ]);
+  const settings = await repositories.settings.getPublicSettings();
 
   if (
     options.requirePrivacyConfiguration &&
@@ -27,6 +27,31 @@ export async function getPublicFormConfig(
       "System zapisów nie jest jeszcze gotowy do pracy produkcyjnej.",
     );
   }
+
+  if (!settings.currentSeasonId) {
+    if (settings.registrationsOpen) {
+      throw new ApplicationError(
+        APPLICATION_ERROR_CODE.systemNotReady,
+        "System zapisów nie ma skonfigurowanego bieżącego sezonu.",
+      );
+    }
+
+    return { catalog: EMPTY_CATALOG, settings } as const;
+  }
+
+  const season = await repositories.catalog.findSeasonById(settings.currentSeasonId);
+  if (!season || !season.active) {
+    if (settings.registrationsOpen) {
+      throw new ApplicationError(
+        APPLICATION_ERROR_CODE.systemNotReady,
+        "Skonfigurowany sezon zapisów nie jest dostępny.",
+      );
+    }
+
+    return { catalog: EMPTY_CATALOG, settings } as const;
+  }
+
+  const catalog = await repositories.catalog.getPublicCatalog(currentDate, season.id);
 
   return {
     catalog,
