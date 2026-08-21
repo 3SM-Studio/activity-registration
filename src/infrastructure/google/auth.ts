@@ -5,6 +5,17 @@ import type { ServerEnv } from "@/lib/env";
 
 const SHEETS_SCOPE = "https://www.googleapis.com/auth/spreadsheets";
 
+export class GoogleAuthenticationError extends Error {
+  constructor() {
+    super("Google authentication failed.");
+    this.name = "GoogleAuthenticationError";
+  }
+}
+
+export function toGoogleAuthenticationError(_error: unknown): GoogleAuthenticationError {
+  return new GoogleAuthenticationError();
+}
+
 function requireOidcConfiguration(env: ServerEnv) {
   const entries = {
     GCP_PROJECT_NUMBER: env.GCP_PROJECT_NUMBER,
@@ -68,13 +79,17 @@ export async function createGoogleAuthClient(env: ServerEnv): Promise<AuthClient
 }
 
 export async function getGoogleAccessToken(env: ServerEnv): Promise<string> {
-  const client = await createGoogleAuthClient(env);
-  const result = await client.getAccessToken();
-  const token = typeof result === "string" ? result : result?.token;
+  try {
+    const client = await createGoogleAuthClient(env);
+    const result = await client.getAccessToken();
+    const token = typeof result === "string" ? result : result?.token;
 
-  if (!token) {
-    throw new Error("Google authentication returned no access token.");
+    if (!token) {
+      throw new Error("Google authentication returned no access token.");
+    }
+
+    return token;
+  } catch (error) {
+    throw toGoogleAuthenticationError(error);
   }
-
-  return token;
 }
