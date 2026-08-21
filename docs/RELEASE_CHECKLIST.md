@@ -1,11 +1,11 @@
 # Release checklist
 
-Date: 2026-08-20
+Date: 2026-08-21
 Target: Pozytywka Registration v3
 
-This checklist is the current source of truth after the production business/legal baseline was approved on 2026-08-20.
+This checklist is the current release truth after production hardening and direct verification against GitHub CI, Vercel Production, Gmail delivery evidence and the canonical Production Google Sheet.
 
-`REGISTRATIONS_OPEN=TRUE` in Production is the final action, not a prerequisite.
+`REGISTRATIONS_OPEN=TRUE` in Production is the final action, not a prerequisite. Until every release blocker is closed, Production remains intentionally closed.
 
 ## Product and business
 
@@ -49,9 +49,11 @@ Canonical decisions: `docs/PRODUCTION_DECISIONS_2026-08-20.md`.
 - [x] shadcn/Radix public form
 - [x] international phone input
 - [x] controlled DOB picker
-- [x] repeat child/activity flows
+- [x] repeat participant/activity flows
 - [x] participant/admin transactional e-mail
 - [x] Pozytywka logo in e-mail header
+- [x] production runtime now fails closed for the wrong PROD Sheet or service-account identity
+- [x] Google authentication provider errors are sanitized before application/platform logging
 
 ## Privacy / RODO
 
@@ -76,8 +78,8 @@ Canonical policy: `docs/RODO_AND_RETENTION_POLICY.md`.
 
 ## Child protection
 
-- [x] full Standardy Ochrony Małoletnich adopted
-- [x] child-friendly shortened version adopted
+- [x] full Standardy Ochrony Małoletnich v1.0 adopted on 2026-08-20
+- [x] child-friendly shortened v1.0 adopted on 2026-08-20
 - [x] owner/responsibility assigned to Iwona Pilarz
 - [x] safe adult-child relations defined
 - [x] prohibited conduct defined
@@ -89,11 +91,17 @@ Canonical policy: `docs/RODO_AND_RETENTION_POLICY.md`.
 - [x] personnel preparation procedure defined
 - [x] Article 21 verification workflow documented
 - [x] staff verification records explicitly excluded from registration Sheet/Git
+- [x] 2026 legal gap audit completed against Article 22c
+- [x] v1.1 draft prepared with explicit reporting channel, disability/SEN accommodations, documented review and publication rules
+- [x] public full + child-friendly web routes implemented in the hardening release
+- [ ] v1.1 formally adopted by Iwona Pilarz
+- [ ] adopted full + shortened Standardy physically displayed in the premises
 
 Canonical documents:
 
-- `docs/STANDARDY_OCHRONY_MALOLETNICH.md`
-- `docs/STANDARDY_OCHRONY_MALOLETNICH_SKROT.md`
+- adopted v1.0: `docs/STANDARDY_OCHRONY_MALOLETNICH.md`
+- adopted shortened v1.0: `docs/STANDARDY_OCHRONY_MALOLETNICH_SKROT.md`
+- pending replacement: `docs/STANDARDY_OCHRONY_MALOLETNICH_V1.1_DRAFT.md`
 
 Operational evidence of each real staff check remains personnel documentation, not repository content.
 
@@ -105,8 +113,9 @@ Canonical PROD Sheet ID:
 
 - [x] separate PROD Sheet created
 - [x] copied from validated v3 structure to preserve native Tables/formatting
-- [x] copied TEST participant rows removed from PROD
-- [x] `ZAPISY` verified empty after cleanup
+- [x] production headers directly re-verified against the v3 contract on 2026-08-21
+- [x] production catalog/settings values directly re-verified on 2026-08-21
+- [x] `ZAPISY` verified header-only after final smoke cleanup on 2026-08-21
 - [x] production city written
 - [x] production season written
 - [x] production Offerings written
@@ -114,18 +123,21 @@ Canonical PROD Sheet ID:
 - [x] production settings written
 - [x] `SYSTEM_SCHEMA_VERSION=3`
 - [x] `CURRENT_SEASON_ID=2026-2027`
-- [x] `REGISTRATIONS_OPEN=FALSE`
+- [x] `REGISTRATIONS_OPEN=FALSE` during hardening
 - [x] native table ranges synchronized to all current catalog/settings rows
 - [x] `OFERTY_ZAJEC` and `GRUPY` rows verified inside their native Tables after resize
 - [x] production `ASSIGNED_GROUP_ID` configured as a native Table dropdown
 - [x] synthetic `appendCells(tableId=900001)` smoke verified a new row stays inside `Rejestracje`
 - [x] smoke row inherited table banding, date typing and semantic `NEW` formatting
-- [x] synthetic PROD smoke row removed immediately after verification
 - [x] guarded/reproducible production catalog seed added to repository
 - [x] catalog seed commands re-run `sheet:bootstrap` so native table ranges cannot remain stale after reseed
-- [ ] repository `sheet:validate` executed using final PROD identity
-- [ ] repository `diagnostics` executed using final PROD identity
-- [ ] repository reconciliation executed using final PROD identity
+- [x] real Vercel Production `201` registration ID was matched to the canonical PROD Sheet, proving the deployed runtime writes to this spreadsheet
+- [x] final synthetic Production smoke registration removed after verification
+- [x] reconciliation equivalent is currently clean because Production `ZAPISY` has zero data rows
+- [ ] repository `sheet:validate` command executed through the final PROD Vercel identity
+- [ ] repository `diagnostics` command executed through the final PROD Vercel identity
+
+The remaining two command-level checks are deliberately not replaced by a public debug endpoint. Direct Sheet validation plus a real Vercel-runtime write already provide the relevant structural and runtime evidence without creating a temporary production attack surface.
 
 ## TEST finalization
 
@@ -134,9 +146,8 @@ Canonical PROD Sheet ID:
 - [x] participant/admin notification path previously reported success
 - [x] manual real-delivery QA rows removed after the final test session
 - [x] only the explicit synthetic fixture remains in TEST `ZAPISY`
-- [x] TEST `REGISTRATIONS_OPEN=FALSE` after the test session
 - [x] seed command re-runs `sheet:bootstrap` so supporting native Tables resize after reseed
-- [ ] final Preview HEAD real-Google validation evidence recorded
+- [ ] final canonical Preview HEAD real-Google validation evidence recorded for this hardening release
 
 ## Security and abuse
 
@@ -149,25 +160,30 @@ Canonical PROD Sheet ID:
 - [x] no service-account private key in repo
 - [x] Vercel OIDC/WIF architecture
 - [x] security headers
+- [x] CSP baseline includes blocked object/frame embedding and self-only manifest/base/form targets
 - [x] business dedupe kept separate from anti-abuse
 - [x] WAF rate limiting selected as production volume-control strategy
 - [x] Turnstile retained as escalation, not default friction
+- [x] final Production application logs for a real successful registration checked for PII leakage
 - [ ] Vercel WAF rule for `POST /api/registrations` physically created and verified
-- [ ] final production logs checked for PII leakage
 
 ## Production identity / hosting
 
-- [ ] separate PROD Google service account physically exists
-- [ ] Production WIF subject bound only to the PROD service account
-- [ ] PROD service account granted only required PROD Sheet access
-- [ ] TEST identity verified without PROD access
-- [ ] Vercel Production `APP_ENV=production`
-- [ ] Vercel Production `DATA_BACKEND=google-sheets`
-- [ ] Vercel Production points to canonical PROD Sheet
-- [ ] complete Production WIF environment configured
-- [ ] `ALLOW_TEST_SEED=false`
-- [ ] `ALLOW_PRODUCTION_CATALOG_SEED=false` during normal runtime
-- [ ] `pnpm prod:env:validate` passes against intended Production configuration
+- [x] separate PROD Google service account physically exists and is present on the PROD Sheet ACL
+- [x] Vercel Production is operational with `APP_ENV=production`
+- [x] Vercel Production is operational with `DATA_BACKEND=google-sheets`
+- [x] Vercel Production was proven to write to the canonical PROD Sheet
+- [x] complete Production WIF configuration is operational, because the deployed Vercel runtime successfully authenticated to Google Sheets without a private key
+- [x] hardening code rejects a wrong PROD Sheet/service-account configuration at runtime
+- [ ] Production WIF subject/provider binding independently verified to permit only the dedicated PROD service account
+- [ ] old TEST/general service account removed from PROD Sheet access
+- [ ] TEST identity independently verified without PROD access
+- [ ] PROD service account's broader Google IAM/Drive access independently confirmed least-privilege beyond this Sheet
+- [ ] `ALLOW_TEST_SEED=false` explicitly verified in Vercel Production configuration
+- [ ] `ALLOW_PRODUCTION_CATALOG_SEED=false` explicitly verified in Vercel Production configuration
+- [ ] `pnpm prod:env:validate` executed against the exact final Vercel Production environment
+
+Known blocker: `activity-registration@pozytywka-reg-3sm-260819.iam.gserviceaccount.com` still has `writer` on the PROD Sheet. It must be removed before registrations are opened.
 
 ## E-mail production
 
@@ -177,44 +193,50 @@ Canonical PROD Sheet ID:
 - [x] failures do not roll back persisted registration
 - [x] same-request replay does not resend notifications
 - [x] admin recipient baseline: `pozytywka.boleslaw@gmail.com`
-- [ ] production sender domain/address verified in Resend
-- [ ] Production `EMAIL_FROM` configured with that verified sender
-- [ ] Production `REGISTRATION_ADMIN_EMAILS` configured
-- [ ] final participant delivery confirmed from Production configuration
-- [ ] final admin delivery confirmed from Production configuration
+- [x] Production sender is operational on the custom address `Pracownia Twórcza Pozytywka <zapisy@3stupidmen.com>`
+- [x] Production `EMAIL_FROM` custom sender proven by a real delivered message
+- [x] final participant delivery confirmed from Production configuration on 2026-08-21
+- [x] Production notification transport reported success for the corresponding real registration
+- [ ] final admin mailbox delivery independently confirmed
+
+The delivered Production participant message is stronger operational evidence than merely checking a provider dashboard flag: the custom sender was accepted and the message reached the recipient mailbox.
+
+## Automated acceptance
+
+Final PR head must be green:
+
+- [x] `pnpm check` on PR #41 / hardening head
+- [x] system Chrome verification in CI
+- [x] Critical E2E on PR #41 / hardening head
 
 ## Manual acceptance
 
-Automated gates must be green on the final PR/commit:
+Checks that require a real browser/device/operator and therefore cannot be truthfully simulated by CI:
 
-- [ ] `pnpm check`
-- [ ] Critical E2E
-
-Final physical/manual checks:
-
-- [ ] desktop Chrome
 - [ ] physical Android/Samsung Chrome
-- [ ] iPhone Safari
-- [ ] keyboard-only flow
-- [ ] focus rings
-- [ ] 200% zoom/reflow
-- [ ] final visual/contrast check
-- [ ] privacy page read-through
-- [ ] Sheet operator flow using real production catalog
+- [ ] physical iPhone Safari
+- [ ] keyboard-only human flow
+- [ ] focus-ring human review
+- [ ] 200% zoom/reflow human review
+- [ ] final human visual/contrast review
+- [ ] privacy/Standardy final human read-through
+- [ ] Sheet operator flow using the real production catalog
+
+CI already covers desktop Chromium behavior and mobile-sized Chromium viewports, but that is not equivalent to physical Safari/Android or a human accessibility review.
 
 ## Final release
 
-Production can open only after every unchecked item above that depends on the actual hosting/IAM/mail environment has evidence.
+Production can open only after every remaining blocker that can affect security, child protection, production identity or real-world operation has evidence.
 
 Final sequence:
 
-1. keep Production registrations closed,
-2. configure separate PROD identity/WIF,
-3. configure Vercel Production env,
-4. configure verified Resend sender,
-5. create and verify WAF rule,
-6. run PROD validate/diagnostics/reconciliation,
-7. run closed Production smoke and e-mail delivery check,
-8. finish physical/manual QA,
-9. verify final deployment SHA,
-10. set Production `REGISTRATIONS_OPEN=TRUE`.
+1. merge/deploy this hardening release while Production registrations remain closed,
+2. verify the deployed Production SHA and public legal routes,
+3. remove the old general/TEST service account from PROD Sheet access and verify TEST cannot access PROD,
+4. independently verify the Production WIF binding and normal-runtime seed flags,
+5. create/verify the Vercel WAF rate-limit rule,
+6. formally adopt v1.1 and display the adopted full + shortened Standardy in the premises,
+7. independently confirm admin mailbox delivery,
+8. complete physical/manual QA and operator Sheet flow,
+9. run any remaining environment-specific validation commands where access exists,
+10. only then set Production `REGISTRATIONS_OPEN=TRUE`.
