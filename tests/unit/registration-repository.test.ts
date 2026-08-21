@@ -40,6 +40,7 @@ const registration: Registration = {
   assignedGroupId: null,
   contactedAt: null,
   confirmedAt: null,
+  closedAt: null,
   possibleDuplicateOf: null,
   notes: "",
   privacyNoticeVersion: "2026-08-v1",
@@ -48,6 +49,13 @@ const registration: Registration = {
   updatedAt: "2026-08-18T12:00:00.000Z",
   schemaVersion: 2,
 };
+
+function workflowDate(value: string | null): string | number {
+  if (!value) {
+    return "";
+  }
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) ? isoDateToGoogleSerial(value) : value;
+}
 
 function rowForHeaders(
   headers: readonly string[],
@@ -78,8 +86,9 @@ function rowForHeaders(
     SEASON_ID: record.seasonId ?? "",
     SEASON_NAME_SNAPSHOT: record.seasonNameSnapshot ?? "",
     ASSIGNED_GROUP_ID: record.assignedGroupId ?? "",
-    CONTACTED_AT: record.contactedAt ?? "",
-    CONFIRMED_AT: record.confirmedAt ?? "",
+    CONTACTED_AT: workflowDate(record.contactedAt),
+    CONFIRMED_AT: workflowDate(record.confirmedAt),
+    CLOSED_AT: workflowDate(record.closedAt),
     POSSIBLE_DUPLICATE_OF: record.possibleDuplicateOf ?? "",
     SCHEMA_VERSION: record.schemaVersion,
   };
@@ -135,7 +144,7 @@ describe("GoogleSheetsRegistrationRepository", () => {
     ]);
   });
 
-  it("reads a schema-v2 idempotent registration from reordered v3 headers", async () => {
+  it("reads a schema-v2 idempotent registration from reordered v4 headers", async () => {
     const reorderedHeaders = [
       ...REGISTRATION_HEADERS.slice(8),
       ...REGISTRATION_HEADERS.slice(0, 8),
@@ -145,6 +154,22 @@ describe("GoogleSheetsRegistrationRepository", () => {
     const repository = new GoogleSheetsRegistrationRepository(client);
 
     await expect(repository.findByRequestId(registration.requestId)).resolves.toEqual(registration);
+  });
+
+  it("round-trips a schema-v4 CLOSED_AT native date", async () => {
+    const closed: Registration = {
+      ...registration,
+      seasonId: asSeasonId("test-2026-2027"),
+      seasonNameSnapshot: "2026/2027",
+      status: REGISTRATION_STATUS.cancelled,
+      closedAt: "2026-09-10",
+      schemaVersion: 4,
+    };
+    const row = rowForHeaders(REGISTRATION_HEADERS, closed);
+    const { client } = createClient(REGISTRATION_HEADERS, [row]);
+    const repository = new GoogleSheetsRegistrationRepository(client);
+
+    await expect(repository.findByRequestId(closed.requestId)).resolves.toEqual(closed);
   });
 
   it("returns only business duplicate candidates from parsed registration rows", async () => {
