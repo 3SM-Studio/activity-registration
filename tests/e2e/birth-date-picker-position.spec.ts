@@ -24,7 +24,9 @@ test("keeps the birth date calendar physically anchored to its field during scro
   const result = await page.evaluate(() => {
     const pickerNode = document.querySelector<HTMLElement>('[data-slot="birth-date-picker"]');
     const triggerNode = pickerNode?.querySelector<HTMLElement>("button");
-    const calendarNode = pickerNode?.querySelector<HTMLElement>('[data-slot="birth-date-calendar"]');
+    const calendarNode = pickerNode?.querySelector<HTMLElement>(
+      '[data-slot="birth-date-calendar"]',
+    );
 
     if (!pickerNode || !triggerNode || !calendarNode) {
       throw new Error("Could not find the birth date picker geometry nodes.");
@@ -48,7 +50,10 @@ test("keeps the birth date calendar physically anchored to its field during scro
 
       const triggerDelta = triggerNode.getBoundingClientRect().top - beforeTriggerTop;
       const calendarDelta = calendarNode.getBoundingClientRect().top - beforeCalendarTop;
-      maximumFrameDrift = Math.max(maximumFrameDrift, Math.abs(triggerDelta - calendarDelta));
+      maximumFrameDrift = Math.max(
+        maximumFrameDrift,
+        Math.abs(triggerDelta - calendarDelta),
+      );
     }
 
     const finalTriggerRect = triggerNode.getBoundingClientRect();
