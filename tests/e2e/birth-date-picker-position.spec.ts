@@ -1,11 +1,5 @@
 import { expect, test } from "@playwright/test";
 
-async function expectPopoverSeparatedFromTrigger(
-  trigger: ReturnType<Parameters<typeof test>[1]> extends never ? never : never,
-) {
-  void trigger;
-}
-
 test("keeps the birth date popover separated from its trigger without position animation", async ({
   page,
 }) => {
