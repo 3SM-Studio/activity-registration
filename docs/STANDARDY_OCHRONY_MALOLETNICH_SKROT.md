@@ -1,10 +1,7 @@
 # Pozytywka - zasady bezpieczeństwa dla dzieci i młodzieży
 
 Wersja skrócona Standardów Ochrony Małoletnich
-Wersja: 1.1 - PROJEKT DO FORMALNEGO ZATWIERDZENIA PRZED PUBLIKACJĄ
-Data projektu: 2026-08-21
-
-> Do czasu formalnego zatwierdzenia przez Iwonę Pilarz wersją obowiązującą pozostaje skrócona wersja z 2026-08-20.
+Data: 2026-08-20
 
 ## Masz prawo czuć się bezpiecznie
 
@@ -21,12 +18,6 @@ Nikt nie powinien:
 - proponować Ci alkoholu, nikotyny lub środków odurzających,
 - publikować Twojego wizerunku bez odpowiedniej zgody,
 - ignorować sytuacji, w której ktoś Cię krzywdzi.
-
-## Twoje potrzeby mają znaczenie
-
-Jeśli masz niepełnosprawność, specjalne potrzeby edukacyjne albo potrzebujesz innego sposobu komunikacji, zasady bezpieczeństwa nadal dotyczą Cię w pełni.
-
-Możesz poprosić o prostsze wyjaśnienie, więcej czasu, spokojniejsze miejsce rozmowy albo inny dostępny sposób przekazania informacji. Osoba dorosła powinna dostosować sposób rozmowy i pomocy do Twoich potrzeb, bez zawstydzania i bez ignorowania zgłoszenia.
 
 ## Kontakt fizyczny
 
@@ -49,8 +40,6 @@ Możesz powiedzieć o tym:
 - rodzicowi lub opiekunowi,
 - innej zaufanej osobie dorosłej.
 
-Do Iwony Pilarz możesz też napisać na `pozytywka.boleslaw@gmail.com` albo zadzwonić pod numer `602 753 268`.
-
 Możesz powiedzieć to własnymi słowami. Nie musisz znać nazwy tego, co się wydarzyło, ani mieć dowodów, żeby poprosić o pomoc.
 
 Jeżeli zgłoszenie dotyczy osoby, której zwykle zgłasza się problemy, powiedz innej zaufanej osobie dorosłej lub właściwej instytucji.
@@ -64,10 +53,10 @@ Gdy dowiemy się, że możesz być w niebezpieczeństwie:
 3. nie będziemy wymagać, żebyś samodzielnie rozwiązał lub udowodnił problem,
 4. przekażemy informację tylko osobom, które muszą pomóc,
 5. jeżeli sytuacja tego wymaga, skontaktujemy się z odpowiednią instytucją publiczną,
-6. ustalimy, co trzeba zmienić, żebyś mógł lub mogła czuć się bezpiecznie.
+6. ustalimy, co trzeba zmienić, żebyś mógł/mogła czuć się bezpiecznie.
 
 ## Ważne
 
 To, że zgłaszasz coś niepokojącego, nie oznacza, że robisz komuś problem. Mówienie o sytuacji, która Cię martwi, jest właściwe.
 
-Po formalnym przyjęciu wersji 1.1 pełne Standardy będą publikowane pod `/standardy-ochrony-maloletnich`, a ta wersja pod `/standardy-ochrony-maloletnich/dla-dzieci` oraz obie wersje będą wywieszane w widocznym miejscu w lokalu Pozytywki.
+Pełne Standardy Ochrony Małoletnich są dostępne w dokumencie `STANDARDY_OCHRONY_MALOLETNICH.md`.
