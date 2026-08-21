@@ -82,7 +82,8 @@ export function BirthDatePicker({
         align="start"
         side="bottom"
         sideOffset={8}
-        avoidCollisions={false}
+        collisionPadding={12}
+        hideWhenDetached
         style={{ animation: "none" }}
       >
         <Calendar
