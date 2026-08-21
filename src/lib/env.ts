@@ -4,7 +4,7 @@ export const CANONICAL_PREVIEW_BRANCH = "preview";
 export const PRODUCTION_SPREADSHEET_ID = "1DRcWvY8xfZDGjJLWOr8Ax1XsyBw4dWU8C6u9WGNvFfM";
 export const PRODUCTION_SERVICE_ACCOUNT_EMAIL =
   "activity-registration-prod@pozytywka-reg-3sm-260819.iam.gserviceaccount.com";
-export const PRODUCTION_ADMIN_EMAIL = "pozytywka.boleslaw@gmail.com";
+export const PRODUCTION_ADMIN_EMAIL = "michal.szwindowski@gmail.com";
 
 const oidcKeys = [
   "GCP_PROJECT_NUMBER",
@@ -186,7 +186,7 @@ const serverEnvSchema = z
         context.addIssue({
           code: "custom",
           path: ["REGISTRATION_ADMIN_EMAILS"],
-          message: "Production admin recipients must include the approved Pozytywka mailbox.",
+          message: "Production admin recipients must include the approved admin mailbox.",
         });
       }
     }
