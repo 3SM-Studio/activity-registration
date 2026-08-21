@@ -13,7 +13,7 @@ export default function ChildFriendlyStandardsPage() {
     <DocumentShell
       eyebrow="Pracownia Twórcza Pozytywka"
       title="Zasady bezpieczeństwa dla dzieci i młodzieży"
-      meta="Wersja skrócona Standardów Ochrony Małoletnich · 20 sierpnia 2026 r."
+      meta="Wersja skrócona Standardów Ochrony Małoletnich · aktualizacja 21 sierpnia 2026 r."
       backHref="/standardy-ochrony-maloletnich"
       backLabel="Zobacz pełne Standardy"
     >
@@ -34,6 +34,20 @@ export default function ChildFriendlyStandardsPage() {
           <li>publikować Twojego wizerunku bez odpowiedniej zgody,</li>
           <li>ignorować sytuacji, w której ktoś Cię krzywdzi.</li>
         </ul>
+      </section>
+
+      <section>
+        <h2>Twoje potrzeby mają znaczenie</h2>
+        <p>
+          Jeśli masz niepełnosprawność, specjalne potrzeby edukacyjne albo potrzebujesz innego
+          sposobu komunikacji, zasady bezpieczeństwa nadal dotyczą Cię w pełni. Możesz poprosić o
+          prostsze wyjaśnienie, więcej czasu, spokojniejsze miejsce rozmowy albo inny dostępny sposób
+          przekazania informacji.
+        </p>
+        <p>
+          Osoba dorosła powinna dostosować sposób rozmowy i pomocy do Twoich potrzeb, bez
+          zawstydzania i bez traktowania Twoich trudności jako powodu do ignorowania zgłoszenia.
+        </p>
       </section>
 
       <section>
@@ -67,6 +81,11 @@ export default function ChildFriendlyStandardsPage() {
           <li>rodzicowi lub opiekunowi,</li>
           <li>innej zaufanej osobie dorosłej.</li>
         </ul>
+        <p>
+          Do Iwony Pilarz możesz też napisać na{" "}
+          <a href="mailto:pozytywka.boleslaw@gmail.com">pozytywka.boleslaw@gmail.com</a> albo
+          zadzwonić pod numer <a href="tel:+48602753268">602 753 268</a>.
+        </p>
         <p>
           Możesz powiedzieć to własnymi słowami. Nie musisz znać nazwy tego, co się wydarzyło, ani
           mieć dowodów, żeby poprosić o pomoc.
