@@ -100,7 +100,7 @@ describe("registration notifications", () => {
       ],
     });
     expect(messages[1]?.html).toContain('src="cid:pozytywka-logo"');
-    expect(messages[1]?.html).toContain("Obsługa zgłoszenia");
+    expect(messages[1]?.html).toContain("Nowe zgłoszenie do obsługi");
     expect(messages[1]?.html).toContain("Dane systemowe");
     expect(messages[1]?.replyTo).toBeUndefined();
     expect(messages[1]?.text).toContain("Pełne dane kontaktowe");

@@ -98,6 +98,7 @@ function workflowIssues(
   const groupById = new Map(groups.map((group) => [group.id, group]));
   const invalidSeasonReference: string[] = [];
   const invalidAssignedGroupReference: string[] = [];
+  const inactiveAssignedGroup: string[] = [];
   const groupOfferingMismatch: string[] = [];
   const groupSeasonMismatch: string[] = [];
   const assignedGroupAgeMismatch: string[] = [];
@@ -169,6 +170,9 @@ function workflowIssues(
         if (!group) {
           invalidAssignedGroupReference.push(registration.id);
         } else {
+          if (!group.active) {
+            inactiveAssignedGroup.push(registration.id);
+          }
           if (group.offeringId !== registration.offeringId) {
             groupOfferingMismatch.push(registration.id);
           }
@@ -200,6 +204,7 @@ function workflowIssues(
   return {
     invalidSeasonReference,
     invalidAssignedGroupReference,
+    inactiveAssignedGroup,
     groupOfferingMismatch,
     groupSeasonMismatch,
     assignedGroupAgeMismatch,

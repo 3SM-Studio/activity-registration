@@ -1,10 +1,12 @@
 import { REGISTRATION_STATUS } from "@/domain/registration";
-import { createHeaderMap } from "@/infrastructure/google/header-map";
+import { cell, createHeaderMap } from "@/infrastructure/google/header-map";
 import { parseGroupRow } from "@/infrastructure/google/parsers";
 import {
   GROUP_HEADERS,
   OPERATOR_DASHBOARD_SHEET,
   REGISTRATION_HEADERS,
+  SETTING_KEY,
+  SETTINGS_HEADERS,
   REGISTRATIONS_TABLE_ID,
   SHEET,
 } from "@/infrastructure/google/sheets-contracts";
@@ -265,15 +267,28 @@ function formulaCell(value: string) {
 }
 
 async function bootstrapDashboard(client: SheetsClient, dashboard: SheetMetadata): Promise<void> {
-  const groupRows = await client.getValues(`${SHEET.groups}!A:ZZ`, {
-    valueRenderOption: "UNFORMATTED_VALUE",
-  });
+  const [groupRows, settingsRows] = await Promise.all([
+    client.getValues(`${SHEET.groups}!A:ZZ`, { valueRenderOption: "UNFORMATTED_VALUE" }),
+    client.getValues(`${SHEET.settings}!A:ZZ`),
+  ]);
   const headers = createHeaderMap(groupRows[0] ?? [], GROUP_HEADERS);
+  const settingsHeaders = createHeaderMap(settingsRows[0] ?? [], SETTINGS_HEADERS);
+  const currentSeasonRows = settingsRows
+    .slice(1)
+    .filter((row) => cell(row, settingsHeaders, "KEY") === SETTING_KEY.currentSeasonId);
+  if (currentSeasonRows.length !== 1) {
+    throw new Error("PANEL_OPERATORA requires exactly one CURRENT_SEASON_ID setting.");
+  }
+  const currentSeasonId = cell(currentSeasonRows[0] ?? [], settingsHeaders, "VALUE");
+  if (!currentSeasonId) {
+    throw new Error("PANEL_OPERATORA requires CURRENT_SEASON_ID.");
+  }
+
   const groups = groupRows
     .slice(1)
     .map((row) => parseGroupRow(row, headers))
     .filter((group) => group !== null)
-    .filter((group) => group.active)
+    .filter((group) => group.active && group.seasonId === currentSeasonId)
     .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, "pl"));
 
   await client.clearValues(`${OPERATOR_DASHBOARD_SHEET}!A:K`);
@@ -471,10 +486,10 @@ export function buildOperatorSheetRequests(
       rule: {
         condition: {
           type: "ONE_OF_RANGE",
-          values: [{ userEnteredValue: "GRUPY!A2:A1000" }],
+          values: [{ userEnteredValue: `${OPERATOR_DASHBOARD_SHEET}!A13:A1000` }],
         },
         inputMessage:
-          "Wybierz aktywną grupę z zakładki GRUPY. Po przypisaniu sprawdź zgodność wieku i oferty.",
+          "Wybierz aktywną grupę bieżącego sezonu. Po przypisaniu sprawdź zgodność wieku i oferty.",
         strict: true,
         showCustomUi: true,
       },

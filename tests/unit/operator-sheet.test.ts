@@ -118,6 +118,19 @@ describe("operator Sheets experience", () => {
     }
   });
 
+  it("uses the active current-season dashboard list as the group dropdown source", () => {
+    const requests = buildOperatorSheetRequests(sheet());
+    const validation = requests.find((request) => "setDataValidation" in request)
+      ?.setDataValidation as
+      | { rule?: { condition?: { type?: string; values?: Array<{ userEnteredValue?: string }> } } }
+      | undefined;
+
+    expect(validation?.rule?.condition).toEqual({
+      type: "ONE_OF_RANGE",
+      values: [{ userEnteredValue: "PANEL_OPERATORA!A13:A1000" }],
+    });
+  });
+
   it("backs operator filter views with the native registration table", () => {
     const requests = buildOperatorSheetRequests(sheet());
     const filters = requests.flatMap((request) => {
