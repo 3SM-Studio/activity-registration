@@ -38,8 +38,8 @@ export const REGISTRATION_OPERATOR_FILTER_VIEW_TITLES = {
 } as const;
 
 const TECHNICAL_COLUMN_RANGES = [
-  { startIndex: 0, endIndex: 7 },
-  { startIndex: 10, endIndex: 11 },
+  { startIndex: 0, endIndex: 2 },
+  { startIndex: 3, endIndex: 5 },
   { startIndex: 17, endIndex: 23 },
   { startIndex: 27, endIndex: 29 },
 ] as const;

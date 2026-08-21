@@ -91,7 +91,6 @@ describe("registration notifications", () => {
     expect(messages[0]?.text).toContain("nie potwierdzenie miejsca na zajęciach");
     expect(messages[1]).toMatchObject({
       to: ["biuro@example.com"],
-      replyTo: "anna@example.com",
       idempotencyKey: "registration-admin/reg_11111111-1111-4111-8111-111111111111",
       attachments: [
         {
@@ -103,9 +102,13 @@ describe("registration notifications", () => {
     expect(messages[1]?.html).toContain('src="cid:pozytywka-logo"');
     expect(messages[1]?.html).toContain("Obsługa zgłoszenia");
     expect(messages[1]?.html).toContain("Dane systemowe");
-    expect(messages[1]?.text).toContain("Rodzic/opiekun");
-    expect(messages[1]?.text).toContain("Anna Kowalska");
-    expect(messages[1]?.text).toContain("2012-01-15");
+    expect(messages[1]?.replyTo).toBeUndefined();
+    expect(messages[1]?.text).toContain("Pełne dane kontaktowe");
+    expect(messages[1]?.text).not.toContain("Anna Kowalska");
+    expect(messages[1]?.text).not.toContain("2012-01-15");
+    expect(messages[1]?.text).not.toContain("+48500000000");
+    expect(messages[1]?.text).not.toContain("anna@example.com");
+    expect(messages[1]?.text).not.toContain("Jan Kowalski");
   });
 
   it("keeps probable-duplicate warning internal to the admin notification", async () => {
@@ -140,7 +143,9 @@ describe("registration notifications", () => {
   });
 
   it("attempts both notifications and reports partial failure without throwing", async () => {
-    const sender = new RecordingSender((message) => message.subject.startsWith("Nowe zgłoszenie:"));
+    const sender = new RecordingSender((message) =>
+      message.idempotencyKey.startsWith("registration-admin/"),
+    );
 
     const result = await sendRegistrationNotifications(registration(), {
       sender,

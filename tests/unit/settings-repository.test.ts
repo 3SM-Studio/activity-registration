@@ -22,7 +22,7 @@ function createClient(values: readonly (readonly unknown[])[]): SheetsClient {
 
 function validSettings(overrides: Readonly<Record<string, string>> = {}) {
   const values: Record<string, string> = {
-    SYSTEM_SCHEMA_VERSION: "3",
+    SYSTEM_SCHEMA_VERSION: "4",
     REGISTRATIONS_OPEN: "TAK",
     CURRENT_SEASON_ID: "test-2026-2027",
     PUBLIC_FORM_TITLE: "Zapisy 2026",
@@ -56,9 +56,20 @@ describe("GoogleSheetsSettingsRepository", () => {
     await expect(repository.getPublicSettings()).rejects.toBeInstanceOf(SheetSchemaError);
   });
 
+  it("accepts the previous schema only in fail-closed migration mode", async () => {
+    const repository = new GoogleSheetsSettingsRepository(
+      createClient(validSettings({ SYSTEM_SCHEMA_VERSION: "3", REGISTRATIONS_OPEN: "TAK" })),
+    );
+
+    await expect(repository.getPublicSettings()).resolves.toMatchObject({
+      registrationsOpen: false,
+      currentSeasonId: "test-2026-2027",
+    });
+  });
+
   it("rejects an unsupported system schema version", async () => {
     const repository = new GoogleSheetsSettingsRepository(
-      createClient(validSettings({ SYSTEM_SCHEMA_VERSION: "4" })),
+      createClient(validSettings({ SYSTEM_SCHEMA_VERSION: "5" })),
     );
 
     await expect(repository.getPublicSettings()).rejects.toThrow(
