@@ -69,7 +69,9 @@ export function computeOfferingIntakeStatus(
     }
 
     if (currentDate > openTo) {
-      return PUBLIC_INTAKE_STATUS.closed;
+      return offering.waitlistEnabled
+        ? PUBLIC_INTAKE_STATUS.waitlistOnly
+        : PUBLIC_INTAKE_STATUS.closed;
     }
   }
 
