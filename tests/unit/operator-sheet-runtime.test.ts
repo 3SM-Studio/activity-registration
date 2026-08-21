@@ -24,9 +24,7 @@ function sheet(overrides: Partial<SheetMetadata> = {}): SheetMetadata {
   };
 }
 
-function addedConditionalFormatFormulas(
-  requests: readonly Record<string, unknown>[],
-) {
+function addedConditionalFormatFormulas(requests: readonly Record<string, unknown>[]) {
   return requests.flatMap((request) => {
     const add = request.addConditionalFormatRule as
       | {
@@ -37,8 +35,7 @@ function addedConditionalFormatFormulas(
           };
         }
       | undefined;
-    const formula =
-      add?.rule?.booleanRule?.condition?.values?.[0]?.userEnteredValue;
+    const formula = add?.rule?.booleanRule?.condition?.values?.[0]?.userEnteredValue;
     return formula ? [formula] : [];
   });
 }
@@ -49,10 +46,7 @@ describe("safe operator Sheets runtime", () => {
 
     expect(
       requests.some(
-        (request) =>
-          "updateTable" in request ||
-          "addTable" in request ||
-          "deleteTable" in request,
+        (request) => "updateTable" in request || "addTable" in request || "deleteTable" in request,
       ),
     ).toBe(false);
   });
