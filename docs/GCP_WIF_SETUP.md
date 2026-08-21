@@ -1,10 +1,10 @@
 # GCP Workload Identity Federation dla systemu zapisów
 
-Ten runbook opisuje zweryfikowany dostęp Vercel -> Google Sheets bez długowiecznych kluczy JSON service account.
+Ten runbook opisuje aktualny, zweryfikowany dostęp Vercel -> Google Sheets bez długowiecznych kluczy JSON service account.
+
+Stan zaktualizowany: 2026-08-21.
 
 ## Aktualny stan
-
-Zweryfikowane 2026-08-19 na publicznym Vercel Preview.
 
 ```text
 GCP project ID      pozytywka-reg-3sm-260819
@@ -14,51 +14,55 @@ Vercel project      pozytywka-activity-registration
 Vercel project ID   prj_G9iXemQYiX8fuFkhHuSPTwZ8fQAa
 Pool ID             vercel
 Provider ID         vercel
+Issuer              https://oidc.vercel.com/atypicalmichas
 ```
 
-TEST:
+TEST / Preview:
 
 ```text
 Sheet ID             11-wmT8OCSVinFNjAFE7oHvIYUKnVOBgxmwIgvGgWH-8
 Service account      activity-registration@pozytywka-reg-3sm-260819.iam.gserviceaccount.com
 Vercel environment   preview
+Vercel branch         preview
 ```
 
 PROD:
 
 ```text
-Sheet ID             1YvPxYSPHkiWetpYjPfCq-KrXncjGy6bSCWIIwjl-v38
-Service account      NIE UTWORZONY
+Sheet ID             1DRcWvY8xfZDGjJLWOr8Ax1XsyBw4dWU8C6u9WGNvFfM
+Service account      activity-registration-prod@pozytywka-reg-3sm-260819.iam.gserviceaccount.com
 Vercel environment   production
+SYSTEM_SCHEMA_VERSION 4
 REGISTRATIONS_OPEN   FALSE
 ```
 
-PROD nie jest jeszcze podłączony do runtime aplikacji.
+Production jest podłączony do runtime aplikacji. Realny zapis z Vercel Production został zweryfikowany w kanonicznym PROD Sheet. Po migracji schema v4 Production nadal działa z zamkniętymi zapisami.
 
 ## Zasada izolacji TEST i PROD
 
-TEST i PROD muszą używać różnych service accountów.
+TEST i PROD używają różnych service accountów.
 
-Nie udostępniaj PROD Sheeta obecnemu kontu:
+TEST identity:
 
 ```text
 activity-registration@pozytywka-reg-3sm-260819.iam.gserviceaccount.com
 ```
 
-To konto jest tożsamością TEST/Preview. Gdyby dostało dostęp do PROD, Preview mogłoby uzyskać dostęp do produkcyjnego arkusza po impersonacji tej samej tożsamości.
-
-Docelowo produkcja dostaje osobny service account, np.:
+PROD identity:
 
 ```text
 activity-registration-prod@pozytywka-reg-3sm-260819.iam.gserviceaccount.com
 ```
 
-Dopiero ten osobny service account dostaje:
+Zweryfikowane 2026-08-21:
 
-- dostęp do `Pozytywka - Zapisy PROD`,
-- `roles/iam.workloadIdentityUser` dla subjectu Vercel `environment:production`.
+- TEST Sheet ma TEST service account jako `writer`,
+- TEST Sheet nie ma PROD service account,
+- PROD Sheet ma dedykowany PROD service account jako `writer`,
+- PROD Sheet nie ma TEST/general service account,
+- nie udostępniamy całego prywatnego Drive ani wspólnego folderu obu identity.
 
-## 1. API
+## 1. Wymagane API
 
 ```bash
 PROJECT_ID="pozytywka-reg-3sm-260819"
@@ -79,7 +83,7 @@ Projekt ma numer:
 656375661462
 ```
 
-Można go zawsze odczytać ponownie:
+Weryfikacja:
 
 ```bash
 GCP_PROJECT_NUMBER="$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')"
@@ -101,52 +105,13 @@ pool:     vercel
 provider: vercel
 ```
 
-Kod aplikacji używa kanonicznego audience providera Google:
+Kanoniczny audience providera Google:
 
 ```text
 //iam.googleapis.com/projects/656375661462/locations/global/workloadIdentityPools/vercel/providers/vercel
 ```
 
-To samo audience musi być dopuszczone w konfiguracji providera. Nie używaj tutaj `https://vercel.com/atypicalmichas`.
-
-Tworzenie nowego providera od zera:
-
-```bash
-PROJECT_ID="pozytywka-reg-3sm-260819"
-GCP_PROJECT_NUMBER="656375661462"
-POOL_ID="vercel"
-PROVIDER_ID="vercel"
-GCP_AUDIENCE="//iam.googleapis.com/projects/${GCP_PROJECT_NUMBER}/locations/global/workloadIdentityPools/${POOL_ID}/providers/${PROVIDER_ID}"
-
-gcloud iam workload-identity-pools create "$POOL_ID" \
-  --project="$PROJECT_ID" \
-  --location=global \
-  --display-name="Vercel" \
-  --description="Vercel OIDC for Pozytywka registration"
-
-gcloud iam workload-identity-pools providers create-oidc "$PROVIDER_ID" \
-  --project="$PROJECT_ID" \
-  --location=global \
-  --workload-identity-pool="$POOL_ID" \
-  --display-name="Vercel" \
-  --issuer-uri="https://oidc.vercel.com/atypicalmichas" \
-  --allowed-audiences="$GCP_AUDIENCE" \
-  --attribute-mapping="google.subject=assertion.sub"
-```
-
-Jeżeli provider już istnieje i trzeba naprawić audience:
-
-```bash
-GCP_AUDIENCE="//iam.googleapis.com/projects/656375661462/locations/global/workloadIdentityPools/vercel/providers/vercel"
-
-gcloud iam workload-identity-pools providers update-oidc vercel \
-  --project="pozytywka-reg-3sm-260819" \
-  --location=global \
-  --workload-identity-pool=vercel \
-  --allowed-audiences="$GCP_AUDIENCE"
-```
-
-Weryfikacja:
+Weryfikacja providera:
 
 ```bash
 gcloud iam workload-identity-pools providers describe vercel \
@@ -166,15 +131,17 @@ oidc:
     - //iam.googleapis.com/projects/656375661462/locations/global/workloadIdentityPools/vercel/providers/vercel
 ```
 
+Nie używaj jako audience `https://vercel.com/atypicalmichas`.
+
 ## 3. Preview principal
 
-Vercel `sub` dla działającego Preview:
+Kanoniczny subject Preview:
 
 ```text
 owner:atypicalmichas:project:pozytywka-activity-registration:environment:preview
 ```
 
-Binding istnieje na TEST service account:
+Binding ma istnieć wyłącznie na TEST service account:
 
 ```bash
 PROJECT_ID="pozytywka-reg-3sm-260819"
@@ -190,20 +157,15 @@ gcloud iam service-accounts add-iam-policy-binding "$TEST_SA_EMAIL" \
 
 Nie przyznawaj `roles/iam.workloadIdentityUser` całemu poolowi.
 
-## 4. Production principal, dopiero przed PROD
+## 4. Production principal
 
-Najpierw utwórz osobny service account:
+Kanoniczny subject Production:
 
-```bash
-PROJECT_ID="pozytywka-reg-3sm-260819"
-
-gcloud iam service-accounts create activity-registration-prod \
-  --project="$PROJECT_ID" \
-  --display-name="Pozytywka Activity Registration PROD" \
-  --description="Production-only Google Sheets identity for Pozytywka registrations"
+```text
+owner:atypicalmichas:project:pozytywka-activity-registration:environment:production
 ```
 
-Następnie binduj wyłącznie subject produkcyjny:
+Binding ma istnieć wyłącznie na PROD service account:
 
 ```bash
 GCP_PROJECT_NUMBER="656375661462"
@@ -216,22 +178,21 @@ gcloud iam service-accounts add-iam-policy-binding "$PROD_SA_EMAIL" \
   --member="principal://iam.googleapis.com/projects/${GCP_PROJECT_NUMBER}/locations/global/workloadIdentityPools/vercel/subject/${PROD_SUBJECT}"
 ```
 
-Nie dodawaj subjectu `environment:production` do TEST service accountu.
+Nie dodawaj subjectu `environment:production` do TEST service accountu. Nie dodawaj subjectu `environment:preview` do PROD service accountu.
 
 ## 5. Google Drive / Sheets permissions
 
-Aktualnie:
+Kanoniczny stan:
 
-- TEST Sheet jest udostępniony TEST service accountowi jako `writer`,
-- PROD Sheet nie jest udostępniony TEST service accountowi.
-
-Przed produkcją udostępnij PROD Sheet wyłącznie PROD service accountowi.
-
-Nie udostępniaj całego folderu ani całego prywatnego Drive.
+- TEST Sheet `11-wmT8OCSVinFNjAFE7oHvIYUKnVOBgxmwIgvGgWH-8` jest udostępniony TEST service accountowi jako `writer`,
+- PROD Sheet `1DRcWvY8xfZDGjJLWOr8Ax1XsyBw4dWU8C6u9WGNvFfM` jest udostępniony wyłącznie aplikacyjnemu PROD service accountowi jako `writer`,
+- TEST service account nie ma dostępu do PROD Sheet,
+- PROD service account nie ma dostępu do TEST Sheet,
+- general access PROD Sheet jest `Restricted`.
 
 ## 6. Vercel Preview env
 
-Aktualny Preview dla `feat/production-integrations` używa:
+Canonical Preview używa:
 
 ```text
 APP_ENV=test
@@ -240,7 +201,6 @@ GOOGLE_SPREADSHEET_ID=11-wmT8OCSVinFNjAFE7oHvIYUKnVOBgxmwIgvGgWH-8
 
 EMAIL_PROVIDER=resend
 EMAIL_FROM=Pracownia Twórcza Pozytywka <zapisy@3stupidmen.com>
-REGISTRATION_ADMIN_EMAILS=3stupidmenbusiness@gmail.com
 RESEND_API_KEY=<Sensitive, Preview>
 
 GCP_PROJECT_ID=pozytywka-reg-3sm-260819
@@ -251,23 +211,23 @@ GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID=vercel
 ALLOW_TEST_SEED=false
 ```
 
-Nie ustawiaj ręcznie `VERCEL_OIDC_TOKEN` na Vercelu. Runtime otrzymuje token OIDC od Vercela.
+Nie ustawiaj ręcznie `VERCEL_OIDC_TOKEN`. Runtime otrzymuje token OIDC od Vercela.
 
 Lokalnie używamy ADC, dlatego lokalny `.env.local` nie powinien zawierać `VERCEL_OIDC_TOKEN`.
 
-## 7. Vercel Production env, przyszły stan
+## 7. Vercel Production env
 
-Dopiero po utworzeniu osobnego PROD service accountu:
+Kanoniczny Production używa:
 
 ```text
 APP_ENV=production
 DATA_BACKEND=google-sheets
-GOOGLE_SPREADSHEET_ID=1YvPxYSPHkiWetpYjPfCq-KrXncjGy6bSCWIIwjl-v38
+GOOGLE_SPREADSHEET_ID=1DRcWvY8xfZDGjJLWOr8Ax1XsyBw4dWU8C6u9WGNvFfM
 
 EMAIL_PROVIDER=resend
-RESEND_API_KEY=<production secret>
-EMAIL_FROM=<verified production sender>
-REGISTRATION_ADMIN_EMAILS=pozytywka.boleslaw@gmail.com
+RESEND_API_KEY=<Sensitive, Production>
+EMAIL_FROM=Pracownia Twórcza Pozytywka <zapisy@3stupidmen.com>
+REGISTRATION_ADMIN_EMAILS=michal.szwindowski@gmail.com
 
 GCP_PROJECT_ID=pozytywka-reg-3sm-260819
 GCP_PROJECT_NUMBER=656375661462
@@ -275,11 +235,14 @@ GCP_SERVICE_ACCOUNT_EMAIL=activity-registration-prod@pozytywka-reg-3sm-260819.ia
 GCP_WORKLOAD_IDENTITY_POOL_ID=vercel
 GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID=vercel
 ALLOW_TEST_SEED=false
+ALLOW_PRODUCTION_CATALOG_SEED=false
 ```
 
-## 8. Zweryfikowany Preview E2E
+Kod runtime i `scripts/validate-production-env.ts` egzekwują kanoniczny PROD Sheet, dedykowany PROD service account i zatwierdzony techniczny odbiorca administracyjny.
 
-2026-08-19 zweryfikowano:
+## 8. Zweryfikowany Preview E2E i finalny HEAD read
+
+2026-08-19 zweryfikowano pełną ścieżkę TEST:
 
 ```text
 Vercel Preview
@@ -293,23 +256,67 @@ Vercel Preview
 -> Resend admin notification request
 ```
 
-Po poprawieniu `allowedAudiences` nowe requesty `GET /` nie generowały już `invalid_grant`.
+2026-08-21 branch `preview` został fast-forwardowany do finalnego SHA aplikacji:
 
-Mail uczestnika został potwierdzony w skrzynce Gmail. Log `registration.notifications.succeeded` oznacza, że obie próby wysyłki zostały przyjęte przez warstwę Resend bez błędu. Nie jest to dowód mailbox delivery wiadomości administracyjnej.
+```text
+caafa3184b61727ab9f05a4bedc6162b4935d926
+```
 
-## 9. Gate przed PROD
+Deployment:
 
-Przed dodaniem production bindingu i otwarciem zapisów:
+```text
+dpl_EQTR2YFkDZLJL2DqxypYEjivTq2R
+```
 
-- utwórz osobny PROD service account,
-- udostępnij mu wyłącznie PROD Sheet,
-- dodaj wyłącznie production subject,
-- wprowadź prawdziwy katalog zajęć,
-- zatwierdź privacy notice i jej wersję,
-- zatwierdź retention policy,
-- skonfiguruj produkcyjnego nadawcę i odbiorcę administracyjnego,
-- wykonaj kontrolowany smoke test przy `REGISTRATIONS_OPEN=FALSE` tam, gdzie to możliwe,
-- dopiero na końcu ustaw `REGISTRATIONS_OPEN=TRUE`.
+osiągnął `READY`. GET do canonical Preview zwrócił dokładne ustawienia TEST Sheet:
+
+```text
+CURRENT_SEASON_ID=test-2026-2027
+PRIVACY_NOTICE_VERSION=test-2026-08-18
+REGISTRATIONS_OPEN=FALSE
+```
+
+W tym samym oknie nie było warning/error/fatal runtime logs. To jest finalny dowód, że aktualny HEAD potrafi uwierzytelnić się przez Preview WIF i czytać izolowany TEST Sheet.
+
+## 9. Zweryfikowany Production runtime
+
+Production działa na finalnym hotfix SHA:
+
+```text
+caafa3184b61727ab9f05a4bedc6162b4935d926
+```
+
+Deployment:
+
+```text
+dpl_7EGyhKvLskZXqDzL5fwkoQ9QmzLe
+```
+
+Po migracji PROD Sheet do schema v4 zweryfikowano:
+
+- `SYSTEM_SCHEMA_VERSION=4`,
+- `REGISTRATIONS_OPEN=FALSE`,
+- zachowanie istniejącego rekordu,
+- natywny Table dropdown `ASSIGNED_GROUP_ID`,
+- `PANEL_OPERATORA`,
+- 12 reguł operatorskiego formatowania warunkowego,
+- cztery widoki operatorskie,
+- pięć pomocniczych natywnych Tables,
+- HTTP 200 z zamkniętym formularzem,
+- brak warning/error/fatal runtime logs w oknie weryfikacji.
+
+## 10. Pozostałe gate'y przed otwarciem PROD
+
+Przed `REGISTRATIONS_OPEN=TRUE` nadal trzeba:
+
+- fizycznie wywiesić pełne i skrócone Standardy v1.1 w siedzibie,
+- wykonać real-device QA na Android Chrome i iPhone Safari,
+- wykonać keyboard/focus/200% zoom/reflow i finalny human visual review,
+- wykonać operator QA na prawdziwym katalogu PROD,
+- wykonać możliwe environment-specific command checks bez tworzenia publicznego debug endpointu,
+- niezależnie przejrzeć szerszy IAM/Drive scope PROD service accountu pod least privilege.
+
+Dopiero po tych gate'ach ustawiamy `REGISTRATIONS_OPEN=TRUE` i wykonujemy finalny live smoke.
 
 ## Źródła
 

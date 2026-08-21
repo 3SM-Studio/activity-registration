@@ -1,8 +1,8 @@
 # Release checklist
 
 Date: 2026-08-21
-Target: Pozytywka Registration v3
-Status: Production deployed and intentionally closed pending final physical/manual acceptance
+Target: Pozytywka Registration v4
+Status: Production deployed, migrated to schema v4 and intentionally closed pending final physical/manual acceptance
 
 `REGISTRATIONS_OPEN=TRUE` in Production is the final action. Until every remaining release blocker is closed, Production remains intentionally closed.
 
@@ -25,18 +25,22 @@ Canonical decisions: `docs/PRODUCTION_DECISIONS_2026-08-20.md`.
 
 ## Runtime and automated acceptance
 
-- [x] schema v3
+- [x] schema v4 code deployed
 - [x] `SEZONY`, `GRUPY`, `CURRENT_SEASON_ID`
-- [x] v3 Offering intake fields and registration statuses
-- [x] `ASSIGNED_GROUP_ID`, `CONTACTED_AT`, `CONFIRMED_AT`, `POSSIBLE_DUPLICATE_OF`
+- [x] v4 operator lifecycle fields: `ASSIGNED_GROUP_ID`, `CONTACTED_AT`, `CONFIRMED_AT`, `CLOSED_AT`, `POSSIBLE_DUPLICATE_OF`
 - [x] business duplicate handling
 - [x] native Google Tables and operator-first `ZAPISY`
+- [x] native `ASSIGNED_GROUP_ID` Table dropdown driven by current-season groups
+- [x] `PANEL_OPERATORA` dashboard with group capacity formulas
+- [x] four operator filter views present
+- [x] twelve operator conditional-format rules present on `ZAPISY`
 - [x] international phone input and controlled DOB picker
 - [x] participant/admin transactional e-mail
 - [x] production runtime fails closed for wrong PROD Sheet or service-account identity
 - [x] Google authentication provider errors sanitized before logging
 - [x] hardening PR #41 passed `pnpm check`, Chrome verification and Critical E2E
 - [x] admin-recipient PR #42 passed full CI
+- [x] native group dropdown hotfix PR #45 passed full CI including Critical E2E
 
 ## Privacy / RODO
 
@@ -85,20 +89,26 @@ Canonical PROD Sheet ID:
 `1DRcWvY8xfZDGjJLWOr8Ax1XsyBw4dWU8C6u9WGNvFfM`
 
 - [x] separate PROD Sheet created
-- [x] v3 structure and native Tables verified
+- [x] schema v4 structure and native Tables verified on 2026-08-21
 - [x] production catalog/settings verified
-- [x] `SYSTEM_SCHEMA_VERSION=3`
+- [x] `SYSTEM_SCHEMA_VERSION=4`
 - [x] `CURRENT_SEASON_ID=2026-2027`
 - [x] `REGISTRATIONS_OPEN=FALSE` during release preparation
-- [x] real Vercel Production registration previously matched to the canonical PROD Sheet
-- [x] synthetic smoke registration removed after verification
-- [x] `ZAPISY` returned to header-only state after smoke cleanup
+- [x] v4 migration completed while registrations remained closed
+- [x] existing registration data preserved through the v4 migration
+- [x] native `ASSIGNED_GROUP_ID` dropdown contains the eight active current-season production groups
+- [x] real Vercel Production registration matched to the canonical PROD Sheet
+- [x] PROD runtime remained HTTP 200 and closed after the migration
+- [x] no Production warning/error/fatal runtime logs observed after the final v4 deployment and migration verification
 - [x] old TEST/general service account removed from PROD Sheet ACL on 2026-08-21
+- [x] dedicated PROD service account remains the only application service account on the PROD Sheet ACL
 - [x] PROD Sheet general access verified as restricted
 - [ ] repository `sheet:validate` command executed through the exact final PROD Vercel identity
 - [ ] repository `diagnostics` command executed through the exact final PROD Vercel identity
 
 The command-level checks are not replaced by a public debug endpoint. Direct Sheet validation plus a proven real Vercel-runtime write provide the current runtime evidence without creating a temporary production attack surface.
+
+Google native Table columns typed as `DATE` currently render with the Table-managed `yyyy-MM-dd` display pattern even when a later `repeatCell` request asks for a different date pattern. Values remain native dates and this is treated as a presentation limitation, not a data-integrity blocker.
 
 ## Production identity / hosting
 
@@ -149,22 +159,32 @@ TEST/Preview service account:
 - [x] Resend provider enabled
 - [x] custom production sender operational: `Pracownia Twórcza Pozytywka <zapisy@3stupidmen.com>`
 - [x] real participant delivery previously confirmed
-- [x] notification transport previously confirmed from Production
-- [x] canonical production admin recipient changed in code to `michal.szwindowski@gmail.com`
+- [x] notification transport confirmed from Production
+- [x] canonical production admin recipient is `michal.szwindowski@gmail.com`
 - [x] `REGISTRATION_ADMIN_EMAILS` Production environment changed to `michal.szwindowski@gmail.com`
-- [x] final admin-recipient deployment is READY on commit `80d4fba8059215e2382c0391f6e8230c412a9726`
-- [ ] one final admin notification delivered to `michal.szwindowski@gmail.com` from the final Production configuration
+- [x] current runtime and release validator both enforce the canonical admin recipient
+- [x] final admin notification delivered to `michal.szwindowski@gmail.com` and present in Inbox on 2026-08-21
 
 The public Pozytywka contact mailbox remains a separate business decision and does not have to equal the technical registration-notification recipient.
 
 ## TEST / Preview
 
+Canonical TEST Sheet ID:
+
+`11-wmT8OCSVinFNjAFE7oHvIYUKnVOBgxmwIgvGgWH-8`
+
 - [x] canonical Preview architecture uses the TEST service account
 - [x] TEST identity independently verified as `environment:preview`
+- [x] TEST Sheet ACL contains the TEST service account and does not contain the PROD service account
 - [x] controlled real submit previously reached `201`
 - [x] participant/admin notification path previously reported success
 - [x] manual real-delivery QA rows removed after testing
-- [ ] final canonical Preview HEAD real-Google validation evidence recorded after the v1.1 publication release
+- [x] `preview` branch fast-forwarded to final v4 application SHA `caafa3184b61727ab9f05a4bedc6162b4935d926`
+- [x] final canonical Preview deployment `dpl_EQTR2YFkDZLJL2DqxypYEjivTq2R` reached READY
+- [x] final Preview GET read returned the exact TEST settings (`test-2026-2027`, `test-2026-08-18`) from the canonical TEST Sheet
+- [x] no Preview warning/error/fatal runtime logs observed during the final real-Google read verification
+
+The final Preview verification proves current HEAD can authenticate through Preview WIF and read the isolated TEST Sheet. The earlier controlled `201` proves the TEST write path. It does not claim a new write was performed on 2026-08-21.
 
 ## Manual acceptance
 
@@ -183,12 +203,10 @@ These checks require a real device or human operator and are not replaced by CI:
 
 Production may open only after the remaining real-world blockers are closed.
 
-1. deploy adopted v1.1 while registrations remain closed,
-2. verify public full + child-friendly routes show v1.1,
-3. physically display both adopted Standardy versions in the premises,
-4. complete final real-device accessibility/form QA,
-5. complete operator Sheet QA,
-6. confirm one final admin notification to `michal.szwindowski@gmail.com`,
-7. execute remaining environment-specific command checks where credentials can be safely obtained,
-8. only then set Production `REGISTRATIONS_OPEN=TRUE`,
-9. perform the final live smoke and immediately remove any synthetic production record.
+1. physically display both adopted Standardy versions in the premises,
+2. complete final real-device accessibility/form QA,
+3. complete operator Sheet QA,
+4. execute remaining environment-specific command checks where credentials can be safely obtained,
+5. review broader PROD service-account IAM/Drive least privilege,
+6. only then set Production `REGISTRATIONS_OPEN=TRUE`,
+7. perform the final live smoke and immediately remove any synthetic production record.
