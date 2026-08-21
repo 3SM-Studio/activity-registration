@@ -36,17 +36,19 @@ function ClosedState({
     <main className="min-h-screen px-4 py-10 sm:px-6 sm:py-16">
       <div className="mx-auto flex min-h-[70vh] w-full max-w-2xl items-center">
         <section className="w-full rounded-[1.75rem] border border-[var(--line)] bg-[var(--surface)] p-6 shadow-[0_28px_90px_-48px_rgba(77,36,58,0.34)] sm:p-10">
-          <div className="mb-8">
+          <div className="not-typeset mb-8">
             <PozytywkaLogo />
           </div>
-          <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-[0.16em] text-[var(--teal)]">
-            <CircleAlert className="size-4" aria-hidden="true" />
-            <span>Zapisy online</span>
+          <div className="typeset typeset-hero">
+            <div className="not-typeset flex items-center gap-2 text-sm font-bold uppercase tracking-[0.16em] text-[var(--teal)]">
+              <CircleAlert className="size-4" aria-hidden="true" />
+              <span>Zapisy online</span>
+            </div>
+            <h1 className="mt-3 text-balance text-4xl font-extrabold tracking-[-0.04em] text-neutral-950 sm:text-5xl">
+              {title}
+            </h1>
+            <p className="max-w-xl text-neutral-600">{description}</p>
           </div>
-          <h1 className="mt-3 text-balance text-4xl font-extrabold tracking-[-0.04em] text-neutral-950 sm:text-5xl">
-            {title}
-          </h1>
-          <p className="mt-5 max-w-xl text-base leading-7 text-neutral-600">{description}</p>
         </section>
       </div>
     </main>
@@ -90,21 +92,21 @@ export default async function HomePage() {
 
       <div className="relative mx-auto w-full max-w-3xl">
         <header className="mb-7 pt-1 sm:mb-9">
-          <div className="mb-8 flex items-center gap-4">
+          <div className="not-typeset mb-8 flex items-center gap-4">
             <PozytywkaLogo />
             <span className="ml-auto hidden border-l border-[var(--line)] pl-4 text-sm font-semibold text-neutral-600 sm:block">
               Zapisy online
             </span>
           </div>
 
-          <div className="max-w-2xl">
-            <p className="mb-3 text-sm font-bold uppercase tracking-[0.16em] text-[var(--teal)]">
+          <div className="typeset typeset-hero max-w-2xl">
+            <p className="not-typeset mb-3 text-sm font-bold uppercase tracking-[0.16em] text-[var(--teal)]">
               Zapisy na zajęcia
             </p>
             <h1 className="text-balance text-[clamp(2.25rem,8vw,3.75rem)] font-extrabold leading-[0.98] tracking-[-0.045em] text-neutral-950">
               {settings.formTitle}
             </h1>
-            <p className="mt-4 max-w-xl text-pretty text-[1.05rem] leading-7 text-neutral-600">
+            <p className="max-w-xl text-pretty text-neutral-600">
               Wybierz miasto i rodzaj zajęć, a następnie podaj dane uczestnika. Po wysłaniu
               Pozytywka sprawdzi zgłoszenie i skontaktuje się z Tobą, aby dobrać odpowiednią grupę
               oraz termin.
@@ -112,9 +114,11 @@ export default async function HomePage() {
           </div>
         </header>
 
-        <RegistrationForm catalog={catalog} settings={settings} />
+        <div className="not-typeset">
+          <RegistrationForm catalog={catalog} settings={settings} />
+        </div>
 
-        <footer className="px-2 pb-2 pt-6 text-center text-xs leading-5 text-neutral-500">
+        <footer className="not-typeset px-2 pb-2 pt-6 text-center text-xs leading-5 text-neutral-500">
           Pracownia Twórcza Pozytywka · formularz zapisów
         </footer>
       </div>
