@@ -1,0 +1,54 @@
+name: Apply dropdown UI preservation patch
+
+on:
+  push:
+    branches:
+      - fix/preserve-dropdown-ui-2026-08-21
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: fix/preserve-dropdown-ui-2026-08-21
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11.20.0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24.19.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Patch bootstrap behavior
+        shell: python
+        run: |
+          from pathlib import Path
+
+          sheet_admin = Path('src/infrastructure/google/sheet-admin.ts')
+          text = sheet_admin.read_text()
+          old = 'fields: "name,range,rowsProperties,columnProperties",'
+          new = 'fields: "name,range,rowsProperties",'
+          assert text.count(old) == 1, text.count(old)
+          sheet_admin.write_text(text.replace(old, new))
+
+          operator = Path('src/infrastructure/google/operator-sheet.ts')
+          text = operator.read_text()
+          old = '''  const activeGroupIds = await readDashboardGroupIds(client);\n  let metadata = await client.getSheetMetadata();\n  await client.batchUpdate([buildAssignedGroupTableRequest(activeGroupIds)]);\n\n  metadata = await client.getSheetMetadata();\n  await client.batchUpdate(buildOperatorSheetRequests(registrationSheet(metadata)));'''
+          new = '''  const activeGroupIds = await readDashboardGroupIds(client);\n  let metadata = await client.getSheetMetadata();\n  let sheet = registrationSheet(metadata);\n  const registrationTable = (sheet.tables ?? []).find(\n    (table) => table.tableId === REGISTRATIONS_TABLE_ID,\n  );\n  if (!registrationTable) {\n    throw new Error("Missing native Rejestracje table for operator console bootstrap.");\n  }\n\n  const expectedGroupIds = [...new Set(activeGroupIds.map((id) => id.trim()).filter(Boolean))];\n  const groupColumn = registrationTable.columnProperties.find(\n    (column) => column.columnIndex === GROUP_COLUMN_INDEX,\n  );\n  const actualGroupIds = new Set(groupColumn?.dropdownValues ?? []);\n  const groupDropdownIsCurrent =\n    expectedGroupIds.length === 0\n      ? groupColumn?.columnType === "TEXT"\n      : groupColumn?.columnType === "DROPDOWN" &&\n        actualGroupIds.size === expectedGroupIds.length &&\n        expectedGroupIds.every((id) => actualGroupIds.has(id));\n\n  // Google Sheets does not expose native dropdown option colors through the public API.\n  // Avoid rewriting table columnProperties when the group dropdown is already current,\n  // so operator-configured chip colors on STATUS survive routine bootstrap runs.\n  if (!groupDropdownIsCurrent) {\n    await client.batchUpdate([buildAssignedGroupTableRequest(activeGroupIds)]);\n    metadata = await client.getSheetMetadata();\n    sheet = registrationSheet(metadata);\n  }\n\n  await client.batchUpdate(buildOperatorSheetRequests(sheet));'''
+          assert text.count(old) == 1, text.count(old)
+          operator.write_text(text.replace(old, new))
+      - run: pnpm exec prettier --write src/infrastructure/google/sheet-admin.ts src/infrastructure/google/operator-sheet.ts
+      - run: pnpm test:run -- tests/unit/operator-sheet.test.ts tests/unit/sheet-admin.test.ts || pnpm test:run
+      - name: Commit patch
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add src/infrastructure/google/sheet-admin.ts src/infrastructure/google/operator-sheet.ts
+          git commit -m "fix: preserve operator dropdown UI" || exit 0
+          git push origin HEAD:fix/preserve-dropdown-ui-2026-08-21
