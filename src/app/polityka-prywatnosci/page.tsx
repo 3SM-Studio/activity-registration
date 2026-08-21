@@ -5,47 +5,42 @@ export const metadata: Metadata = {
   description: "Informacja o przetwarzaniu danych w systemie zapisów Pracowni Twórczej Pozytywka.",
 };
 
-const sectionClassName = "space-y-3";
-const headingClassName = "text-xl font-semibold tracking-tight text-foreground";
-const listClassName = "ml-5 list-disc space-y-2 text-sm leading-6 text-muted-foreground";
-
 export default function PrivacyPage() {
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6 sm:py-14">
-      <div className="rounded-3xl border bg-card p-6 shadow-sm sm:p-10">
-        <header className="space-y-3 border-b pb-7">
-          <p className="text-sm font-medium text-primary">Pracownia Twórcza Pozytywka</p>
-          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+    <main className="mx-auto w-full max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
+      <article className="typeset typeset-legal rounded-3xl border bg-card p-6 shadow-sm sm:p-10 lg:p-12">
+        <header className="max-w-3xl border-b pb-8">
+          <p className="not-typeset text-sm font-semibold text-primary">
+            Pracownia Twórcza Pozytywka
+          </p>
+          <h1 className="mt-3 text-balance text-3xl tracking-tight sm:text-4xl">
             Informacja o przetwarzaniu danych osobowych
           </h1>
-          <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
+          <p className="max-w-2xl text-muted-foreground">
             Wersja: 20 sierpnia 2026 r. Ta informacja dotyczy danych przekazywanych przez formularz
             zapisów na zajęcia.
           </p>
         </header>
 
-        <div className="mt-8 space-y-9">
-          <section className={sectionClassName}>
-            <h2 className={headingClassName}>1. Administrator danych</h2>
-            <p className="text-sm leading-6 text-muted-foreground">
+        <div className="max-w-3xl">
+          <section className="mt-8">
+            <h2>1. Administrator danych</h2>
+            <p>
               Administratorem danych jest Pracownia Twórcza Pozytywka. Iwona Pilarz, NIP 6371975064,
               REGON 122726372. Adres do kontaktu: ul. Browarna 6a, 32-329 Bolesław.
             </p>
-            <p className="text-sm leading-6 text-muted-foreground">
+            <p>
               W sprawach dotyczących danych osobowych możesz napisać na{" "}
-              <a
-                className="font-medium text-primary underline underline-offset-4"
-                href="mailto:pozytywka.boleslaw@gmail.com"
-              >
+              <a className="text-primary" href="mailto:pozytywka.boleslaw@gmail.com">
                 pozytywka.boleslaw@gmail.com
               </a>{" "}
               lub zadzwonić pod numer 602 753 268.
             </p>
           </section>
 
-          <section className={sectionClassName}>
-            <h2 className={headingClassName}>2. Jakie dane przetwarzamy</h2>
-            <ul className={listClassName}>
+          <section>
+            <h2>2. Jakie dane przetwarzamy</h2>
+            <ul>
               <li>wybrane miasto i rodzaj zajęć,</li>
               <li>imię, nazwisko i datę urodzenia uczestnika,</li>
               <li>imię i nazwisko rodzica lub opiekuna, gdy uczestnik jest małoletni,</li>
@@ -55,15 +50,15 @@ export default function PrivacyPage() {
                 identyfikator, czas wysłania, sezon, status i przypisana grupa.
               </li>
             </ul>
-            <p className="text-sm leading-6 text-muted-foreground">
+            <p>
               Formularz nie służy do zbierania informacji o zdrowiu, diagnozach, lekach, PESEL,
               adresie zamieszkania ani danych do celów marketingowych.
             </p>
           </section>
 
-          <section className={sectionClassName}>
-            <h2 className={headingClassName}>3. Cele i podstawy prawne</h2>
-            <ul className={listClassName}>
+          <section>
+            <h2>3. Cele i podstawy prawne</h2>
+            <ul>
               <li>
                 przyjęcie zgłoszenia, kontakt oraz uzgodnienie odpowiedniej grupy i warunków
                 uczestnictwa, art. 6 ust. 1 lit. b RODO, czyli działania podejmowane na żądanie
@@ -83,25 +78,25 @@ export default function PrivacyPage() {
                 ust. 1 lit. c RODO.
               </li>
             </ul>
-            <p className="text-sm leading-6 text-muted-foreground">
+            <p>
               Nie podejmujemy wobec uczestników decyzji wyłącznie w sposób zautomatyzowany i nie
               profilujemy ich. Ostatecznego doboru grupy dokonuje człowiek po weryfikacji
               zgłoszenia.
             </p>
           </section>
 
-          <section className={sectionClassName}>
-            <h2 className={headingClassName}>4. Odbiorcy i dostawcy</h2>
-            <p className="text-sm leading-6 text-muted-foreground">
+          <section>
+            <h2>4. Odbiorcy i dostawcy</h2>
+            <p>
               Dostęp do danych mają wyłącznie upoważnione osoby obsługujące zapisy oraz dostawcy
               usług działający na zlecenie Pozytywki w zakresie niezbędnym do działania systemu:
             </p>
-            <ul className={listClassName}>
+            <ul>
               <li>Vercel, hosting i wykonywanie aplikacji,</li>
               <li>Google, przechowywanie rejestru zgłoszeń w Google Sheets,</li>
               <li>Resend, wysyłka wiadomości transakcyjnych związanych ze zgłoszeniem.</li>
             </ul>
-            <p className="text-sm leading-6 text-muted-foreground">
+            <p>
               Nie sprzedajemy danych i nie udostępniamy rejestru publicznie. Część dostawców może
               przetwarzać dane poza Europejskim Obszarem Gospodarczym. W takich przypadkach
               stosowane są mechanizmy przewidziane przez RODO, w szczególności odpowiednie umowy
@@ -109,9 +104,9 @@ export default function PrivacyPage() {
             </p>
           </section>
 
-          <section className={sectionClassName}>
-            <h2 className={headingClassName}>5. Jak długo przechowujemy dane</h2>
-            <ul className={listClassName}>
+          <section>
+            <h2>5. Jak długo przechowujemy dane</h2>
+            <ul>
               <li>
                 zgłoszenia anulowane albo odrzucone oraz zgłoszenia, które nie doprowadziły do
                 potwierdzenia uczestnictwa: do 12 miesięcy od zamknięcia sprawy,
@@ -129,38 +124,36 @@ export default function PrivacyPage() {
                 odpowiedni zakres danych może być przechowywany do zakończenia tego celu.
               </li>
             </ul>
-            <p className="text-sm leading-6 text-muted-foreground">
+            <p>
               Po upływie właściwego okresu dane są usuwane albo anonimizowane, chyba że zostały
               przeniesione do odrębnego procesu prowadzonego na innej podstawie prawnej.
             </p>
           </section>
 
-          <section className={sectionClassName}>
-            <h2 className={headingClassName}>6. Twoje prawa</h2>
-            <p className="text-sm leading-6 text-muted-foreground">
+          <section>
+            <h2>6. Twoje prawa</h2>
+            <p>
               W zależności od sytuacji możesz żądać dostępu do danych, ich sprostowania, usunięcia,
               ograniczenia przetwarzania lub przeniesienia danych. Możesz także wnieść sprzeciw
               wobec przetwarzania opartego na prawnie uzasadnionym interesie. Realizacja niektórych
               praw może podlegać ograniczeniom wynikającym z przepisów prawa lub konieczności
               ustalenia, obrony albo dochodzenia roszczeń.
             </p>
-            <p className="text-sm leading-6 text-muted-foreground">
-              Masz również prawo złożyć skargę do Prezesa Urzędu Ochrony Danych Osobowych.
-            </p>
+            <p>Masz również prawo złożyć skargę do Prezesa Urzędu Ochrony Danych Osobowych.</p>
           </section>
 
-          <section className={sectionClassName}>
-            <h2 className={headingClassName}>7. Czy podanie danych jest obowiązkowe</h2>
-            <p className="text-sm leading-6 text-muted-foreground">
+          <section>
+            <h2>7. Czy podanie danych jest obowiązkowe</h2>
+            <p>
               Podanie danych jest dobrowolne, ale niezbędne do przyjęcia i obsługi zgłoszenia. Bez
               danych uczestnika i danych kontaktowych nie będziemy mogli zweryfikować zgłoszenia,
               dobrać grupy ani skontaktować się w sprawie uczestnictwa.
             </p>
           </section>
 
-          <section className={sectionClassName}>
-            <h2 className={headingClassName}>8. Zgłoszenie a miejsce na zajęciach</h2>
-            <p className="text-sm leading-6 text-muted-foreground">
+          <section>
+            <h2>8. Zgłoszenie a miejsce na zajęciach</h2>
+            <p>
               Wysłanie formularza jest prośbą o zapis i etapem poprzedzającym uzgodnienie
               uczestnictwa. Nie oznacza automatycznego przyjęcia do konkretnej grupy ani rezerwacji
               miejsca. Pozytywka weryfikuje zgłoszenie i kontaktuje się w celu uzgodnienia właściwej
@@ -168,7 +161,7 @@ export default function PrivacyPage() {
             </p>
           </section>
         </div>
-      </div>
+      </article>
     </main>
   );
 }

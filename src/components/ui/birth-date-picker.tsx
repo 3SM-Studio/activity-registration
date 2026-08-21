@@ -80,9 +80,11 @@ export function BirthDatePicker({
       <PopoverContent
         className="w-auto overflow-hidden p-0"
         align="start"
-        sideOffset={6}
+        side="bottom"
+        sideOffset={8}
         collisionPadding={12}
         hideWhenDetached
+        style={{ animation: "none" }}
       >
         <Calendar
           mode="single"

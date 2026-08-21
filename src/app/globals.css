@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "./typeset.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -110,6 +111,33 @@ body {
     sans-serif;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
+}
+
+.typeset-pozytywka {
+  --typeset-font-body: inherit;
+  --typeset-font-heading: inherit;
+  --typeset-font-mono: ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  --typeset-size: 1rem;
+  --typeset-leading: 1.7;
+  --typeset-flow: 1.2em;
+}
+
+.typeset-hero {
+  --typeset-font-body: inherit;
+  --typeset-font-heading: inherit;
+  --typeset-font-mono: ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  --typeset-size: 1rem;
+  --typeset-leading: 1.7;
+  --typeset-flow: 1em;
+}
+
+.typeset-legal {
+  --typeset-font-body: inherit;
+  --typeset-font-heading: inherit;
+  --typeset-font-mono: ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  --typeset-size: 1rem;
+  --typeset-leading: 1.75;
+  --typeset-flow: 1.35em;
 }
 
 button,
