@@ -139,7 +139,8 @@ export async function submitRegistration(
   }
 
   const birthDate = input.birthDate.trim();
-  const ageAtSubmission = calculateAgeAtDate(birthDate, dateOnlyInPoland(nowDate));
+  const currentDate = dateOnlyInPoland(nowDate);
+  const ageAtSubmission = calculateAgeAtDate(birthDate, currentDate);
   const normalized = {
     cityId: input.cityId,
     offeringId: input.offeringId,
@@ -153,26 +154,6 @@ export async function submitRegistration(
     email: normalizeEmail(input.email),
   };
 
-  const requestId = asRequestId(input.requestId);
-  const existing = await dependencies.repositories.registrations.findByRequestId(requestId);
-
-  if (existing) {
-    if (!sameLogicalRequest(existing, normalized)) {
-      throw new ApplicationError(
-        APPLICATION_ERROR_CODE.requestIdConflict,
-        "Formularz został zmieniony po wcześniejszej próbie wysłania. Spróbuj ponownie.",
-      );
-    }
-
-    return {
-      registrationId: existing.id,
-      idempotentReplay: true,
-      businessDuplicate: false,
-      registration: existing,
-    };
-  }
-
-  const currentDate = dateOnlyInPoland(nowDate);
   const settings = await dependencies.repositories.settings.getPublicSettings();
 
   if (!settings.registrationsOpen) {
@@ -197,6 +178,25 @@ export async function submitRegistration(
       APPLICATION_ERROR_CODE.systemNotReady,
       "System zapisów nie ma skonfigurowanego bieżącego sezonu.",
     );
+  }
+
+  const requestId = asRequestId(input.requestId);
+  const existing = await dependencies.repositories.registrations.findByRequestId(requestId);
+
+  if (existing) {
+    if (!sameLogicalRequest(existing, normalized)) {
+      throw new ApplicationError(
+        APPLICATION_ERROR_CODE.requestIdConflict,
+        "Formularz został zmieniony po wcześniejszej próbie wysłania. Spróbuj ponownie.",
+      );
+    }
+
+    return {
+      registrationId: existing.id,
+      idempotentReplay: true,
+      businessDuplicate: false,
+      registration: existing,
+    };
   }
 
   const season = await dependencies.repositories.catalog.findSeasonById(settings.currentSeasonId);
