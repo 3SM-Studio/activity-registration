@@ -2,6 +2,7 @@ import Image from "next/image";
 import { CircleAlert } from "lucide-react";
 
 import { getPublicFormConfig } from "@/application/get-public-form-config";
+import { PublicFooter } from "@/components/public/public-footer";
 import { RegistrationForm } from "@/components/registration/registration-form";
 import { createApplicationRepositories } from "@/infrastructure/repositories";
 import {
@@ -34,7 +35,7 @@ function ClosedState({
 }>) {
   return (
     <main className="min-h-screen px-4 py-10 sm:px-6 sm:py-16">
-      <div className="mx-auto flex min-h-[70vh] w-full max-w-2xl items-center">
+      <div className="mx-auto flex min-h-[68vh] w-full max-w-2xl items-center">
         <section className="w-full rounded-[1.75rem] border border-[var(--line)] bg-[var(--surface)] p-6 shadow-[0_28px_90px_-48px_rgba(77,36,58,0.34)] sm:p-10">
           <div className="not-typeset mb-8">
             <PozytywkaLogo />
@@ -51,6 +52,7 @@ function ClosedState({
           </div>
         </section>
       </div>
+      <PublicFooter />
     </main>
   );
 }
@@ -118,9 +120,7 @@ export default async function HomePage() {
           <RegistrationForm catalog={catalog} settings={settings} />
         </div>
 
-        <footer className="not-typeset px-2 pb-2 pt-6 text-center text-xs leading-5 text-neutral-500">
-          Pracownia Twórcza Pozytywka · formularz zapisów
-        </footer>
+        <PublicFooter />
       </div>
     </main>
   );
