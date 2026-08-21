@@ -53,6 +53,7 @@ export function BirthDatePicker({
   const panelRef = useRef<HTMLDivElement>(null);
   const generatedPanelId = useId();
   const panelId = `${id ?? "birth-date"}-${generatedPanelId}-calendar`;
+  const isOpen = open && !disabled;
 
   const selected = isoToLocalDate(value);
   const today = new Date();
@@ -71,7 +72,7 @@ export function BirthDatePicker({
   );
 
   useLayoutEffect(() => {
-    if (!open) {
+    if (!isOpen) {
       return;
     }
 
@@ -87,10 +88,10 @@ export function BirthDatePicker({
     const spaceAbove = triggerRect.top - VIEWPORT_PADDING_PX;
 
     setPlacement(panelRect.height > spaceBelow && spaceAbove > spaceBelow ? "top" : "bottom");
-  }, [open]);
+  }, [isOpen]);
 
   useEffect(() => {
-    if (!open) {
+    if (!isOpen) {
       return;
     }
 
@@ -117,13 +118,7 @@ export function BirthDatePicker({
       document.removeEventListener("pointerdown", handlePointerDown, true);
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [close, open]);
-
-  useEffect(() => {
-    if (disabled && open) {
-      close();
-    }
-  }, [close, disabled, open]);
+  }, [close, isOpen]);
 
   return (
     <div ref={rootRef} data-slot="birth-date-picker" className="relative w-full">
@@ -136,15 +131,15 @@ export function BirthDatePicker({
         aria-invalid={invalid}
         aria-describedby={describedBy}
         aria-haspopup="dialog"
-        aria-expanded={open}
-        aria-controls={open ? panelId : undefined}
+        aria-expanded={isOpen}
+        aria-controls={isOpen ? panelId : undefined}
         data-empty={!selected}
         className={cn(
           "h-12 w-full justify-start rounded-xl px-3 text-left font-normal",
           !selected && "text-muted-foreground",
         )}
         onClick={() => {
-          if (open) {
+          if (isOpen) {
             close();
           } else {
             setPlacement("bottom");
@@ -156,7 +151,7 @@ export function BirthDatePicker({
         {selected ? format(selected, "d MMMM yyyy", { locale: pl }) : "Wybierz datę urodzenia"}
       </Button>
 
-      {open ? (
+      {isOpen ? (
         <div
           ref={panelRef}
           id={panelId}
