@@ -1,12 +1,19 @@
 import { expect, test } from "@playwright/test";
 
-test("publishes full and child-friendly protection standards", async ({ page }) => {
+test("publishes adopted full and child-friendly protection standards v1.1", async ({ page }) => {
   await page.goto("/standardy-ochrony-maloletnich");
   await expect(
     page.getByRole("heading", { level: 1, name: "Standardy Ochrony Małoletnich" }),
   ).toBeVisible();
+  await expect(page.getByText(/Wersja 1\.1 · przyjęta i obowiązująca od 21 sierpnia 2026 r\./)).toBeVisible();
   await expect(
-    page.getByRole("heading", { level: 2, name: "15. Udostępnianie Standardów" }),
+    page.getByRole("heading", {
+      level: 2,
+      name: "5. Dzieci z niepełnosprawnościami i specjalnymi potrzebami edukacyjnymi",
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 2, name: "16. Udostępnianie Standardów" }),
   ).toBeVisible();
   await expect(
     page.getByRole("link", { name: "Zasady bezpieczeństwa dla dzieci i młodzieży" }),
@@ -16,9 +23,12 @@ test("publishes full and child-friendly protection standards", async ({ page }) 
   await expect(
     page.getByRole("heading", { level: 1, name: "Zasady bezpieczeństwa dla dzieci i młodzieży" }),
   ).toBeVisible();
+  await expect(page.getByText(/Wersja 1\.1 · skrócona wersja Standardów Ochrony Małoletnich/)).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "Twoje potrzeby mają znaczenie" })).toBeVisible();
   await expect(
     page.getByRole("heading", { level: 2, name: "Gdy ktoś robi Ci krzywdę" }),
   ).toBeVisible();
+  await expect(page.getByRole("link", { name: "pozytywka.boleslaw@gmail.com" })).toBeVisible();
   await expect(
     page.getByRole("link", { name: "Pełne Standardy Ochrony Małoletnich" }),
   ).toBeVisible();
