@@ -256,9 +256,7 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
     setSuccessState(null);
     setGlobalError(null);
     setShowValidationSummary(false);
-    requestAnimationFrame(() =>
-      window.scrollTo({ top: 0, behavior: preferredScrollBehavior() }),
-    );
+    requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: preferredScrollBehavior() }));
   };
 
   const beginAnotherOffering = () => {
@@ -280,9 +278,7 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
     setSuccessState(null);
     setGlobalError(null);
     setShowValidationSummary(false);
-    requestAnimationFrame(() =>
-      window.scrollTo({ top: 0, behavior: preferredScrollBehavior() }),
-    );
+    requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: preferredScrollBehavior() }));
   };
 
   if (!settings.registrationsOpen) {

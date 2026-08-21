@@ -7,7 +7,10 @@ export function PublicFooter() {
   return (
     <footer className="not-typeset mx-auto w-full max-w-3xl px-2 pb-4 pt-7 text-center text-xs leading-6 text-muted-foreground">
       <p>Pracownia Twórcza Pozytywka · formularz zapisów</p>
-      <nav aria-label="Informacje i bezpieczeństwo" className="mt-2 flex flex-wrap justify-center gap-x-4 gap-y-2">
+      <nav
+        aria-label="Informacje i bezpieczeństwo"
+        className="mt-2 flex flex-wrap justify-center gap-x-4 gap-y-2"
+      >
         <Link className={linkClassName} href="/polityka-prywatnosci">
           Polityka prywatności
         </Link>

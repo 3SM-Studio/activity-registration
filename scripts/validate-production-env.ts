@@ -86,9 +86,9 @@ function main(): void {
 
   const wifConfigured = Boolean(
     env.GCP_PROJECT_NUMBER &&
-      env.GCP_SERVICE_ACCOUNT_EMAIL &&
-      env.GCP_WORKLOAD_IDENTITY_POOL_ID &&
-      env.GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID,
+    env.GCP_SERVICE_ACCOUNT_EMAIL &&
+    env.GCP_WORKLOAD_IDENTITY_POOL_ID &&
+    env.GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID,
   );
   const adminRecipientCount = env.REGISTRATION_ADMIN_EMAILS?.length ?? 0;
 

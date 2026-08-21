@@ -5,7 +5,8 @@ import { DocumentShell } from "@/components/public/document-shell";
 
 export const metadata: Metadata = {
   title: "Zasady bezpieczeństwa dla dzieci i młodzieży | Pozytywka",
-  description: "Skrócona, przyjazna dzieciom i młodzieży wersja Standardów Ochrony Małoletnich Pracowni Twórczej Pozytywka.",
+  description:
+    "Skrócona, przyjazna dzieciom i młodzieży wersja Standardów Ochrony Małoletnich Pracowni Twórczej Pozytywka.",
 };
 
 export default function ChildFriendlyStandardsPage() {
@@ -85,7 +86,9 @@ export default function ChildFriendlyStandardsPage() {
           <li>wysłuchamy Cię bez obwiniania,</li>
           <li>nie będziemy wymagać, żebyś samodzielnie rozwiązał lub udowodnił problem,</li>
           <li>przekażemy informację tylko osobom, które muszą pomóc,</li>
-          <li>jeżeli sytuacja tego wymaga, skontaktujemy się z odpowiednią instytucją publiczną,</li>
+          <li>
+            jeżeli sytuacja tego wymaga, skontaktujemy się z odpowiednią instytucją publiczną,
+          </li>
           <li>ustalimy, co trzeba zmienić, żebyś mógł lub mogła czuć się bezpiecznie.</li>
         </ol>
       </section>

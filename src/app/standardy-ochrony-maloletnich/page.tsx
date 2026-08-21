@@ -29,9 +29,9 @@ export default function ChildProtectionStandardsPage() {
       <section className="mt-8">
         <h2>1. Cel i zakres</h2>
         <p>
-          Standardy obowiązują wszystkie osoby dopuszczone przez Pozytywkę do działalności
-          związanej z edukacją artystyczną, rozwijaniem zainteresowań, opieką lub innym bezpośrednim
-          kontaktem z małoletnimi.
+          Standardy obowiązują wszystkie osoby dopuszczone przez Pozytywkę do działalności związanej
+          z edukacją artystyczną, rozwijaniem zainteresowań, opieką lub innym bezpośrednim kontaktem
+          z małoletnimi.
         </p>
         <p>Celem jest:</p>
         <ul>
@@ -56,7 +56,9 @@ export default function ChildProtectionStandardsPage() {
           <li>przyjmuje zgłoszenia dotyczące bezpieczeństwa małoletnich,</li>
           <li>koordynuje interwencje i dokumentowanie zdarzeń,</li>
           <li>odpowiada za wymagane zawiadomienia do właściwych instytucji,</li>
-          <li>kontroluje wykonanie procedury weryfikacji osób dopuszczanych do pracy z małoletnimi.</li>
+          <li>
+            kontroluje wykonanie procedury weryfikacji osób dopuszczanych do pracy z małoletnimi.
+          </li>
         </ul>
         <p>
           Jeżeli zgłoszenie dotyczy Iwony Pilarz lub zachodzi konflikt interesów, osoba zgłaszająca
@@ -72,14 +74,19 @@ export default function ChildProtectionStandardsPage() {
         <p>
           Przed nawiązaniem stosunku pracy lub dopuszczeniem osoby do działalności, której
           rzeczywiste obowiązki obejmują wychowanie, edukację, opiekę, sport lub rozwijanie
-          zainteresowań małoletnich, Pozytywka wykonuje obowiązki z art. 21 ustawy o przeciwdziałaniu
-          zagrożeniom przestępczością na tle seksualnym i ochronie małoletnich.
+          zainteresowań małoletnich, Pozytywka wykonuje obowiązki z art. 21 ustawy o
+          przeciwdziałaniu zagrożeniom przestępczością na tle seksualnym i ochronie małoletnich.
         </p>
         <p>W szczególności:</p>
         <ol>
           <li>organizator sprawdza wymagane rejestry z dostępem ograniczonym,</li>
-          <li>osoba przedstawia informację z Krajowego Rejestru Karnego w wymaganym ustawą zakresie,</li>
-          <li>dla osób związanych z innymi państwami wykonuje się dodatkowe obowiązki przewidziane ustawą,</li>
+          <li>
+            osoba przedstawia informację z Krajowego Rejestru Karnego w wymaganym ustawą zakresie,
+          </li>
+          <li>
+            dla osób związanych z innymi państwami wykonuje się dodatkowe obowiązki przewidziane
+            ustawą,
+          </li>
           <li>
             wymagane informacje i oświadczenia są dokumentowane w aktach osobowych albo odrębnej
             dokumentacji osoby dopuszczonej do działalności,
@@ -89,7 +96,10 @@ export default function ChildProtectionStandardsPage() {
             komunikatorów ani ogólnych dysków projektowych.
           </li>
         </ol>
-        <p>Dopuszczenie do kontaktu z małoletnimi bez zakończonej wymaganej procedury jest zabronione.</p>
+        <p>
+          Dopuszczenie do kontaktu z małoletnimi bez zakończonej wymaganej procedury jest
+          zabronione.
+        </p>
       </section>
 
       <section>
@@ -126,11 +136,20 @@ export default function ChildProtectionStandardsPage() {
             udostępnianie takich treści,
           </li>
           <li>upokarzanie, grożenie, szantażowanie lub ośmieszanie,</li>
-          <li>faworyzowanie w zamian za prywatne korzyści lub budowanie tajnej relacji z dzieckiem,</li>
-          <li>proponowanie alkoholu, nikotyny, środków odurzających lub innych substancji niedozwolonych,</li>
-          <li>prywatne spotkania z małoletnim poza uzasadnionym procesem zajęć bez wiedzy opiekuna,</li>
+          <li>
+            faworyzowanie w zamian za prywatne korzyści lub budowanie tajnej relacji z dzieckiem,
+          </li>
+          <li>
+            proponowanie alkoholu, nikotyny, środków odurzających lub innych substancji
+            niedozwolonych,
+          </li>
+          <li>
+            prywatne spotkania z małoletnim poza uzasadnionym procesem zajęć bez wiedzy opiekuna,
+          </li>
           <li>utrzymywanie ukrytej, nieuzasadnionej relacji przez prywatne komunikatory,</li>
-          <li>fotografowanie lub publikowanie wizerunku poza odrębnym, zgodnym z prawem procesem,</li>
+          <li>
+            fotografowanie lub publikowanie wizerunku poza odrębnym, zgodnym z prawem procesem,
+          </li>
           <li>
             ujawnianie innym uczestnikom lub osobom postronnym prywatnych informacji o dziecku lub
             jego rodzinie.
@@ -311,7 +330,10 @@ export default function ChildProtectionStandardsPage() {
             lub rejestru zapisów.
           </li>
         </ul>
-        <p>Potwierdzenie zapoznania przechowuje się w dokumentacji personelu, nie w rejestrze zapisów.</p>
+        <p>
+          Potwierdzenie zapoznania przechowuje się w dokumentacji personelu, nie w rejestrze
+          zapisów.
+        </p>
       </section>
 
       <section>

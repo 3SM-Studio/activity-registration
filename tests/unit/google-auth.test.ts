@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { GoogleAuthenticationError, toGoogleAuthenticationError } from "@/infrastructure/google/auth";
+import {
+  GoogleAuthenticationError,
+  toGoogleAuthenticationError,
+} from "@/infrastructure/google/auth";
 
 describe("Google authentication error sanitization", () => {
   it("does not retain sensitive details from provider errors", () => {
