@@ -44,11 +44,14 @@ export class GoogleSheetsSettingsRepository implements SettingsRepository {
     }
 
     const systemSchemaVersion = settings.get(SETTING_KEY.systemSchemaVersion);
-    if (systemSchemaVersion !== String(SYSTEM_SCHEMA_VERSION)) {
+    const migrationReadVersion = SYSTEM_SCHEMA_VERSION - 1;
+    const schemaVersion = Number(systemSchemaVersion);
+    if (schemaVersion !== SYSTEM_SCHEMA_VERSION && schemaVersion !== migrationReadVersion) {
       throw new SheetSchemaError(
         `Unsupported SYSTEM_SCHEMA_VERSION: ${systemSchemaVersion ?? "<missing>"}`,
       );
     }
+    const schemaReadyForWrites = schemaVersion === SYSTEM_SCHEMA_VERSION;
 
     const rawCurrentSeasonId = settings.get(SETTING_KEY.currentSeasonId)?.trim() ?? "";
     if (rawCurrentSeasonId && !isTechnicalId(rawCurrentSeasonId)) {
@@ -59,7 +62,8 @@ export class GoogleSheetsSettingsRepository implements SettingsRepository {
     const privacyNoticeVersion = settings.get(SETTING_KEY.privacyNoticeVersion)?.trim() || null;
 
     return {
-      registrationsOpen: parseBooleanCell(settings.get(SETTING_KEY.registrationsOpen) ?? ""),
+      registrationsOpen:
+        schemaReadyForWrites && parseBooleanCell(settings.get(SETTING_KEY.registrationsOpen) ?? ""),
       currentSeasonId: rawCurrentSeasonId ? asSeasonId(rawCurrentSeasonId) : null,
       formTitle: settings.get(SETTING_KEY.publicFormTitle)?.trim() || DEFAULT_FORM_TITLE,
       successMessage: settings.get(SETTING_KEY.successMessage)?.trim() || DEFAULT_SUCCESS_MESSAGE,

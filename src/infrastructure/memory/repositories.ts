@@ -1,8 +1,11 @@
 import {
   PUBLIC_INTAKE_STATUS,
   asCityId,
+  asGroupId,
   asOfferingId,
   asSeasonId,
+  type InternalGroup,
+  type OfferingId,
   type PublicCatalog,
   type Season,
   type SeasonId,
@@ -33,6 +36,8 @@ const currentSeason: Season = {
   sortOrder: 10,
 };
 
+const allAges = [{ min: 0, max: 120 }] as const;
+
 const catalog: PublicCatalog = {
   cities: [
     { id: asCityId("gdynia"), name: "Gdynia", sortOrder: 10 },
@@ -46,6 +51,7 @@ const catalog: PublicCatalog = {
       publicDescription: null,
       sortOrder: 10,
       intakeStatus: PUBLIC_INTAKE_STATUS.open,
+      ageRanges: allAges,
     },
     {
       id: asOfferingId("gdynia-contemporary"),
@@ -54,6 +60,7 @@ const catalog: PublicCatalog = {
       publicDescription: null,
       sortOrder: 20,
       intakeStatus: PUBLIC_INTAKE_STATUS.open,
+      ageRanges: allAges,
     },
     {
       id: asOfferingId("gdynia-taniec-wspolczesny"),
@@ -62,6 +69,7 @@ const catalog: PublicCatalog = {
       publicDescription: null,
       sortOrder: 30,
       intakeStatus: PUBLIC_INTAKE_STATUS.open,
+      ageRanges: allAges,
     },
     {
       id: asOfferingId("sopot-hiphop"),
@@ -70,6 +78,7 @@ const catalog: PublicCatalog = {
       publicDescription: null,
       sortOrder: 10,
       intakeStatus: PUBLIC_INTAKE_STATUS.open,
+      ageRanges: allAges,
     },
     {
       id: asOfferingId("sopot-choreografia"),
@@ -78,9 +87,27 @@ const catalog: PublicCatalog = {
       publicDescription: null,
       sortOrder: 20,
       intakeStatus: PUBLIC_INTAKE_STATUS.open,
+      ageRanges: allAges,
     },
   ],
 };
+
+const groups: readonly InternalGroup[] = catalog.offerings.map((offering, index) => ({
+  id: asGroupId(`test-group-${index + 1}`),
+  seasonId: currentSeason.id,
+  offeringId: offering.id,
+  name: `Test group ${index + 1}`,
+  ageMin: 0,
+  ageMax: 120,
+  dayOfWeek: null,
+  startTime: null,
+  endTime: null,
+  location: null,
+  instructor: null,
+  capacity: null,
+  active: true,
+  sortOrder: (index + 1) * 10,
+}));
 
 class MemoryCatalogRepository implements CatalogRepository {
   async getPublicCatalog(): Promise<PublicCatalog> {
@@ -89,6 +116,13 @@ class MemoryCatalogRepository implements CatalogRepository {
 
   async findSeasonById(seasonId: SeasonId): Promise<Season | null> {
     return seasonId === currentSeason.id ? currentSeason : null;
+  }
+
+  async findGroupsForOffering(
+    seasonId: SeasonId,
+    offeringId: OfferingId,
+  ): Promise<readonly InternalGroup[]> {
+    return groups.filter((group) => group.seasonId === seasonId && group.offeringId === offeringId);
   }
 }
 

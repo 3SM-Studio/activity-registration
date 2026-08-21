@@ -5,6 +5,7 @@ export const APPLICATION_ERROR_CODE = {
   cityNotAvailable: "CITY_NOT_AVAILABLE",
   offeringNotAvailable: "OFFERING_NOT_AVAILABLE",
   offeringCityMismatch: "OFFERING_CITY_MISMATCH",
+  participantAgeNotEligible: "PARTICIPANT_AGE_NOT_ELIGIBLE",
   requestIdConflict: "REQUEST_ID_CONFLICT",
   temporaryUnavailable: "TEMPORARY_UNAVAILABLE",
   internal: "INTERNAL_ERROR",

@@ -1,6 +1,13 @@
 import { LEGACY_REGISTRATION_STATUS, REGISTRATION_STATUS } from "../src/domain/registration";
-import { bootstrapSheetStructure } from "../src/infrastructure/google/sheet-admin";
 import { cell, createHeaderMap } from "../src/infrastructure/google/header-map";
+import {
+  bootstrapOperatorSheetExperience,
+  validateOperatorSheetExperience,
+} from "../src/infrastructure/google/operator-sheet";
+import {
+  bootstrapSheetStructure,
+  validateSheetStructure,
+} from "../src/infrastructure/google/sheet-admin";
 import {
   LEGACY_OFFERING_HEADERS,
   LEGACY_REGISTRATION_HEADERS,
@@ -11,8 +18,14 @@ import {
   SHEET_SCHEMA,
   SYSTEM_SCHEMA_VERSION,
   V2_REGISTRATION_HEADERS,
+  V3_REGISTRATION_HEADERS,
 } from "../src/infrastructure/google/sheets-contracts";
 import type { SheetsClient } from "../src/infrastructure/google/sheets-client";
+import {
+  bootstrapSupportingSheetTables,
+  validateSupportingSheetTables,
+} from "../src/infrastructure/google/supporting-sheet-tables";
+import { getServerEnv } from "../src/lib/env";
 import { createAdminSheetsClient } from "./_google-admin";
 
 const V2_ADDED_REGISTRATION_HEADERS = ["BIRTH_DATE", "AGE_AT_SUBMISSION"] as const;
@@ -32,6 +45,7 @@ const V3_ADDED_REGISTRATION_HEADERS = [
   "CONFIRMED_AT",
   "POSSIBLE_DUPLICATE_OF",
 ] as const;
+const V4_ADDED_REGISTRATION_HEADERS = ["CLOSED_AT"] as const;
 
 type MigrationHeaderState = "legacy" | "migrated";
 
@@ -52,7 +66,7 @@ function headerState(
   }
 
   throw new Error(
-    `${label} has a partially applied migration (${presentCount}/${addedHeaders.length} v3 headers present). Refusing to insert columns again. Restore the TEST backup or repair the headers explicitly.`,
+    `${label} has a partially applied migration (${presentCount}/${addedHeaders.length} added headers present). Refusing to modify columns again. Restore the backup or repair the headers explicitly.`,
   );
 }
 
@@ -92,17 +106,12 @@ async function setSystemSchemaVersion(client: SheetsClient, version: number): Pr
   }
 
   const versionValueColumn = settingsHeaders.get("VALUE");
-  if (versionValueColumn === undefined) {
-    throw new Error("Missing USTAWIENIA VALUE column.");
-  }
-
-  const versionColumnLetter = columnLetter(versionValueColumn);
   const rowNumber = versionRows[0]?.rowNumber;
-  if (!rowNumber) {
-    throw new Error(`Missing ${SETTING_KEY.systemSchemaVersion} row.`);
+  if (versionValueColumn === undefined || !rowNumber) {
+    throw new Error(`Missing ${SETTING_KEY.systemSchemaVersion} location.`);
   }
 
-  await client.updateValues(`${SHEET.settings}!${versionColumnLetter}${rowNumber}`, [
+  await client.updateValues(`${SHEET.settings}!${columnLetter(versionValueColumn)}${rowNumber}`, [
     [String(version)],
   ]);
 }
@@ -120,7 +129,6 @@ async function migrateV1ToV2(client: SheetsClient): Promise<void> {
 
   if (state === "legacy") {
     createHeaderMap(headerRow, LEGACY_REGISTRATION_HEADERS);
-
     await client.batchUpdate([
       {
         insertDimension: {
@@ -135,11 +143,7 @@ async function migrateV1ToV2(client: SheetsClient): Promise<void> {
       },
       {
         updateCells: {
-          start: {
-            sheetId: registrationsSheet.sheetId,
-            rowIndex: 0,
-            columnIndex: 9,
-          },
+          start: { sheetId: registrationsSheet.sheetId, rowIndex: 0, columnIndex: 9 },
           rows: headerCells(V2_ADDED_REGISTRATION_HEADERS),
           fields: "userEnteredValue",
         },
@@ -189,7 +193,6 @@ async function migrateV2ToV3(client: SheetsClient): Promise<void> {
     client.getValues(`${SHEET.registrations}!1:1`),
     client.getValues(`${SHEET.offerings}!1:1`),
   ]);
-
   const registrationHeader = registrationHeaderRows[0] ?? [];
   const offeringHeader = offeringHeaderRows[0] ?? [];
 
@@ -209,7 +212,7 @@ async function migrateV2ToV3(client: SheetsClient): Promise<void> {
 
   if (registrationState !== offeringState) {
     throw new Error(
-      "Schema v3 is only partially applied between OFERTY_ZAJEC and ZAPISY. Refusing to guess a recovery path. Restore the TEST backup or repair the structure explicitly.",
+      "Schema v3 is only partially applied between OFERTY_ZAJEC and ZAPISY. Refusing to guess a recovery path.",
     );
   }
 
@@ -250,11 +253,7 @@ async function migrateV2ToV3(client: SheetsClient): Promise<void> {
       },
       {
         updateCells: {
-          start: {
-            sheetId: offeringsSheet.sheetId,
-            rowIndex: 0,
-            columnIndex: 3,
-          },
+          start: { sheetId: offeringsSheet.sheetId, rowIndex: 0, columnIndex: 3 },
           rows: headerCells([
             "PUBLIC_DESCRIPTION",
             "ACTIVE",
@@ -270,11 +269,7 @@ async function migrateV2ToV3(client: SheetsClient): Promise<void> {
       },
       {
         updateCells: {
-          start: {
-            sheetId: registrationsSheet.sheetId,
-            rowIndex: 0,
-            columnIndex: 21,
-          },
+          start: { sheetId: registrationsSheet.sheetId, rowIndex: 0, columnIndex: 21 },
           rows: headerCells(V3_ADDED_REGISTRATION_HEADERS),
           fields: "userEnteredValue",
         },
@@ -283,9 +278,48 @@ async function migrateV2ToV3(client: SheetsClient): Promise<void> {
   }
 
   await ensureV3OfferingDefaults(client);
-  await bootstrapSheetStructure(client);
   await setSystemSchemaVersion(client, 3);
   console.info("Migrated sheet schema from version 2 to 3.");
+}
+
+async function migrateV3ToV4(client: SheetsClient): Promise<void> {
+  const metadata = await client.getSheetMetadata();
+  const registrationsSheet = metadata.find((sheet) => sheet.title === SHEET.registrations);
+  if (!registrationsSheet) {
+    throw new Error("Missing ZAPISY sheet.");
+  }
+
+  const headerRows = await client.getValues(`${SHEET.registrations}!1:1`);
+  const headerRow = headerRows[0] ?? [];
+  const state = headerState(headerRow, V4_ADDED_REGISTRATION_HEADERS, "ZAPISY v3 -> v4");
+
+  if (state === "legacy") {
+    createHeaderMap(headerRow, V3_REGISTRATION_HEADERS);
+    await client.batchUpdate([
+      {
+        insertDimension: {
+          range: {
+            sheetId: registrationsSheet.sheetId,
+            dimension: "COLUMNS",
+            startIndex: 26,
+            endIndex: 27,
+          },
+          inheritFromBefore: true,
+        },
+      },
+      {
+        updateCells: {
+          start: { sheetId: registrationsSheet.sheetId, rowIndex: 0, columnIndex: 26 },
+          rows: headerCells(V4_ADDED_REGISTRATION_HEADERS),
+          fields: "userEnteredValue",
+        },
+      },
+    ]);
+  } else {
+    createHeaderMap(headerRow, REGISTRATION_HEADERS);
+  }
+
+  console.info("Prepared ZAPISY headers for schema version 4.");
 }
 
 async function migrateRegistrationWorkflowStatuses(client: SheetsClient): Promise<number> {
@@ -297,9 +331,7 @@ async function migrateRegistrationWorkflowStatuses(client: SheetsClient): Promis
     throw new Error("Missing ZAPISY STATUS column.");
   }
 
-  const statusColumnLetter = columnLetter(statusColumn);
   let migratedCount = 0;
-
   for (const [offset, row] of rows.slice(1).entries()) {
     const rawStatus = cell(row, headers, "STATUS");
     const nextStatus =
@@ -313,8 +345,7 @@ async function migrateRegistrationWorkflowStatuses(client: SheetsClient): Promis
       continue;
     }
 
-    const rowNumber = offset + 2;
-    await client.updateValues(`${SHEET.registrations}!${statusColumnLetter}${rowNumber}`, [
+    await client.updateValues(`${SHEET.registrations}!${columnLetter(statusColumn)}${offset + 2}`, [
       [nextStatus],
     ]);
     migratedCount += 1;
@@ -338,16 +369,15 @@ async function readSchemaVersion(client: SheetsClient): Promise<number> {
 
   const rawVersion = cell(versionRows[0] ?? [], headers, "VALUE");
   const version = Number(rawVersion);
-
   if (!Number.isInteger(version) || version < 1) {
     throw new Error(`Invalid sheet schema version: ${rawVersion || "<empty>"}.`);
   }
-
   return version;
 }
 
 async function main() {
   const client = createAdminSheetsClient();
+  const env = getServerEnv();
   let version = await readSchemaVersion(client);
 
   if (version > SYSTEM_SCHEMA_VERSION) {
@@ -360,10 +390,13 @@ async function main() {
     await migrateV1ToV2(client);
     version = 2;
   }
-
   if (version === 2) {
     await migrateV2ToV3(client);
     version = 3;
+  }
+  if (version === 3) {
+    await migrateV3ToV4(client);
+    version = 4;
   }
 
   if (version < SYSTEM_SCHEMA_VERSION) {
@@ -373,9 +406,26 @@ async function main() {
   }
 
   const migratedStatuses = await migrateRegistrationWorkflowStatuses(client);
-  await bootstrapSheetStructure(client);
+  const hardProtectionEditorEmails =
+    env.APP_ENV === "production" && env.GCP_SERVICE_ACCOUNT_EMAIL
+      ? [env.GCP_SERVICE_ACCOUNT_EMAIL]
+      : undefined;
+
+  await bootstrapSheetStructure(
+    client,
+    hardProtectionEditorEmails ? { hardProtectionEditorEmails } : {},
+  );
+  await bootstrapSupportingSheetTables(client);
+  await bootstrapOperatorSheetExperience(client);
+
+  await validateSupportingSheetTables(client);
+  await validateOperatorSheetExperience(client);
+
+  await setSystemSchemaVersion(client, SYSTEM_SCHEMA_VERSION);
+  const report = await validateSheetStructure(client);
+
   console.info(
-    `Sheet schema is at version ${SYSTEM_SCHEMA_VERSION}. Workflow status migration updated ${migratedStatuses} row(s).`,
+    `Sheet schema is at version ${SYSTEM_SCHEMA_VERSION}. Workflow status migration updated ${migratedStatuses} row(s). Validation warnings: ${report.warnings.length}.`,
   );
 }
 

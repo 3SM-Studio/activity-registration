@@ -26,6 +26,7 @@ import {
   normalizeStoredRegistrationStatus,
   REGISTRATION_SCHEMA_VERSION,
   REGISTRATION_SOURCE,
+  WORKFLOW_REGISTRATION_SCHEMA_VERSION,
   type RegistrationSchemaVersion,
 } from "@/domain/registration";
 import { googleSerialToIsoDate } from "@/infrastructure/google/google-date";
@@ -79,18 +80,25 @@ function parseOptionalDateOnlyValue(raw: unknown, label: string): string | null 
   return parseDateOnlyValue(raw, label);
 }
 
-function parseOptionalTimestamp(
-  value: string,
+function parseOptionalWorkflowDate(
+  raw: unknown,
   label: string,
   registrationId: string,
 ): string | null {
-  if (!value) {
+  if (raw === null || raw === undefined || String(raw).trim() === "") {
     return null;
   }
-  if (Number.isNaN(Date.parse(value))) {
-    throw new SheetSchemaError(`Invalid ${label} for registration ${registrationId}`);
+
+  if (typeof raw === "number") {
+    return googleSerialToIsoDate(raw);
   }
-  return value;
+
+  const value = String(raw).trim();
+  if (isValidIsoDateOnly(value) || !Number.isNaN(Date.parse(value))) {
+    return value;
+  }
+
+  throw new SheetSchemaError(`Invalid ${label} for registration ${registrationId}`);
 }
 
 export function parseCityRow(row: readonly unknown[], headers: HeaderMap): City | null {
@@ -267,6 +275,7 @@ function parseRegistrationSchemaVersion(raw: string): RegistrationSchemaVersion 
   if (
     version === LEGACY_REGISTRATION_SCHEMA_VERSION ||
     version === BIRTH_DATE_REGISTRATION_SCHEMA_VERSION ||
+    version === WORKFLOW_REGISTRATION_SCHEMA_VERSION ||
     version === REGISTRATION_SCHEMA_VERSION
   ) {
     return version;
@@ -368,9 +377,10 @@ export function parseRegistrationRow(
   let assignedGroupId = null;
   let contactedAt = null;
   let confirmedAt = null;
+  let closedAt = null;
   let possibleDuplicateOf = null;
 
-  if (schemaVersion === REGISTRATION_SCHEMA_VERSION) {
+  if (schemaVersion >= WORKFLOW_REGISTRATION_SCHEMA_VERSION) {
     const rawSeasonId = cell(row, headers, "SEASON_ID");
     const rawSeasonName = cell(row, headers, "SEASON_NAME_SNAPSHOT");
     if (!isTechnicalId(rawSeasonId) || !rawSeasonName) {
@@ -387,8 +397,16 @@ export function parseRegistrationRow(
       assignedGroupId = asGroupId(rawGroupId);
     }
 
-    contactedAt = parseOptionalTimestamp(cell(row, headers, "CONTACTED_AT"), "CONTACTED_AT", id);
-    confirmedAt = parseOptionalTimestamp(cell(row, headers, "CONFIRMED_AT"), "CONFIRMED_AT", id);
+    contactedAt = parseOptionalWorkflowDate(
+      rawCell(row, headers, "CONTACTED_AT"),
+      "CONTACTED_AT",
+      id,
+    );
+    confirmedAt = parseOptionalWorkflowDate(
+      rawCell(row, headers, "CONFIRMED_AT"),
+      "CONFIRMED_AT",
+      id,
+    );
 
     const rawPossibleDuplicateOf = cell(row, headers, "POSSIBLE_DUPLICATE_OF");
     if (rawPossibleDuplicateOf) {
@@ -397,6 +415,10 @@ export function parseRegistrationRow(
       }
       possibleDuplicateOf = asRegistrationId(rawPossibleDuplicateOf);
     }
+  }
+
+  if (schemaVersion >= REGISTRATION_SCHEMA_VERSION) {
+    closedAt = parseOptionalWorkflowDate(rawCell(row, headers, "CLOSED_AT"), "CLOSED_AT", id);
   }
 
   return {
@@ -421,6 +443,7 @@ export function parseRegistrationRow(
     assignedGroupId,
     contactedAt,
     confirmedAt,
+    closedAt,
     possibleDuplicateOf,
     notes: cell(row, headers, "NOTES"),
     privacyNoticeVersion: cell(row, headers, "PRIVACY_NOTICE_VERSION"),

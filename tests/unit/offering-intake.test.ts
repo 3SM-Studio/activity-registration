@@ -76,17 +76,32 @@ describe("offering intake", () => {
     expect(computeOfferingIntakeStatus(windowed, "2026-09-30")).toBe(PUBLIC_INTAKE_STATUS.open);
   });
 
-  it("returns CLOSED after a windowed registration period", () => {
+  it("returns CLOSED after a windowed registration period when waitlist is disabled", () => {
     expect(
       computeOfferingIntakeStatus(
         offering({
           registrationMode: REGISTRATION_MODE.windowed,
           registrationOpenFrom: "2026-09-01",
           registrationOpenTo: "2026-09-30",
+          waitlistEnabled: false,
         }),
         "2026-10-01",
       ),
     ).toBe(PUBLIC_INTAKE_STATUS.closed);
+  });
+
+  it("moves a windowed offering to WAITLIST_ONLY after the window when waitlist is enabled", () => {
+    expect(
+      computeOfferingIntakeStatus(
+        offering({
+          registrationMode: REGISTRATION_MODE.windowed,
+          registrationOpenFrom: "2026-09-01",
+          registrationOpenTo: "2026-09-30",
+          waitlistEnabled: true,
+        }),
+        "2026-10-01",
+      ),
+    ).toBe(PUBLIC_INTAKE_STATUS.waitlistOnly);
   });
 
   it("keeps manual WAITLIST_ONLY inside a valid window", () => {

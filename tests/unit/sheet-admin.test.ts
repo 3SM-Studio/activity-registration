@@ -203,7 +203,7 @@ describe("validateSheetStructure", () => {
 });
 
 describe("bootstrapSheetStructure", () => {
-  it("adds warning protections while operational v3 columns remain editable", async () => {
+  it("adds warning-only v4 system protections in non-production bootstrap", async () => {
     const { client, batchRequests } = createBootstrapClient();
 
     await bootstrapSheetStructure(client);
@@ -217,22 +217,53 @@ describe("bootstrapSheetStructure", () => {
     expect(protectedRanges).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          description: "activity-registration:system-columns:identity-and-pii",
+          description: "activity-registration:hard-system:core-identifiers",
           warningOnly: true,
-          range: expect.objectContaining({ startColumnIndex: 0, endColumnIndex: 15 }),
+          range: expect.objectContaining({ startColumnIndex: 0, endColumnIndex: 7 }),
         }),
         expect.objectContaining({
-          description: "activity-registration:system-columns:metadata-before-operations",
+          description: "activity-registration:hard-system:age-snapshot",
+          warningOnly: true,
+          range: expect.objectContaining({ startColumnIndex: 10, endColumnIndex: 11 }),
+        }),
+        expect.objectContaining({
+          description: "activity-registration:hard-system:submission-metadata",
           warningOnly: true,
           range: expect.objectContaining({ startColumnIndex: 17, endColumnIndex: 23 }),
         }),
         expect.objectContaining({
-          description: "activity-registration:system-columns:metadata-after-operations",
+          description: "activity-registration:hard-system:duplicate-and-schema",
           warningOnly: true,
-          range: expect.objectContaining({ startColumnIndex: 26, endColumnIndex: 28 }),
+          range: expect.objectContaining({ startColumnIndex: 27, endColumnIndex: 29 }),
+        }),
+        expect.objectContaining({
+          description: "activity-registration:hard-system:header",
+          warningOnly: true,
         }),
       ]),
     );
+  });
+
+  it("uses hard protection with only the dedicated production editor when configured", async () => {
+    const { client, batchRequests } = createBootstrapClient();
+
+    await bootstrapSheetStructure(client, {
+      hardProtectionEditorEmails: ["prod-sa@example.iam.gserviceaccount.com"],
+    });
+
+    const protectedRanges = batchRequests.flatMap((request) => {
+      const addProtectedRange = request.addProtectedRange as
+        { protectedRange?: Record<string, unknown> } | undefined;
+      return addProtectedRange?.protectedRange ? [addProtectedRange.protectedRange] : [];
+    });
+
+    expect(protectedRanges).not.toHaveLength(0);
+    for (const protectedRange of protectedRanges) {
+      expect(protectedRange).toMatchObject({
+        warningOnly: false,
+        editors: { users: ["prod-sa@example.iam.gserviceaccount.com"] },
+      });
+    }
   });
 
   it("creates a native registrations table with typed columns", async () => {
@@ -260,7 +291,7 @@ describe("bootstrapSheetStructure", () => {
     );
   });
 
-  it("replaces stale v2 registration protections without duplicating them", async () => {
+  it("deletes legacy managed protections before creating the v4 protection set", async () => {
     const existing: readonly ProtectedRangeMetadata[] = [
       {
         protectedRangeId: 101,
@@ -281,23 +312,21 @@ describe("bootstrapSheetStructure", () => {
 
     await bootstrapSheetStructure(client);
 
-    expect(batchRequests.filter((request) => "updateProtectedRange" in request)).toHaveLength(1);
     expect(batchRequests).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({
-          deleteProtectedRange: { protectedRangeId: 102 },
-        }),
+        { deleteProtectedRange: { protectedRangeId: 101 } },
+        { deleteProtectedRange: { protectedRangeId: 102 } },
         expect.objectContaining({
           addProtectedRange: expect.objectContaining({
             protectedRange: expect.objectContaining({
-              description: "activity-registration:system-columns:metadata-before-operations",
+              description: "activity-registration:hard-system:core-identifiers",
             }),
           }),
         }),
         expect.objectContaining({
           addProtectedRange: expect.objectContaining({
             protectedRange: expect.objectContaining({
-              description: "activity-registration:system-columns:metadata-after-operations",
+              description: "activity-registration:hard-system:duplicate-and-schema",
             }),
           }),
         }),

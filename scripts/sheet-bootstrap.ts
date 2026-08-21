@@ -10,13 +10,22 @@ import {
   bootstrapSupportingSheetTables,
   validateSupportingSheetTables,
 } from "../src/infrastructure/google/supporting-sheet-tables";
+import { getServerEnv } from "../src/lib/env";
 import { createAdminSheetsClient } from "./_google-admin";
 
 async function main() {
   const client = createAdminSheetsClient();
+  const env = getServerEnv();
+  const hardProtectionEditorEmails =
+    env.APP_ENV === "production" && env.GCP_SERVICE_ACCOUNT_EMAIL
+      ? [env.GCP_SERVICE_ACCOUNT_EMAIL]
+      : undefined;
 
   console.info("Bootstrapping Google Sheet structure...");
-  await bootstrapSheetStructure(client);
+  await bootstrapSheetStructure(
+    client,
+    hardProtectionEditorEmails ? { hardProtectionEditorEmails } : {},
+  );
   await bootstrapSupportingSheetTables(client);
   await bootstrapOperatorSheetExperience(client);
 
@@ -32,6 +41,7 @@ async function main() {
         offeringCount: report.offeringCount,
         nativeTables: "ready",
         operatorExperience: "ready",
+        protectionMode: hardProtectionEditorEmails ? "hard" : "warning-only-test",
         warnings: report.warnings,
       },
       null,

@@ -1,6 +1,6 @@
 import { REGISTRATION_STATUS } from "@/domain/registration";
 
-export const SYSTEM_SCHEMA_VERSION = 3 as const;
+export const SYSTEM_SCHEMA_VERSION = 4 as const;
 
 export const SHEET = {
   cities: "MIASTA",
@@ -10,6 +10,8 @@ export const SHEET = {
   registrations: "ZAPISY",
   settings: "USTAWIENIA",
 } as const;
+
+export const OPERATOR_DASHBOARD_SHEET = "PANEL_OPERATORA";
 
 export const REGISTRATIONS_TABLE_ID = "900001";
 export const REGISTRATIONS_TABLE_NAME = "Rejestracje";
@@ -64,17 +66,6 @@ export const GROUP_HEADERS = [
   "SORT_ORDER",
 ] as const;
 
-export const ASSIGNABLE_GROUP_IDS_2026_2027 = [
-  "olkusz-psikusy",
-  "olkusz-psotki",
-  "olkusz-pozytywki",
-  "olkusz-besti",
-  "olkusz-bez-kurtyny",
-  "olkusz-od-poczatku",
-  "olkusz-balet-mlodszy",
-  "olkusz-inside",
-] as const;
-
 export const LEGACY_REGISTRATION_HEADERS = [
   "REGISTRATION_ID",
   "REQUEST_ID",
@@ -124,7 +115,7 @@ export const V2_REGISTRATION_HEADERS = [
   "SCHEMA_VERSION",
 ] as const;
 
-export const REGISTRATION_HEADERS = [
+export const V3_REGISTRATION_HEADERS = [
   "REGISTRATION_ID",
   "REQUEST_ID",
   "SUBMITTED_AT",
@@ -155,10 +146,42 @@ export const REGISTRATION_HEADERS = [
   "SCHEMA_VERSION",
 ] as const;
 
+export const REGISTRATION_HEADERS = [
+  "REGISTRATION_ID",
+  "REQUEST_ID",
+  "SUBMITTED_AT",
+  "OFFERING_ID",
+  "CITY_ID_SNAPSHOT",
+  "CITY_NAME_SNAPSHOT",
+  "OFFERING_NAME_SNAPSHOT",
+  "PARTICIPANT_FIRST_NAME",
+  "PARTICIPANT_LAST_NAME",
+  "BIRTH_DATE",
+  "AGE_AT_SUBMISSION",
+  "GUARDIAN_FIRST_NAME",
+  "GUARDIAN_LAST_NAME",
+  "PHONE",
+  "EMAIL",
+  "STATUS",
+  "NOTES",
+  "PRIVACY_NOTICE_VERSION",
+  "SOURCE",
+  "CREATED_AT",
+  "UPDATED_AT",
+  "SEASON_ID",
+  "SEASON_NAME_SNAPSHOT",
+  "ASSIGNED_GROUP_ID",
+  "CONTACTED_AT",
+  "CONFIRMED_AT",
+  "CLOSED_AT",
+  "POSSIBLE_DUPLICATE_OF",
+  "SCHEMA_VERSION",
+] as const;
+
 export type RegistrationHeader = (typeof REGISTRATION_HEADERS)[number];
 
 export const REGISTRATION_TABLE_COLUMNS = REGISTRATION_HEADERS.map((columnName, columnIndex) => {
-  if (columnName === "BIRTH_DATE") {
+  if (["BIRTH_DATE", "CONTACTED_AT", "CONFIRMED_AT", "CLOSED_AT"].includes(columnName)) {
     return { columnIndex, columnName, columnType: "DATE" } as const;
   }
 
@@ -175,20 +198,6 @@ export const REGISTRATION_TABLE_COLUMNS = REGISTRATION_HEADERS.map((columnName, 
         condition: {
           type: "ONE_OF_LIST",
           values: Object.values(REGISTRATION_STATUS).map((value) => ({ userEnteredValue: value })),
-        },
-      },
-    } as const;
-  }
-
-  if (columnName === "ASSIGNED_GROUP_ID") {
-    return {
-      columnIndex,
-      columnName,
-      columnType: "DROPDOWN",
-      dataValidationRule: {
-        condition: {
-          type: "ONE_OF_LIST",
-          values: ASSIGNABLE_GROUP_IDS_2026_2027.map((value) => ({ userEnteredValue: value })),
         },
       },
     } as const;

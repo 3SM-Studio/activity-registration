@@ -17,6 +17,14 @@ import {
   SHEET,
 } from "@/infrastructure/google/sheets-contracts";
 import type { SheetsClient } from "@/infrastructure/google/sheets-client";
+import { isValidIsoDateOnly } from "@/lib/birth-date";
+
+function workflowDateToCell(value: string | null): string | number {
+  if (!value) {
+    return "";
+  }
+  return isValidIsoDateOnly(value) ? isoDateToGoogleSerial(value) : value;
+}
 
 function registrationToCells(
   registration: Registration,
@@ -46,8 +54,9 @@ function registrationToCells(
     SEASON_ID: registration.seasonId ?? "",
     SEASON_NAME_SNAPSHOT: registration.seasonNameSnapshot ?? "",
     ASSIGNED_GROUP_ID: registration.assignedGroupId ?? "",
-    CONTACTED_AT: registration.contactedAt ?? "",
-    CONFIRMED_AT: registration.confirmedAt ?? "",
+    CONTACTED_AT: workflowDateToCell(registration.contactedAt),
+    CONFIRMED_AT: workflowDateToCell(registration.confirmedAt),
+    CLOSED_AT: workflowDateToCell(registration.closedAt),
     POSSIBLE_DUPLICATE_OF: registration.possibleDuplicateOf ?? "",
     SCHEMA_VERSION: registration.schemaVersion,
   };

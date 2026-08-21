@@ -5,10 +5,12 @@ export type RequestId = string & { readonly __brand: "RequestId" };
 
 export const LEGACY_REGISTRATION_SCHEMA_VERSION = 1 as const;
 export const BIRTH_DATE_REGISTRATION_SCHEMA_VERSION = 2 as const;
-export const REGISTRATION_SCHEMA_VERSION = 3 as const;
+export const WORKFLOW_REGISTRATION_SCHEMA_VERSION = 3 as const;
+export const REGISTRATION_SCHEMA_VERSION = 4 as const;
 export type RegistrationSchemaVersion =
   | typeof LEGACY_REGISTRATION_SCHEMA_VERSION
   | typeof BIRTH_DATE_REGISTRATION_SCHEMA_VERSION
+  | typeof WORKFLOW_REGISTRATION_SCHEMA_VERSION
   | typeof REGISTRATION_SCHEMA_VERSION;
 
 const UUID_V4_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -37,9 +39,6 @@ export const LEGACY_REGISTRATION_STATUS = {
   inProgress: "IN_PROGRESS",
   accepted: "ACCEPTED",
 } as const;
-
-export type LegacyRegistrationStatus =
-  (typeof LEGACY_REGISTRATION_STATUS)[keyof typeof LEGACY_REGISTRATION_STATUS];
 
 export function normalizeStoredRegistrationStatus(value: string): RegistrationStatus | null {
   const current = Object.values(REGISTRATION_STATUS).find((status) => status === value);
@@ -80,6 +79,7 @@ export type Registration = Readonly<{
   assignedGroupId: GroupId | null;
   contactedAt: string | null;
   confirmedAt: string | null;
+  closedAt: string | null;
   possibleDuplicateOf: RegistrationId | null;
   notes: string;
   privacyNoticeVersion: string;

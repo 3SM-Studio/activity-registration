@@ -12,7 +12,8 @@ export class GoogleAuthenticationError extends Error {
   }
 }
 
-export function toGoogleAuthenticationError(_error: unknown): GoogleAuthenticationError {
+export function toGoogleAuthenticationError(error: unknown): GoogleAuthenticationError {
+  void error;
   return new GoogleAuthenticationError();
 }
 

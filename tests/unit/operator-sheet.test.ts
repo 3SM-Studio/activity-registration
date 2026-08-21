@@ -40,7 +40,7 @@ describe("operator Sheets experience", () => {
             sheetId: 1003,
             startRowIndex: 1,
             startColumnIndex: 0,
-            endColumnIndex: 28,
+            endColumnIndex: 29,
           },
           fields: expect.stringContaining("userEnteredFormat.backgroundColorStyle"),
         }),
@@ -102,10 +102,10 @@ describe("operator Sheets experience", () => {
       { sheetId: 1003, dimension: "COLUMNS", startIndex: 0, endIndex: 2 },
       { sheetId: 1003, dimension: "COLUMNS", startIndex: 3, endIndex: 5 },
       { sheetId: 1003, dimension: "COLUMNS", startIndex: 17, endIndex: 23 },
-      { sheetId: 1003, dimension: "COLUMNS", startIndex: 26, endIndex: 28 },
+      { sheetId: 1003, dimension: "COLUMNS", startIndex: 27, endIndex: 29 },
     ]);
 
-    for (const operatorColumn of [15, 16, 23, 24, 25]) {
+    for (const operatorColumn of [2, 5, 6, 15, 16, 23, 24, 25, 26]) {
       expect(
         hiddenRanges.some(
           (range) =>
@@ -116,6 +116,19 @@ describe("operator Sheets experience", () => {
         ),
       ).toBe(false);
     }
+  });
+
+  it("uses the active current-season dashboard list as the group dropdown source", () => {
+    const requests = buildOperatorSheetRequests(sheet());
+    const validation = requests.find((request) => "setDataValidation" in request)
+      ?.setDataValidation as
+      | { rule?: { condition?: { type?: string; values?: Array<{ userEnteredValue?: string }> } } }
+      | undefined;
+
+    expect(validation?.rule?.condition).toEqual({
+      type: "ONE_OF_RANGE",
+      values: [{ userEnteredValue: "PANEL_OPERATORA!A13:A1000" }],
+    });
   });
 
   it("backs operator filter views with the native registration table", () => {

@@ -49,6 +49,7 @@ function registration(overrides: Partial<Registration> = {}): Registration {
     assignedGroupId: null,
     contactedAt: null,
     confirmedAt: null,
+    closedAt: null,
     possibleDuplicateOf: null,
     notes: "",
     privacyNoticeVersion: "v1",

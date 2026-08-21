@@ -38,10 +38,6 @@ export type RegistrationNotificationResult = Readonly<{
   failed: number;
 }>;
 
-function participantName(registration: Registration): string {
-  return `${registration.participantFirstName} ${registration.participantLastName}`;
-}
-
 async function renderTemplate(
   template: ReactElement,
 ): Promise<Readonly<{ html: string; text: string }>> {
@@ -77,13 +73,11 @@ async function adminMessage(
   adminEmails: readonly string[],
 ): Promise<EmailMessage> {
   const rendered = await renderTemplate(createElement(RegistrationAdminEmail, { registration }));
-  const name = participantName(registration);
 
   return {
     from,
     to: adminEmails,
-    replyTo: registration.email,
-    subject: `Nowe zgłoszenie: ${name} - ${registration.offeringNameSnapshot}`,
+    subject: `Nowe zgłoszenie - ${registration.offeringNameSnapshot} - ${registration.cityNameSnapshot}`,
     text: rendered.text,
     html: rendered.html,
     idempotencyKey: `registration-admin/${registration.id}`,

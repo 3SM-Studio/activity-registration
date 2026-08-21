@@ -16,8 +16,20 @@ function createRepositories(
       async getPublicCatalog() {
         return { cities: [], offerings: [] };
       },
-      async findSeasonById() {
-        return null;
+      async findSeasonById(seasonId) {
+        return seasonId === currentSeasonId
+          ? {
+              id: currentSeasonId,
+              name: "2026/2027",
+              startDate: "2026-09-01",
+              endDate: "2027-07-31",
+              active: true,
+              sortOrder: 10,
+            }
+          : null;
+      },
+      async findGroupsForOffering() {
+        return [];
       },
     },
     settings: {

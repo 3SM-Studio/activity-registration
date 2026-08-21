@@ -40,6 +40,10 @@ export type SheetValidationReport = Readonly<{
   warnings: readonly string[];
 }>;
 
+export type SheetBootstrapOptions = Readonly<{
+  hardProtectionEditorEmails?: readonly string[];
+}>;
+
 const DEFAULT_SETTINGS = [
   [SETTING_KEY.systemSchemaVersion, String(SYSTEM_SCHEMA_VERSION)],
   [SETTING_KEY.registrationsOpen, "NIE"],
@@ -55,20 +59,30 @@ const VALID_ACTIVE_VALUES = new Set(["TAK", "NIE", "TRUE", "FALSE", "1", "0", "Y
 
 const REGISTRATION_PROTECTION_SPECS = [
   {
-    description: "activity-registration:system-columns:identity-and-pii",
+    description: "activity-registration:hard-system:core-identifiers",
     startColumnIndex: 0,
-    endColumnIndex: 15,
+    endColumnIndex: 7,
   },
   {
-    description: "activity-registration:system-columns:metadata-before-operations",
+    description: "activity-registration:hard-system:age-snapshot",
+    startColumnIndex: 10,
+    endColumnIndex: 11,
+  },
+  {
+    description: "activity-registration:hard-system:submission-metadata",
     startColumnIndex: 17,
     endColumnIndex: 23,
   },
   {
-    description: "activity-registration:system-columns:metadata-after-operations",
-    startColumnIndex: 26,
-    endColumnIndex: 28,
+    description: "activity-registration:hard-system:duplicate-and-schema",
+    startColumnIndex: 27,
+    endColumnIndex: 29,
   },
+] as const;
+
+const MANAGED_PROTECTION_PREFIXES = [
+  "activity-registration:system-columns:",
+  "activity-registration:hard-system:",
 ] as const;
 
 function rowHasContent(row: readonly unknown[]): boolean {
@@ -114,7 +128,6 @@ async function ensureDefaultSettings(client: SheetsClient): Promise<void> {
     if (existingKeys.has(key)) {
       throw new SheetSchemaError(`Duplicate setting key: ${key}`);
     }
-
     existingKeys.add(key);
   }
 
@@ -127,77 +140,65 @@ async function ensureDefaultSettings(client: SheetsClient): Promise<void> {
   }
 }
 
+function managedProtection(description: string): boolean {
+  return MANAGED_PROTECTION_PREFIXES.some((prefix) => description.startsWith(prefix));
+}
+
 async function ensureRegistrationProtections(
   client: SheetsClient,
   metadata: readonly SheetMetadata[],
+  options: SheetBootstrapOptions,
 ): Promise<void> {
   const registrationSheet = metadata.find((sheet) => sheet.title === SHEET.registrations);
   if (!registrationSheet) {
     return;
   }
 
+  const editorEmails = [...(options.hardProtectionEditorEmails ?? [])];
+  const useHardProtection = editorEmails.length > 0;
   const requests: Record<string, unknown>[] = [];
-  const expectedDescriptions = new Set<string>(
-    REGISTRATION_PROTECTION_SPECS.map((spec) => spec.description),
-  );
 
   for (const existing of registrationSheet.protectedRanges ?? []) {
-    if (
-      existing.description.startsWith("activity-registration:system-columns:") &&
-      !expectedDescriptions.has(existing.description)
-    ) {
+    if (managedProtection(existing.description)) {
       requests.push({ deleteProtectedRange: { protectedRangeId: existing.protectedRangeId } });
     }
   }
 
   for (const spec of REGISTRATION_PROTECTION_SPECS) {
-    const existing = (registrationSheet.protectedRanges ?? []).find(
-      (range) => range.description === spec.description,
-    );
-
-    if (!existing) {
-      requests.push({
-        addProtectedRange: {
-          protectedRange: {
-            description: spec.description,
-            warningOnly: true,
-            range: {
-              sheetId: registrationSheet.sheetId,
-              startColumnIndex: spec.startColumnIndex,
-              endColumnIndex: spec.endColumnIndex,
-            },
+    requests.push({
+      addProtectedRange: {
+        protectedRange: {
+          description: spec.description,
+          warningOnly: !useHardProtection,
+          ...(useHardProtection ? { editors: { users: editorEmails } } : {}),
+          range: {
+            sheetId: registrationSheet.sheetId,
+            startColumnIndex: spec.startColumnIndex,
+            endColumnIndex: spec.endColumnIndex,
           },
         },
-      });
-      continue;
-    }
+      },
+    });
+  }
 
-    if (
-      !existing.warningOnly ||
-      existing.startColumnIndex !== spec.startColumnIndex ||
-      existing.endColumnIndex !== spec.endColumnIndex
-    ) {
-      requests.push({
-        updateProtectedRange: {
-          protectedRange: {
-            protectedRangeId: existing.protectedRangeId,
-            description: spec.description,
-            warningOnly: true,
-            range: {
-              sheetId: registrationSheet.sheetId,
-              startColumnIndex: spec.startColumnIndex,
-              endColumnIndex: spec.endColumnIndex,
-            },
-          },
-          fields: "description,warningOnly,range",
+  requests.push({
+    addProtectedRange: {
+      protectedRange: {
+        description: "activity-registration:hard-system:header",
+        warningOnly: !useHardProtection,
+        ...(useHardProtection ? { editors: { users: editorEmails } } : {}),
+        range: {
+          sheetId: registrationSheet.sheetId,
+          startRowIndex: 0,
+          endRowIndex: 1,
+          startColumnIndex: 0,
+          endColumnIndex: REGISTRATION_HEADERS.length,
         },
-      });
-    }
-  }
+      },
+    },
+  });
 
-  if (requests.length > 0) {
-    await client.batchUpdate(requests);
-  }
+  await client.batchUpdate(requests);
 }
 
 function registrationTableRange(sheetId: number, rowCount: number) {
@@ -262,6 +263,52 @@ async function ensureRegistrationTable(
   ]);
 }
 
+async function ensureHumanDateFormats(
+  client: SheetsClient,
+  metadata: readonly SheetMetadata[],
+): Promise<void> {
+  const offeringsSheet = metadata.find((sheet) => sheet.title === SHEET.offerings);
+  const registrationSheet = metadata.find((sheet) => sheet.title === SHEET.registrations);
+  const requests: Record<string, unknown>[] = [];
+
+  if (offeringsSheet) {
+    requests.push({
+      repeatCell: {
+        range: {
+          sheetId: offeringsSheet.sheetId,
+          startRowIndex: 1,
+          startColumnIndex: 8,
+          endColumnIndex: 10,
+        },
+        cell: { userEnteredFormat: { numberFormat: { type: "DATE", pattern: "dd.mm.yyyy" } } },
+        fields: "userEnteredFormat.numberFormat",
+      },
+    });
+  }
+
+  if (registrationSheet) {
+    for (const [startColumnIndex, endColumnIndex] of [
+      [9, 10],
+      [24, 27],
+    ] as const) {
+      requests.push({
+        repeatCell: {
+          range: {
+            sheetId: registrationSheet.sheetId,
+            startRowIndex: 1,
+            startColumnIndex,
+            endColumnIndex,
+          },
+          cell: { userEnteredFormat: { numberFormat: { type: "DATE", pattern: "dd.mm.yyyy" } } },
+          fields: "userEnteredFormat.numberFormat",
+        },
+      });
+    }
+  }
+
+  await client.batchUpdate(requests);
+}
+
 function warnAboutRegistrationProtections(
   metadata: readonly SheetMetadata[],
   warnings: string[],
@@ -282,7 +329,6 @@ function warnAboutRegistrationProtections(
     }
 
     if (
-      !protection.warningOnly ||
       protection.startColumnIndex !== spec.startColumnIndex ||
       protection.endColumnIndex !== spec.endColumnIndex
     ) {
@@ -336,7 +382,10 @@ function assertRegistrationTable(table: TableMetadata | undefined): void {
   }
 }
 
-export async function bootstrapSheetStructure(client: SheetsClient): Promise<void> {
+export async function bootstrapSheetStructure(
+  client: SheetsClient,
+  options: SheetBootstrapOptions = {},
+): Promise<void> {
   let metadata = await client.getSheetMetadata();
   const existing = new Set(metadata.map((sheet) => sheet.title));
 
@@ -376,8 +425,9 @@ export async function bootstrapSheetStructure(client: SheetsClient): Promise<voi
 
   await ensureDefaultSettings(client);
   metadata = await client.getSheetMetadata();
-  await ensureRegistrationProtections(client, metadata);
+  await ensureRegistrationProtections(client, metadata, options);
   await ensureRegistrationTable(client, metadata);
+  await ensureHumanDateFormats(client, metadata);
 }
 
 export async function validateSheetStructure(client: SheetsClient): Promise<SheetValidationReport> {
@@ -544,6 +594,18 @@ export async function validateSheetStructure(client: SheetsClient): Promise<Shee
       );
     } else if (!currentSeason.active) {
       warnings.push(`USTAWIENIA ${SETTING_KEY.currentSeasonId} references an inactive season.`);
+    } else {
+      for (const offering of offerings.filter((candidate) => candidate.active)) {
+        const activeGroups = groups.filter(
+          (group) =>
+            group.active && group.seasonId === currentSeason.id && group.offeringId === offering.id,
+        );
+        if (activeGroups.length === 0) {
+          warnings.push(
+            `Active offering ${offering.id} has no active group in current season ${currentSeason.id} and will not be public.`,
+          );
+        }
+      }
     }
   }
 
