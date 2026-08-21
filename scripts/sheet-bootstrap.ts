@@ -1,37 +1,21 @@
 import {
-  bootstrapOperatorSheetExperience,
-  validateOperatorSheetExperience,
-} from "../src/infrastructure/google/operator-sheet";
-import {
-  bootstrapSheetStructure,
-  validateSheetStructure,
-} from "../src/infrastructure/google/sheet-admin";
-import {
-  bootstrapSupportingSheetTables,
-  validateSupportingSheetTables,
-} from "../src/infrastructure/google/supporting-sheet-tables";
-import { getServerEnv } from "../src/lib/env";
+  refreshOperatorSheetRuntime,
+  validateSafeOperatorSheetExperience,
+} from "../src/infrastructure/google/operator-sheet-runtime";
+import { validateSheetStructure } from "../src/infrastructure/google/sheet-admin";
+import { validateSupportingSheetTables } from "../src/infrastructure/google/supporting-sheet-tables";
 import { createAdminSheetsClient } from "./_google-admin";
 
 async function main() {
   const client = createAdminSheetsClient();
-  const env = getServerEnv();
-  const hardProtectionEditorEmails =
-    env.APP_ENV === "production" && env.GCP_SERVICE_ACCOUNT_EMAIL
-      ? [env.GCP_SERVICE_ACCOUNT_EMAIL]
-      : undefined;
 
-  console.info("Bootstrapping Google Sheet structure...");
-  await bootstrapSheetStructure(
-    client,
-    hardProtectionEditorEmails ? { hardProtectionEditorEmails } : {},
-  );
-  await bootstrapSupportingSheetTables(client);
-  await bootstrapOperatorSheetExperience(client);
+  console.info("Refreshing runtime-safe Google Sheet operator experience...");
+  await refreshOperatorSheetRuntime(client);
 
   const report = await validateSheetStructure(client);
   await validateSupportingSheetTables(client);
-  await validateOperatorSheetExperience(client);
+  await validateSafeOperatorSheetExperience(client);
+
   console.info(
     JSON.stringify(
       {
@@ -39,9 +23,9 @@ async function main() {
         sheets: report.sheets,
         cityCount: report.cityCount,
         offeringCount: report.offeringCount,
-        nativeTables: "ready",
+        nativeTables: "validated-read-only",
         operatorExperience: "ready",
-        protectionMode: hardProtectionEditorEmails ? "hard" : "warning-only-test",
+        structuralMutations: false,
         warnings: report.warnings,
       },
       null,

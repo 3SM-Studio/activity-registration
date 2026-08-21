@@ -1,8 +1,8 @@
 # Operations
 
-This runbook describes the currently implemented v3 operating model.
+This runbook describes the currently implemented v4 operating model.
 
-Never use v3 development or QA commands against PROD unless the command is explicitly part of the approved closed-production release procedure.
+Never use development or QA commands against PROD unless the command is explicitly part of the approved closed-production release procedure.
 
 ## 1. Normal TEST state
 
@@ -45,7 +45,7 @@ Feature branches are disabled through `vercel.json` using:
 Current implemented target:
 
 ```text
-SYSTEM_SCHEMA_VERSION=3
+SYSTEM_SCHEMA_VERSION=4
 ```
 
 System sheets:
@@ -61,7 +61,9 @@ USTAWIENIA
 
 `ZAPISY` remains the native table `Rejestracje`.
 
-Historical v1/v2 rows are allowed to retain unknown v3 fields as empty. Never fabricate DOB, season, group or workflow timestamps.
+`PANEL_OPERATORA` is intentionally a normal dashboard sheet, not a native Google Table. It contains derived formulas/KPIs and a hidden helper column for group IDs; participant records remain canonical only in `ZAPISY`.
+
+Historical rows may retain fields introduced by later schema versions as empty. Never fabricate DOB, season, group or workflow timestamps.
 
 ## 4. Sheet validation
 
@@ -77,7 +79,7 @@ Diagnostics:
 APP_ENV=test DATA_BACKEND=google-sheets pnpm diagnostics
 ```
 
-Diagnostics validate schema/catalog/settings/table metadata and v3 workflow constraints without printing participant PII.
+Diagnostics validate schema/catalog/settings/table metadata and workflow constraints without printing participant PII.
 
 ## 5. Reconciliation
 
@@ -123,17 +125,39 @@ sheet:validate
 
 in addition to normal repository CI.
 
-## 7. Bootstrap / migration
+## 7. Runtime bootstrap vs structural schema sync
+
+There are now two intentionally different maintenance paths.
+
+### Routine operator refresh
+
+```bash
+APP_ENV=test DATA_BACKEND=google-sheets pnpm sheet:bootstrap
+```
+
+`sheet:bootstrap` is the runtime-safe path. It may refresh operator presentation, filter views and warning conditional formats in `ZAPISY`, and it removes legacy whole-cell `STATUS` conditional formats. It must not create/update native Tables, Table `columnProperties`, supporting-table schema or protections.
+
+Use this path during normal operation when a presentation refresh is actually needed. Ordinary status/date edits do not require running any bootstrap because `PANEL_OPERATORA` formulas recalculate from `ZAPISY` automatically.
+
+### Structural schema maintenance
+
+```bash
+APP_ENV=test DATA_BACKEND=google-sheets pnpm sheet:schema-sync
+```
+
+`sheet:schema-sync` is the explicit structural path. It may create/update native Tables, refresh Table ranges/row properties, update `ASSIGNED_GROUP_ID` dropdown values, refresh protections and rebuild the operator dashboard structure.
+
+Do not run `sheet:schema-sync` while an operator is actively editing the Sheet UI or configuring native dropdown presentation. For PROD, treat it as a controlled maintenance operation with intake closed and no concurrent operator edits.
 
 For a fresh TEST sheet:
 
 ```bash
-APP_ENV=test DATA_BACKEND=google-sheets pnpm sheet:bootstrap
+APP_ENV=test DATA_BACKEND=google-sheets pnpm sheet:schema-sync
 APP_ENV=test DATA_BACKEND=google-sheets ALLOW_TEST_SEED=true pnpm seed:test
 APP_ENV=test DATA_BACKEND=google-sheets pnpm sheet:validate
 ```
 
-`sheet:bootstrap` is non-destructive.
+`seed:test` and `seed:production-catalog` intentionally finish through the structural schema-sync path because catalog changes can require Table/dropdown metadata changes.
 
 Explicit migration:
 
@@ -141,18 +165,19 @@ Explicit migration:
 pnpm sheet:migrate
 ```
 
-The migration path supports historical versions through v3. It must be idempotent, fail closed on unknown/partial unsafe structures and set the system version only after the required structural work succeeds.
+The migration path supports historical versions through v4. It must be idempotent, fail closed on unknown/partial unsafe structures and set the system version only after the required structural work succeeds.
 
-Before migrating any important spreadsheet:
+Before migrating or structurally syncing any important spreadsheet:
 
 1. confirm the spreadsheet/environment explicitly,
 2. set `REGISTRATIONS_OPEN=FALSE`,
 3. create a complete backup,
-4. run current validation, diagnostics and reconciliation,
-5. record native table metadata,
-6. ensure no uncontrolled users are submitting,
-7. migrate,
-8. rerun validation/diagnostics/integration.
+4. ensure no operator is actively editing the spreadsheet,
+5. run current validation, diagnostics and reconciliation,
+6. record native table metadata,
+7. ensure no uncontrolled users are submitting,
+8. migrate/sync,
+9. rerun validation/diagnostics/integration.
 
 Rollback is restore from the pre-migration backup unless a tested reverse migration exists.
 
@@ -168,7 +193,7 @@ If a write outcome is uncertain, retry the whole registration with the same `req
 
 `requestId` protects transport replay.
 
-Separately, v3 performs business duplicate detection before create:
+Separately, the current registration flow performs business duplicate detection before create:
 
 - exact active duplicate with matching contact: no new row,
 - probable duplicate with changed contact: new row with `POSSIBLE_DUPLICATE_OF`,
@@ -191,7 +216,7 @@ REJECTED
 CANCELLED
 ```
 
-The operator sheet keeps one canonical table and provides operator-first visibility/filter views around it.
+The operator workflow keeps one canonical native table in `ZAPISY` and a separate read-only-style dashboard in `PANEL_OPERATORA`.
 
 Operator-managed fields include:
 
@@ -200,8 +225,11 @@ STATUS
 ASSIGNED_GROUP_ID
 CONTACTED_AT
 CONFIRMED_AT
+CLOSED_AT
 NOTES
 ```
+
+`STATUS` is a native Google Table dropdown. Native dropdown option/chip colors are UI-owned because the public Sheets API does not expose per-option chip colors. Do not emulate status chips with whole-cell conditional formatting. Code-managed conditional formatting is reserved for actionable warnings such as missing workflow dates, missing confirmed group or duplicate review.
 
 `NOTES` is for information necessary to process the registration. Do not turn it into an uncontrolled health/family/special-category data store.
 
@@ -209,7 +237,7 @@ NOTES
 
 ## 11. Group catalog
 
-The v3 `GRUPY` schema exists, but real group rows must come from Iwona's verified data.
+The `GRUPY` schema is active, but real group rows must come from Iwona's verified data.
 
 Do not fabricate:
 
@@ -220,7 +248,7 @@ Do not fabricate:
 - instructors,
 - capacities.
 
-`ASSIGNED_GROUP_ID` can remain empty until a real group catalog and operator process are approved.
+`ASSIGNED_GROUP_ID` is a native dropdown derived from active groups for `CURRENT_SEASON_ID`. When that active set changes, run the explicit `sheet:schema-sync` maintenance path rather than rewriting Table metadata during routine operator work.
 
 ## 12. Abuse protection
 
@@ -270,7 +298,7 @@ Do not open intake yet.
 Required order:
 
 1. create/confirm separate PROD Sheet,
-2. migrate/bootstrap PROD to schema v3 with a backup and `REGISTRATIONS_OPEN=FALSE`,
+2. migrate/sync PROD to schema v4 with a backup and `REGISTRATIONS_OPEN=FALSE`,
 3. create/confirm separate PROD service account,
 4. bind only the Production Vercel subject to the PROD identity,
 5. verify Preview identity cannot write/read PROD resources beyond explicitly approved access,
