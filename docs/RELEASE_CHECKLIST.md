@@ -92,7 +92,7 @@ Canonical policy: `docs/RODO_AND_RETENTION_POLICY.md`.
 - [x] Article 21 verification workflow documented
 - [x] staff verification records explicitly excluded from registration Sheet/Git
 - [x] 2026 legal gap audit completed against Article 22c
-- [x] v1.1 draft prepared with explicit reporting channel, disability/SEN accommodations, documented review and publication rules
+- [x] v1.1 drafts prepared with explicit reporting channel, disability/SEN accommodations, documented review and publication rules
 - [x] public full + child-friendly web routes implemented in the hardening release
 - [ ] v1.1 formally adopted by Iwona Pilarz
 - [ ] adopted full + shortened Standardy physically displayed in the premises
@@ -101,7 +101,8 @@ Canonical documents:
 
 - adopted v1.0: `docs/STANDARDY_OCHRONY_MALOLETNICH.md`
 - adopted shortened v1.0: `docs/STANDARDY_OCHRONY_MALOLETNICH_SKROT.md`
-- pending replacement: `docs/STANDARDY_OCHRONY_MALOLETNICH_V1.1_DRAFT.md`
+- pending full replacement: `docs/STANDARDY_OCHRONY_MALOLETNICH_V1.1_DRAFT.md`
+- pending shortened replacement: `docs/STANDARDY_OCHRONY_MALOLETNICH_SKROT_V1.1_DRAFT.md`
 
 Operational evidence of each real staff check remains personnel documentation, not repository content.
 
