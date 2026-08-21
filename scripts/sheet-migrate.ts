@@ -1,6 +1,13 @@
 import { LEGACY_REGISTRATION_STATUS, REGISTRATION_STATUS } from "../src/domain/registration";
-import { bootstrapSheetStructure } from "../src/infrastructure/google/sheet-admin";
 import { cell, createHeaderMap } from "../src/infrastructure/google/header-map";
+import {
+  bootstrapOperatorSheetExperience,
+  validateOperatorSheetExperience,
+} from "../src/infrastructure/google/operator-sheet";
+import {
+  bootstrapSheetStructure,
+  validateSheetStructure,
+} from "../src/infrastructure/google/sheet-admin";
 import {
   LEGACY_OFFERING_HEADERS,
   LEGACY_REGISTRATION_HEADERS,
@@ -14,6 +21,10 @@ import {
   V3_REGISTRATION_HEADERS,
 } from "../src/infrastructure/google/sheets-contracts";
 import type { SheetsClient } from "../src/infrastructure/google/sheets-client";
+import {
+  bootstrapSupportingSheetTables,
+  validateSupportingSheetTables,
+} from "../src/infrastructure/google/supporting-sheet-tables";
 import { getServerEnv } from "../src/lib/env";
 import { createAdminSheetsClient } from "./_google-admin";
 
@@ -308,8 +319,7 @@ async function migrateV3ToV4(client: SheetsClient): Promise<void> {
     createHeaderMap(headerRow, REGISTRATION_HEADERS);
   }
 
-  await setSystemSchemaVersion(client, 4);
-  console.info("Migrated sheet schema from version 3 to 4.");
+  console.info("Prepared ZAPISY headers for schema version 4.");
 }
 
 async function migrateRegistrationWorkflowStatuses(client: SheetsClient): Promise<number> {
@@ -400,12 +410,22 @@ async function main() {
     env.APP_ENV === "production" && env.GCP_SERVICE_ACCOUNT_EMAIL
       ? [env.GCP_SERVICE_ACCOUNT_EMAIL]
       : undefined;
+
   await bootstrapSheetStructure(
     client,
     hardProtectionEditorEmails ? { hardProtectionEditorEmails } : {},
   );
+  await bootstrapSupportingSheetTables(client);
+  await bootstrapOperatorSheetExperience(client);
+
+  await validateSupportingSheetTables(client);
+  await validateOperatorSheetExperience(client);
+
+  await setSystemSchemaVersion(client, SYSTEM_SCHEMA_VERSION);
+  const report = await validateSheetStructure(client);
+
   console.info(
-    `Sheet schema is at version ${SYSTEM_SCHEMA_VERSION}. Workflow status migration updated ${migratedStatuses} row(s).`,
+    `Sheet schema is at version ${SYSTEM_SCHEMA_VERSION}. Workflow status migration updated ${migratedStatuses} row(s). Validation warnings: ${report.warnings.length}.`,
   );
 }
 
