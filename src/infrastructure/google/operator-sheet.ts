@@ -5,6 +5,7 @@ import {
   GROUP_HEADERS,
   OPERATOR_DASHBOARD_SHEET,
   REGISTRATION_HEADERS,
+  REGISTRATION_TABLE_COLUMNS,
   SETTING_KEY,
   SETTINGS_HEADERS,
   REGISTRATIONS_TABLE_ID,
@@ -445,6 +446,42 @@ async function bootstrapDashboard(client: SheetsClient, dashboard: SheetMetadata
   ]);
 }
 
+export function buildAssignedGroupTableRequest(activeGroupIds: readonly string[]) {
+  const uniqueGroupIds = [...new Set(activeGroupIds.map((id) => id.trim()).filter(Boolean))];
+  const columnProperties = REGISTRATION_TABLE_COLUMNS.map((column) => {
+    if (column.columnIndex !== GROUP_COLUMN_INDEX || uniqueGroupIds.length === 0) {
+      return column;
+    }
+
+    return {
+      columnIndex: column.columnIndex,
+      columnName: column.columnName,
+      columnType: "DROPDOWN",
+      dataValidationRule: {
+        condition: {
+          type: "ONE_OF_LIST",
+          values: uniqueGroupIds.map((value) => ({ userEnteredValue: value })),
+        },
+      },
+    } as const;
+  });
+
+  return {
+    updateTable: {
+      table: {
+        tableId: REGISTRATIONS_TABLE_ID,
+        columnProperties,
+      },
+      fields: "columnProperties",
+    },
+  } as const;
+}
+
+async function readDashboardGroupIds(client: SheetsClient): Promise<readonly string[]> {
+  const rows = await client.getValues(`${OPERATOR_DASHBOARD_SHEET}!A13:A1000`);
+  return rows.map((row) => String(row[0] ?? "").trim()).filter((value) => value.length > 0);
+}
+
 export function buildOperatorSheetRequests(
   sheet: SheetMetadata,
 ): readonly Record<string, unknown>[] {
@@ -474,27 +511,6 @@ export function buildOperatorSheetRequests(
       },
     });
   }
-
-  requests.push({
-    setDataValidation: {
-      range: {
-        sheetId: sheet.sheetId,
-        startRowIndex: 1,
-        startColumnIndex: GROUP_COLUMN_INDEX,
-        endColumnIndex: GROUP_COLUMN_INDEX + 1,
-      },
-      rule: {
-        condition: {
-          type: "ONE_OF_RANGE",
-          values: [{ userEnteredValue: `${OPERATOR_DASHBOARD_SHEET}!A13:A1000` }],
-        },
-        inputMessage:
-          "Wybierz aktywną grupę bieżącego sezonu. Po przypisaniu sprawdź zgodność wieku i oferty.",
-        strict: true,
-        showCustomUi: true,
-      },
-    },
-  });
 
   const headerNotes = new Map<number, string>([
     [
@@ -616,9 +632,14 @@ export function buildOperatorSheetRequests(
 
 export async function bootstrapOperatorSheetExperience(client: SheetsClient): Promise<void> {
   const dashboard = await ensureDashboardSheet(client);
-  const metadata = await client.getSheetMetadata();
-  await client.batchUpdate(buildOperatorSheetRequests(registrationSheet(metadata)));
   await bootstrapDashboard(client, dashboard);
+
+  const activeGroupIds = await readDashboardGroupIds(client);
+  let metadata = await client.getSheetMetadata();
+  await client.batchUpdate([buildAssignedGroupTableRequest(activeGroupIds)]);
+
+  metadata = await client.getSheetMetadata();
+  await client.batchUpdate(buildOperatorSheetRequests(registrationSheet(metadata)));
 }
 
 export async function validateOperatorSheetExperience(client: SheetsClient): Promise<void> {
@@ -627,6 +648,37 @@ export async function validateOperatorSheetExperience(client: SheetsClient): Pro
 
   if (!metadata.some((candidate) => candidate.title === OPERATOR_DASHBOARD_SHEET)) {
     throw new Error("PANEL_OPERATORA sheet is missing.");
+  }
+
+  const activeGroupIds = await readDashboardGroupIds(client);
+  const registrationTable = (sheet.tables ?? []).find(
+    (table) => table.tableId === REGISTRATIONS_TABLE_ID,
+  );
+  const groupColumn = registrationTable?.columnProperties.find(
+    (column) => column.columnIndex === GROUP_COLUMN_INDEX,
+  );
+
+  if (!groupColumn) {
+    throw new Error("ZAPISY ASSIGNED_GROUP_ID table column is missing.");
+  }
+
+  if (activeGroupIds.length === 0) {
+    if (groupColumn.columnType !== "TEXT") {
+      throw new Error("ZAPISY ASSIGNED_GROUP_ID must be TEXT when no active groups exist.");
+    }
+  } else {
+    if (groupColumn.columnType !== "DROPDOWN") {
+      throw new Error("ZAPISY ASSIGNED_GROUP_ID is not a native dropdown.");
+    }
+
+    const expectedValues = new Set(activeGroupIds);
+    const actualValues = new Set(groupColumn.dropdownValues ?? []);
+    if (
+      actualValues.size !== expectedValues.size ||
+      [...expectedValues].some((value) => !actualValues.has(value))
+    ) {
+      throw new Error("ZAPISY ASSIGNED_GROUP_ID dropdown has stale group IDs.");
+    }
   }
 
   for (const title of Object.values(REGISTRATION_OPERATOR_FILTER_VIEW_TITLES)) {

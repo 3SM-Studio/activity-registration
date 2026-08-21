@@ -359,11 +359,13 @@ function assertRegistrationTable(table: TableMetadata | undefined): void {
     const actual = table.columnProperties.find(
       (column) => column.columnIndex === expected.columnIndex,
     );
-    if (
-      !actual ||
-      actual.columnName !== expected.columnName ||
-      actual.columnType !== expected.columnType
-    ) {
+    const columnTypeMatches =
+      actual &&
+      (expected.columnName === "ASSIGNED_GROUP_ID"
+        ? actual.columnType === expected.columnType || actual.columnType === "DROPDOWN"
+        : actual.columnType === expected.columnType);
+
+    if (!actual || actual.columnName !== expected.columnName || !columnTypeMatches) {
       throw new SheetSchemaError(
         `Native ZAPISY table column ${expected.columnName} has an invalid contract.`,
       );

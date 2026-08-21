@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildAssignedGroupTableRequest,
   buildOperatorSheetRequests,
   OWNED_OPERATOR_FORMAT_FORMULAS,
   REGISTRATION_OPERATOR_FILTER_VIEW_TITLES,
@@ -118,16 +119,39 @@ describe("operator Sheets experience", () => {
     }
   });
 
-  it("uses the active current-season dashboard list as the group dropdown source", () => {
-    const requests = buildOperatorSheetRequests(sheet());
-    const validation = requests.find((request) => "setDataValidation" in request)
-      ?.setDataValidation as
-      | { rule?: { condition?: { type?: string; values?: Array<{ userEnteredValue?: string }> } } }
-      | undefined;
+  it("uses a native table dropdown for active current-season group IDs", () => {
+    const request = buildAssignedGroupTableRequest(["group-a", "group-b", "group-a"]);
+    const updateTable = request.updateTable;
+    const groupColumn = updateTable.table.columnProperties.find(
+      (column) => column.columnIndex === 23,
+    );
 
-    expect(validation?.rule?.condition).toEqual({
-      type: "ONE_OF_RANGE",
-      values: [{ userEnteredValue: "PANEL_OPERATORA!A13:A1000" }],
+    expect(groupColumn).toEqual({
+      columnIndex: 23,
+      columnName: "ASSIGNED_GROUP_ID",
+      columnType: "DROPDOWN",
+      dataValidationRule: {
+        condition: {
+          type: "ONE_OF_LIST",
+          values: [{ userEnteredValue: "group-a" }, { userEnteredValue: "group-b" }],
+        },
+      },
+    });
+    expect(buildOperatorSheetRequests(sheet()).some((item) => "setDataValidation" in item)).toBe(
+      false,
+    );
+  });
+
+  it("keeps the group table column as text when there are no active groups", () => {
+    const request = buildAssignedGroupTableRequest([]);
+    const groupColumn = request.updateTable.table.columnProperties.find(
+      (column) => column.columnIndex === 23,
+    );
+
+    expect(groupColumn).toMatchObject({
+      columnIndex: 23,
+      columnName: "ASSIGNED_GROUP_ID",
+      columnType: "TEXT",
     });
   });
 
