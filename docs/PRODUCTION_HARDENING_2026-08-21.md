@@ -49,7 +49,7 @@ Independent mailbox-level evidence for the administrative recipient remains outs
 
 ### CI
 
-The hardening PR passed the repository quality gate and Critical E2E before the final documentation-truth cleanup. Every final HEAD must repeat the same CI successfully before merge.
+The hardening branch has repeatedly passed the repository quality gate, system Chrome verification and Critical E2E during hardening. The exact final merge head must also be green; a prior green SHA is never treated as evidence for a later commit.
 
 ## Hardening implemented in code
 
