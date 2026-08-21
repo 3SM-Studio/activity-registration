@@ -276,10 +276,7 @@ function formulaCell(value: string) {
   return { userEnteredValue: { formulaValue: value } } as const;
 }
 
-async function bootstrapDashboard(
-  client: SheetsClient,
-  dashboard: SheetMetadata,
-): Promise<void> {
+async function bootstrapDashboard(client: SheetsClient, dashboard: SheetMetadata): Promise<void> {
   const [groupRows, offeringRows, settingsRows] = await Promise.all([
     client.getValues(`${SHEET.groups}!A:ZZ`, { valueRenderOption: "UNFORMATTED_VALUE" }),
     client.getValues(`${SHEET.offerings}!A:ZZ`),
@@ -350,9 +347,7 @@ async function bootstrapDashboard(
       stringCell(""),
       formulaCell('=COUNTIF(ZAPISY!P2:P;"NEW")'),
       stringCell(""),
-      formulaCell(
-        '=COUNTIF(ZAPISY!P2:P;"IN_REVIEW")+COUNTIF(ZAPISY!P2:P;"CONTACTED")',
-      ),
+      formulaCell('=COUNTIF(ZAPISY!P2:P;"IN_REVIEW")+COUNTIF(ZAPISY!P2:P;"CONTACTED")'),
       stringCell(""),
       formulaCell('=COUNTIF(ZAPISY!P2:P;"WAITLISTED")'),
       stringCell(""),
@@ -373,9 +368,7 @@ async function bootstrapDashboard(
       stringCell(""),
       formulaCell(attentionFormula),
       stringCell(""),
-      formulaCell(
-        '=COUNTIF(ZAPISY!P2:P;"REJECTED")+COUNTIF(ZAPISY!P2:P;"CANCELLED")',
-      ),
+      formulaCell('=COUNTIF(ZAPISY!P2:P;"REJECTED")+COUNTIF(ZAPISY!P2:P;"CANCELLED")'),
       stringCell(""),
       formulaCell(
         '=COUNTIF(ZAPISY!P2:P;"NEW")+COUNTIF(ZAPISY!P2:P;"IN_REVIEW")+' +
@@ -406,11 +399,7 @@ async function bootstrapDashboard(
       group.ageMin === null && group.ageMax === null
         ? "bez limitu"
         : `${group.ageMin ?? "…"}-${group.ageMax ?? "…"}`;
-    const termLabel = [
-      group.dayOfWeek,
-      group.startTime,
-      group.endTime ? `-${group.endTime}` : null,
-    ]
+    const termLabel = [group.dayOfWeek, group.startTime, group.endTime ? `-${group.endTime}` : null]
       .filter(Boolean)
       .join(" ");
     const capacityCell = group.capacity === null ? stringCell("-") : numberCell(group.capacity);
