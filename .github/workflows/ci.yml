@@ -30,8 +30,11 @@ jobs:
           cache: pnpm
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      - name: Date picker formatting probe
-        run: |
-          pnpm exec prettier --write tests/e2e/birth-date-picker-position.spec.ts
-          git diff -- tests/e2e/birth-date-picker-position.spec.ts
-          exit 1
+      - name: Quality gate
+        run: pnpm check
+      - name: Verify system Chrome
+        run: google-chrome --version
+      - name: Critical E2E
+        run: pnpm test:e2e
+        env:
+          PLAYWRIGHT_USE_SYSTEM_CHROME: "1"
