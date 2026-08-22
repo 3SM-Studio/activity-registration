@@ -10,9 +10,14 @@ import {
   type Season,
   type SeasonId,
 } from "@/domain/catalog";
+import {
+  NOTIFICATION_STATUS,
+  type NotificationOutboxJob,
+} from "@/domain/notification-outbox";
 import type {
   ApplicationRepositories,
   CatalogRepository,
+  NotificationOutboxRepository,
   RegistrationRepository,
   SettingsRepository,
 } from "@/domain/repositories";
@@ -20,7 +25,7 @@ import {
   isPotentialDuplicateCandidate,
   type RegistrationDuplicateCriteria,
 } from "@/domain/registration-duplicates";
-import type { Registration, RequestId } from "@/domain/registration";
+import type { Registration, RegistrationId, RequestId } from "@/domain/registration";
 import {
   DEFAULT_FORM_TITLE,
   DEFAULT_SUCCESS_MESSAGE,
@@ -141,11 +146,17 @@ class MemorySettingsRepository implements SettingsRepository {
 
 const memoryStore = globalThis as typeof globalThis & {
   __activityRegistrations?: Registration[];
+  __activityNotificationJobs?: NotificationOutboxJob[];
 };
 
 function getRegistrations(): Registration[] {
   memoryStore.__activityRegistrations ??= [];
   return memoryStore.__activityRegistrations;
+}
+
+function getNotificationJobs(): NotificationOutboxJob[] {
+  memoryStore.__activityNotificationJobs ??= [];
+  return memoryStore.__activityNotificationJobs;
 }
 
 class MemoryRegistrationRepository implements RegistrationRepository {
@@ -164,6 +175,122 @@ class MemoryRegistrationRepository implements RegistrationRepository {
   async create(registration: Registration): Promise<void> {
     getRegistrations().push(registration);
   }
+
+  async listAll(): Promise<readonly Registration[]> {
+    return [...getRegistrations()];
+  }
+}
+
+class MemoryNotificationOutboxRepository implements NotificationOutboxRepository {
+  async listAll(): Promise<readonly NotificationOutboxJob[]> {
+    return [...getNotificationJobs()];
+  }
+
+  async listForRegistration(registrationId: RegistrationId): Promise<readonly NotificationOutboxJob[]> {
+    return getNotificationJobs().filter((job) => job.registrationId === registrationId);
+  }
+
+  async create(job: NotificationOutboxJob): Promise<void> {
+    if (!getNotificationJobs().some((candidate) => candidate.id === job.id)) {
+      getNotificationJobs().push(job);
+    }
+  }
+
+  async claim(
+    notificationId: string,
+    now: string,
+    leaseUntil: string,
+    leaseToken: string,
+  ): Promise<NotificationOutboxJob | null> {
+    const jobs = getNotificationJobs();
+    const index = jobs.findIndex((job) => job.id === notificationId);
+    const current = jobs[index];
+    if (!current) {
+      return null;
+    }
+
+    const nowMs = Date.parse(now);
+    const terminal =
+      current.status === NOTIFICATION_STATUS.sent || current.status === NOTIFICATION_STATUS.skipped;
+    const activeLease =
+      current.status === NOTIFICATION_STATUS.sending &&
+      current.leaseUntil !== null &&
+      Date.parse(current.leaseUntil) > nowMs;
+    const notDue = current.nextAttemptAt !== null && Date.parse(current.nextAttemptAt) > nowMs;
+    if (terminal || activeLease || notDue) {
+      return null;
+    }
+
+    const claimed: NotificationOutboxJob = {
+      ...current,
+      status: NOTIFICATION_STATUS.sending,
+      attemptCount: current.attemptCount + 1,
+      nextAttemptAt: null,
+      lastAttemptAt: now,
+      leaseToken,
+      leaseUntil,
+      errorCode: null,
+      updatedAt: now,
+    };
+    jobs[index] = claimed;
+    return claimed;
+  }
+
+  async markSent(notificationId: string, leaseToken: string, sentAt: string): Promise<void> {
+    const jobs = getNotificationJobs();
+    const index = jobs.findIndex((job) => job.id === notificationId);
+    const current = jobs[index];
+    if (!current || current.leaseToken !== leaseToken) {
+      return;
+    }
+    jobs[index] = {
+      ...current,
+      status: NOTIFICATION_STATUS.sent,
+      nextAttemptAt: null,
+      leaseToken: null,
+      leaseUntil: null,
+      errorCode: null,
+      updatedAt: sentAt,
+      sentAt,
+    };
+  }
+
+  async markFailed(
+    notificationId: string,
+    leaseToken: string,
+    failedAt: string,
+    errorCode: string,
+    nextAttemptAt: string,
+  ): Promise<void> {
+    const jobs = getNotificationJobs();
+    const index = jobs.findIndex((job) => job.id === notificationId);
+    const current = jobs[index];
+    if (!current || current.leaseToken !== leaseToken) {
+      return;
+    }
+    jobs[index] = {
+      ...current,
+      status: NOTIFICATION_STATUS.failed,
+      nextAttemptAt,
+      leaseToken: null,
+      leaseUntil: null,
+      errorCode,
+      updatedAt: failedAt,
+    };
+  }
+
+  async makeFailedJobsDue(now: string): Promise<number> {
+    const jobs = getNotificationJobs();
+    let count = 0;
+    for (const [index, job] of jobs.entries()) {
+      if (job.status !== NOTIFICATION_STATUS.failed) {
+        continue;
+      }
+      jobs[index] = { ...job, nextAttemptAt: now, updatedAt: now };
+      count += 1;
+    }
+    return count;
+  }
 }
 
 export function createMemoryRepositories(): ApplicationRepositories {
@@ -171,5 +298,6 @@ export function createMemoryRepositories(): ApplicationRepositories {
     catalog: new MemoryCatalogRepository(),
     registrations: new MemoryRegistrationRepository(),
     settings: new MemorySettingsRepository(),
+    notifications: new MemoryNotificationOutboxRepository(),
   };
 }
