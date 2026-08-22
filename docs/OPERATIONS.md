@@ -4,7 +4,7 @@ This runbook describes the currently implemented v4 operating model.
 
 Never use development or QA commands against PROD unless the command is explicitly part of the approved closed-production release procedure.
 
-## 1. Normal TEST state
+## 1. Normal environment state
 
 TEST should normally remain:
 
@@ -12,9 +12,15 @@ TEST should normally remain:
 REGISTRATIONS_OPEN=FALSE
 ```
 
-Open TEST only for a controlled QA session and close it afterwards.
+PROD must remain:
 
-Routine TEST data must be clearly synthetic. Do not copy participant rows from PROD into TEST and do not use real participant mailboxes for normal QA.
+```text
+REGISTRATIONS_OPEN=FALSE
+```
+
+until every blocking release item is complete.
+
+Open TEST only for a controlled QA session and close it afterwards. Routine TEST data must be clearly synthetic.
 
 ## 2. Canonical Preview
 
@@ -26,23 +32,11 @@ Before product QA verify:
 GitHub preview HEAD == canonical Vercel Preview deployment git SHA
 ```
 
-Then verify the stable Preview alias actually renders the current application and reads the TEST catalog.
+Feature branches are disabled through `vercel.json` using the `**: false`, `preview: true`, `main: true` contract guarded by `scripts/repo-validate.mjs`.
 
-Do not infer deployment success only from GitHub merge state.
+Do not infer deployment success only from GitHub merge state. Vercel must report the exact SHA as `READY`.
 
-Feature branches are disabled through `vercel.json` using:
-
-```json
-"**": false,
-"preview": true,
-"main": true
-```
-
-`scripts/repo-validate.mjs` guards that contract.
-
-## 3. Current schema
-
-Current implemented target:
+## 3. Current Sheet contract
 
 ```text
 SYSTEM_SCHEMA_VERSION=4
@@ -56,14 +50,17 @@ SEZONY
 OFERTY_ZAJEC
 GRUPY
 ZAPISY
+POWIADOMIENIA
 USTAWIENIA
 ```
 
-`ZAPISY` remains the native table `Rejestracje`.
+`ZAPISY` is the native Table `Rejestracje`.
 
-`PANEL_OPERATORA` is intentionally a normal dashboard sheet, not a native Google Table. It contains derived formulas/KPIs and a hidden helper column for group IDs; participant records remain canonical only in `ZAPISY`.
+`POWIADOMIENIA` is a protected technical notification outbox without participant PII columns.
 
-Historical rows may retain fields introduced by later schema versions as empty. Never fabricate DOB, season, group or workflow timestamps.
+`PANEL_OPERATORA` is intentionally a normal derived dashboard, not a native Google Table.
+
+Historical registration rows may retain older row-level schema versions. Never fabricate missing historical values merely to normalize version numbers.
 
 ## 4. Sheet validation
 
@@ -79,30 +76,68 @@ Diagnostics:
 APP_ENV=test DATA_BACKEND=google-sheets pnpm diagnostics
 ```
 
-Diagnostics validate schema/catalog/settings/table metadata and workflow constraints without printing participant PII.
+Diagnostics validate schema/catalog/settings/table metadata, workflow constraints and notification-outbox health without printing participant PII.
 
-## 5. Reconciliation
+An unhealthy outbox includes:
+
+- missing confirmation/admin jobs,
+- `FAILED` jobs,
+- `SENDING` jobs with expired leases.
+
+## 5. Registration reconciliation
 
 ```bash
 APP_ENV=test DATA_BACKEND=google-sheets pnpm registrations:reconcile
 ```
 
-Current reconciliation remains non-destructive and PII-safe. It can report technical/data-integrity problems including:
+Registration reconciliation remains non-destructive and PII-safe. Investigate by technical identifiers and row numbers rather than logging participant names, e-mails or phone numbers.
 
-- duplicate `REQUEST_ID`,
-- duplicate `REGISTRATION_ID`,
-- missing technical IDs,
-- invalid season/offering/city references,
-- invalid assigned-group references where applicable,
-- business duplicate candidates,
-- exact active duplicate pairs,
-- workflow-status violations,
-- invalid/future birth dates,
-- detectable workflow timestamp sequencing problems.
+## 6. Notification outbox
 
-Use row numbers and technical identifiers for investigation rather than logging names, e-mails or phone numbers.
+Normal reconcile:
 
-## 6. Real Google integration
+```bash
+pnpm notifications:reconcile
+```
+
+Manual retry of `FAILED` jobs:
+
+```bash
+pnpm notifications:retry
+```
+
+The outbox uses:
+
+```text
+PENDING
+SENDING
+SENT
+FAILED
+SKIPPED
+```
+
+A job is claimed with a lease before send. Provider idempotency keys use stable Registration-based identifiers. Do not claim strict distributed exactly-once semantics from Google Sheets; lease verification plus provider idempotency are the current duplicate-send safeguards.
+
+### One-time adoption
+
+For an existing environment being upgraded from pre-outbox runtime:
+
+```bash
+pnpm notifications:adopt
+```
+
+Rules:
+
+1. `REGISTRATIONS_OPEN` must be false,
+2. `POWIADOMIENIA` must already exist with the canonical headers,
+3. adoption must run only once,
+4. the command refuses adoption when the outbox already contains jobs,
+5. historical Registration jobs become terminal `SKIPPED`,
+6. adoption must never send historical mail.
+
+See `docs/NOTIFICATION_OUTBOX.md`.
+
+## 7. Real Google integration
 
 TEST only:
 
@@ -113,21 +148,11 @@ ALLOW_TEST_SEED=true \
 pnpm test:integration:sheets
 ```
 
-The command must remain hard-blocked outside TEST and must clean its own synthetic test row in `finally`.
+The command must remain hard-blocked outside TEST and use synthetic data only.
 
-For a Google-backed release change the required evidence is:
+For a Google-backed release change, normal repository CI is supplemented by the appropriate Sheet validation, diagnostics and controlled integration evidence.
 
-```text
-sheet:validate
-+ diagnostics
-+ dedicated real-Google integration
-```
-
-in addition to normal repository CI.
-
-## 7. Runtime bootstrap vs structural schema sync
-
-There are now two intentionally different maintenance paths.
+## 8. Runtime bootstrap vs structural schema sync
 
 ### Routine operator refresh
 
@@ -135,9 +160,9 @@ There are now two intentionally different maintenance paths.
 APP_ENV=test DATA_BACKEND=google-sheets pnpm sheet:bootstrap
 ```
 
-`sheet:bootstrap` is the runtime-safe path. It may refresh operator presentation, filter views and warning conditional formats in `ZAPISY`, and it removes legacy whole-cell `STATUS` conditional formats. It must not create/update native Tables, Table `columnProperties`, supporting-table schema or protections.
+`sheet:bootstrap` is runtime-safe. It may refresh operator presentation/filter views/warning conditional formats, but it must not create/update native Tables, Table column schema or protections.
 
-Use this path during normal operation when a presentation refresh is actually needed. Ordinary status/date edits do not require running any bootstrap because `PANEL_OPERATORA` formulas recalculate from `ZAPISY` automatically.
+Ordinary operator status/date edits do not require bootstrap because `PANEL_OPERATORA` formulas recalculate from `ZAPISY`.
 
 ### Structural schema maintenance
 
@@ -145,66 +170,44 @@ Use this path during normal operation when a presentation refresh is actually ne
 APP_ENV=test DATA_BACKEND=google-sheets pnpm sheet:schema-sync
 ```
 
-`sheet:schema-sync` is the explicit structural path. It may create/update native Tables, refresh Table ranges/row properties, update `ASSIGNED_GROUP_ID` dropdown values, refresh protections and rebuild the operator dashboard structure.
+`sheet:schema-sync` is the explicit structural path. It may update Table metadata, supporting schema, group dropdowns, protections and dashboard structure, including notification-outbox protection.
 
-Do not run `sheet:schema-sync` while an operator is actively editing the Sheet UI or configuring native dropdown presentation. For PROD, treat it as a controlled maintenance operation with intake closed and no concurrent operator edits.
+Do not run structural sync while an operator is actively editing structural Sheet metadata. For PROD, intake must be closed first.
 
-For a fresh TEST sheet:
+Before important structural maintenance:
 
-```bash
-APP_ENV=test DATA_BACKEND=google-sheets pnpm sheet:schema-sync
-APP_ENV=test DATA_BACKEND=google-sheets ALLOW_TEST_SEED=true pnpm seed:test
-APP_ENV=test DATA_BACKEND=google-sheets pnpm sheet:validate
-```
+1. confirm environment and spreadsheet ID,
+2. verify `REGISTRATIONS_OPEN=FALSE`,
+3. ensure no concurrent operator structural edits,
+4. capture appropriate backup/evidence for the risk level,
+5. run validation/diagnostics,
+6. perform the structural change,
+7. rerun validation/diagnostics and required integration checks.
 
-`seed:test` and `seed:production-catalog` intentionally finish through the structural schema-sync path because catalog changes can require Table/dropdown metadata changes.
-
-Explicit migration:
-
-```bash
-pnpm sheet:migrate
-```
-
-The migration path supports historical versions through v4. It must be idempotent, fail closed on unknown/partial unsafe structures and set the system version only after the required structural work succeeds.
-
-Before migrating or structurally syncing any important spreadsheet:
-
-1. confirm the spreadsheet/environment explicitly,
-2. set `REGISTRATIONS_OPEN=FALSE`,
-3. create a complete backup,
-4. ensure no operator is actively editing the spreadsheet,
-5. run current validation, diagnostics and reconciliation,
-6. record native table metadata,
-7. ensure no uncontrolled users are submitting,
-8. migrate/sync,
-9. rerun validation/diagnostics/integration.
-
-Rollback is restore from the pre-migration backup unless a tested reverse migration exists.
-
-## 8. Native registration writes
+## 9. Native registration writes
 
 Registrations are appended to native table `Rejestracje` through `AppendCellsRequest` using resolved table/sheet metadata.
 
 The Google client does not blindly retry ambiguous non-idempotent append operations.
 
-If a write outcome is uncertain, retry the whole registration with the same `requestId`; the application first checks whether that logical request already exists.
+If write outcome is uncertain, retry the whole registration with the same `requestId`; the application first checks whether that logical request already exists.
 
-## 9. Business duplicate operations
+## 10. Business duplicate operations
 
 `requestId` protects transport replay.
 
-Separately, the current registration flow performs business duplicate detection before create:
+Separately:
 
 - exact active duplicate with matching contact: no new row,
 - probable duplicate with changed contact: new row with `POSSIBLE_DUPLICATE_OF`,
 - different offering or season: valid independent request,
 - previous `REJECTED`/`CANCELLED`: may be submitted again.
 
-Google Sheets does not give hard atomic uniqueness. Use reconciliation for race-condition candidates. If hard uniqueness becomes required, review storage rather than pretending Sheets provides a database constraint.
+Google Sheets does not provide hard atomic uniqueness. If hard uniqueness becomes required, change storage rather than pretending Sheets is a transactional database.
 
-## 10. Operator workflow
+## 11. Operator workflow
 
-Current status values:
+Current statuses:
 
 ```text
 NEW
@@ -216,9 +219,7 @@ REJECTED
 CANCELLED
 ```
 
-The operator workflow keeps one canonical native table in `ZAPISY` and a separate read-only-style dashboard in `PANEL_OPERATORA`.
-
-Operator-managed fields include:
+Operator-managed fields:
 
 ```text
 STATUS
@@ -229,116 +230,72 @@ CLOSED_AT
 NOTES
 ```
 
-`STATUS` is a native Google Table dropdown. Native dropdown option/chip colors are UI-owned because the public Sheets API does not expose per-option chip colors. Do not emulate status chips with whole-cell conditional formatting. Code-managed conditional formatting is reserved for actionable warnings such as missing workflow dates, missing confirmed group or duplicate review.
+`STATUS` is a native Google Table dropdown. Native option/chip colors are UI-owned because the public Sheets API does not expose per-option chip colors.
 
-`NOTES` is for information necessary to process the registration. Do not turn it into an uncontrolled health/family/special-category data store.
+Do not emulate status chips with whole-cell conditional formatting. Code-managed formatting is reserved for actionable warnings. Current PROD `ZAPISY` has five such warning rules.
 
-`UPDATED_AT` is an application/system-write timestamp. Direct manual Sheet edits do not guarantee it changes.
+`NOTES` must not become an uncontrolled health/family/special-category data store.
 
-## 11. Group catalog
+## 12. Group catalog
 
-The `GRUPY` schema is active, but real group rows must come from Iwona's verified data.
+`ASSIGNED_GROUP_ID` is a native dropdown derived from active groups for `CURRENT_SEASON_ID`.
 
-Do not fabricate:
+When the active group set changes, use the explicit `sheet:schema-sync` path. Do not rewrite Table metadata as part of routine operator work.
 
-- group names,
-- age ranges,
-- schedules,
-- venues,
-- instructors,
-- capacities.
+## 13. Abuse protection
 
-`ASSIGNED_GROUP_ID` is a native dropdown derived from active groups for `CURRENT_SEASON_ID`. When that active set changes, run the explicit `sheet:schema-sync` maintenance path rather than rewriting Table metadata during routine operator work.
+Application-level controls include JSON-only API, body-size limit, honeypot, minimum fill time, server validation and PII-safe logging.
 
-## 12. Abuse protection
+Vercel WAF is the production rate-limit layer. Do not load-test PROD by creating unnecessary registration rows.
 
-Application-level controls:
+Turnstile remains an escalation only if real abuse shows WAF plus existing heuristics are insufficient.
 
-- JSON-only API,
-- body-size limit,
-- honeypot,
-- minimum fill time,
-- server validation,
-- PII-safe logging.
+## 14. Production preflight
 
-Before public PROD opening, the Vercel WAF rate-limit rule defined in `docs/ABUSE_PROTECTION.md` must be configured and verified with registrations closed.
-
-Do not load-test PROD by creating registration rows.
-
-Turnstile remains an escalation only if real abuse shows WAF + current heuristics are insufficient.
-
-## 13. Production environment preflight
-
-After configuring Production environment variables, run with the same intended values:
+Environment validation:
 
 ```bash
 pnpm prod:env:validate
 ```
 
-The preflight fails without:
+Passing the command validates configuration shape/presence. It does not prove external IAM, Sheet permissions or sender-domain correctness.
 
-- `APP_ENV=production`,
-- `DATA_BACKEND=google-sheets`,
-- PROD spreadsheet ID,
-- complete WIF identifiers,
-- `EMAIL_PROVIDER=resend`,
-- Resend API key,
-- production sender,
-- final admin recipient list,
-- `ALLOW_TEST_SEED=false`.
+Closed-production verification must include:
 
-It reports only configuration presence/counts, not secret values.
-
-Passing this command does **not** prove the external service account, IAM binding, Sheet permissions or sender domain are correct. Those require the closed production verification below.
-
-## 14. Closed production verification
-
-Do not open intake yet.
-
-Required order:
-
-1. create/confirm separate PROD Sheet,
-2. migrate/sync PROD to schema v4 with a backup and `REGISTRATIONS_OPEN=FALSE`,
-3. create/confirm separate PROD service account,
-4. bind only the Production Vercel subject to the PROD identity,
-5. verify Preview identity cannot write/read PROD resources beyond explicitly approved access,
-6. review PROD Sheet sharing for approved humans + PROD service account only,
-7. configure production Resend sender and final admin recipients,
-8. run `pnpm prod:env:validate`,
-9. run PROD `sheet:validate`,
-10. run PROD `diagnostics`,
-11. verify the privacy settings/legal page are final,
-12. configure and test the Vercel WAF rule while registrations are closed,
-13. render the production form and confirm closed-state UX,
-14. perform only the specifically approved closed-production smoke actions,
-15. run manual keyboard/focus/reflow/device QA,
-16. record release evidence in `docs/RELEASE_CHECKLIST.md`.
+1. canonical PROD Sheet ID,
+2. dedicated PROD service account,
+3. production-only WIF binding,
+4. approved Sheet ACL,
+5. closed intake,
+6. schema/table/protection validation,
+7. notification outbox adoption/health,
+8. privacy/legal settings,
+9. production Resend sender/admin recipient,
+10. WAF verification,
+11. Vercel deployment exact-SHA check,
+12. runtime log check.
 
 Do not seed TEST fixtures into PROD.
 
 ## 15. Final opening operation
 
-Only when every blocking release item is complete:
+Only after every blocking release item is complete:
 
 ```text
 REGISTRATIONS_OPEN=TRUE
 ```
 
-After opening, perform a minimal controlled real-path verification without creating unnecessary participant data, confirm participant/admin e-mail delivery and monitor errors/WAF activity without logging PII.
+After opening, perform a minimal controlled real-path verification, confirm notification delivery and monitor errors/WAF activity without logging PII.
 
-## 16. External gates
+## 16. External/manual gates
 
-Engineering cannot truthfully close these without approved business/legal/operational input:
+Engineering cannot truthfully close these from CI alone:
 
-- real group catalog,
-- exact theatre-specific rules,
-- final controller/contact data,
-- final privacy notice/legal bases,
-- retention criteria,
-- approved access list,
-- child-protection evidence,
-- paid-contract/resignation process where relevant,
-- final Production sender/admin mailbox,
-- physical-device acceptance.
+- physical display of adopted child-protection documents,
+- physical Android/iPhone acceptance,
+- keyboard/focus/200% zoom/visual contrast human review,
+- final human legal-document read-through,
+- broader Google Cloud IAM least-privilege review beyond Sheet ACL,
+- GitHub branch-protection/ruleset configuration requiring repository admin capability.
 
-See `docs/PRIVACY_AND_ORGANIZATIONAL_READINESS.md` and `docs/RELEASE_CHECKLIST.md`.
+See `docs/RELEASE_CHECKLIST.md`.

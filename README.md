@@ -38,7 +38,7 @@ Browser
 
 Google Sheets jest adapterem storage, a nie domeną aplikacji.
 
-Po skutecznym zapisie aplikacja planuje powiadomienia e-mail. Błąd e-maila nie cofa Registration.
+Po skutecznym zapisie Registration aplikacja utrzymuje trwały outbox powiadomień. Każde nowe zgłoszenie ma osobny job potwierdzenia dla uczestnika i powiadomienia administratora. Awaria e-maila nie cofa Registration, ale pozostawia trwały stan do retry/reconciliation zamiast bezpowrotnie gubić wysyłkę.
 
 ## Wymagania lokalne
 
@@ -68,10 +68,11 @@ Systemowe zakładki:
 - `USTAWIENIA`
 - `SEZONY`
 - `GRUPY`
+- `POWIADOMIENIA`
 
-`PANEL_OPERATORA` jest celowo zwykłym dashboardem, a nie natywną Google Table.
+`ZAPISY` jest natywną Google Table `Rejestracje`. `POWIADOMIENIA` jest chronionym technicznym outboxem bez participant PII. `PANEL_OPERATORA` jest celowo zwykłym dashboardem, a nie natywną Google Table.
 
-Systemowe zakładki mają kontrolowany kontrakt nagłówków. Zmiana kolumn systemowych wymaga jawnej migracji lub structural sync, nie ręcznego dopisania kolumny.
+Systemowe zakładki mają kontrolowany kontrakt nagłówków. Zmiana struktury wymaga jawnej migracji lub structural sync, nie ręcznego dopisania kolumny.
 
 Rutynowa bezpieczna walidacja/operator refresh:
 
@@ -85,6 +86,16 @@ Jawna synchronizacja strukturalna:
 ```bash
 APP_ENV=test DATA_BACKEND=google-sheets pnpm sheet:schema-sync
 ```
+
+Outbox po pierwszym wdrożeniu:
+
+```bash
+pnpm notifications:adopt
+pnpm notifications:reconcile
+pnpm notifications:retry
+```
+
+`notifications:adopt` służy wyłącznie do jednorazowego oznaczenia historycznych Registration jako `SKIPPED`, gdy zapisy są zamknięte. Szczegóły: `docs/NOTIFICATION_OUTBOX.md`.
 
 Seed syntetycznego TEST wymaga jawnej flagi:
 
@@ -122,7 +133,7 @@ APP_ENV=test DATA_BACKEND=google-sheets pnpm diagnostics
 APP_ENV=test DATA_BACKEND=google-sheets ALLOW_TEST_SEED=true pnpm test:integration:sheets
 ```
 
-`pnpm-lock.yaml` jest obowiązkowy przed merge i release.
+`diagnostics` obejmuje także health outboxu: brakujące joby, `FAILED` i wygasłe lease. `pnpm-lock.yaml` jest obowiązkowy przed merge i release.
 
 ## TEST / Preview
 
@@ -135,6 +146,7 @@ Vercel Preview
 -> TEST service account
 -> TEST Google Sheet read/write
 -> Registration API
+-> durable notification outbox
 -> Resend
 ```
 
@@ -152,6 +164,7 @@ Przed większą zmianą przeczytaj:
 - `docs/TESTING.md`
 - `docs/DEPLOYMENT.md`
 - `docs/OPERATIONS.md`
+- `docs/NOTIFICATION_OUTBOX.md`
 - `docs/DEPENDENCIES.md`
 - `docs/IMPLEMENTATION_STATUS.md`
 - `docs/RELEASE_CHECKLIST.md`
