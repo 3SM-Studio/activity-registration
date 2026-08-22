@@ -70,4 +70,6 @@ Alarm operacyjny stanowią:
 - joby `SENDING` z wygasłym lease,
 - nowe Registration bez kompletu dwóch jobów.
 
+`pnpm diagnostics` sprawdza te trzy warunki i kończy się błędem, jeśli outbox nie jest zdrowy. Raportuje również liczbę jobów, dzięki czemu outbox jest częścią normalnego release/operations gate, a nie tylko pasywnym arkuszem.
+
 Nie należy ręcznie edytować `POWIADOMIENIA` podczas normalnej pracy. Naprawy wykonujemy przez reconcile/retry i udokumentowane operacje administracyjne.
