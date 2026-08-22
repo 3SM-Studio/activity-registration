@@ -1,6 +1,6 @@
 import { REGISTRATION_STATUS } from "@/domain/registration";
 
-export const SYSTEM_SCHEMA_VERSION = 5 as const;
+export const SYSTEM_SCHEMA_VERSION = 4 as const;
 
 export const SHEET = {
   cities: "MIASTA",
