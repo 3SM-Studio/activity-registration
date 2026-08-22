@@ -2,9 +2,11 @@
 
 Publiczny system zapisów na zajęcia dla projektów 3SM Studio, obecnie wdrażany dla Pracowni Twórczej Pozytywka.
 
-Status: działający i zweryfikowany TEST/Preview MVP. Produkcja pozostaje celowo fail-closed do czasu zatwierdzenia prawdziwego katalogu, privacy notice, retencji oraz osobnej konfiguracji PROD identity/WIF.
+Status: schema v4 działa na Preview i Production. Produkcja jest wdrożona, ale zapisy pozostają celowo zamknięte do czasu domknięcia końcowej checklisty release i fizycznej akceptacji.
 
 Repozytorium jest świadomie publiczne. Sekrety, tokeny, credentials i PII nie mogą trafiać do Git.
+
+Repo jest publiczne do wglądu, ale nie jest projektem open source. Brak dodatkowej licencji na kopiowanie, modyfikację lub redystrybucję kodu. Szczegóły: `LICENSE`.
 
 ## Stack
 
@@ -36,7 +38,7 @@ Browser
 
 Google Sheets jest adapterem storage, a nie domeną aplikacji.
 
-Po skutecznym zapisie aplikacja planuje best-effort powiadomienia e-mail. Błąd e-maila nie cofa Registration.
+Po skutecznym zapisie aplikacja planuje powiadomienia e-mail. Błąd e-maila nie cofa Registration.
 
 ## Wymagania lokalne
 
@@ -64,14 +66,24 @@ Systemowe zakładki:
 - `OFERTY_ZAJEC`
 - `ZAPISY`
 - `USTAWIENIA`
+- `SEZONY`
+- `GRUPY`
 
-Mają kontrolowany kontrakt nagłówków. Zmiana kolumn systemowych wymaga jawnej migracji, nie ręcznego dopisania kolumny.
+`PANEL_OPERATORA` jest celowo zwykłym dashboardem, a nie natywną Google Table.
 
-Bootstrap TEST:
+Systemowe zakładki mają kontrolowany kontrakt nagłówków. Zmiana kolumn systemowych wymaga jawnej migracji lub structural sync, nie ręcznego dopisania kolumny.
+
+Rutynowa bezpieczna walidacja/operator refresh:
 
 ```bash
 APP_ENV=test DATA_BACKEND=google-sheets pnpm sheet:bootstrap
 APP_ENV=test DATA_BACKEND=google-sheets pnpm sheet:validate
+```
+
+Jawna synchronizacja strukturalna:
+
+```bash
+APP_ENV=test DATA_BACKEND=google-sheets pnpm sheet:schema-sync
 ```
 
 Seed syntetycznego TEST wymaga jawnej flagi:
@@ -158,3 +170,7 @@ Przed większą zmianą przeczytaj:
 - produkcja nie korzysta z długowiecznego private key service account,
 - sekrety nie trafiają do publicznego repo,
 - PROD pozostaje zamknięty, dopóki release checklist nie jest kompletna.
+
+## Licencja
+
+Kod jest publicznie widoczny, ale nie jest udostępniany na licencji open source. Obowiązują warunki `LICENSE` oraz zasady contribution opisane w `CONTRIBUTING.md`.
