@@ -28,6 +28,9 @@
     "seed:production-catalog": "tsx scripts/seed-production-catalog.ts && tsx scripts/sheet-schema-sync.ts",
     "diagnostics": "tsx scripts/diagnostics.ts",
     "registrations:reconcile": "tsx scripts/reconcile-registrations.ts",
+    "notifications:adopt": "tsx scripts/notifications-adopt.ts",
+    "notifications:reconcile": "tsx scripts/notifications-reconcile.ts",
+    "notifications:retry": "tsx scripts/notifications-reconcile.ts --force-failed",
     "retention:report": "tsx scripts/retention-report.ts",
     "repo:validate": "node scripts/repo-validate.mjs",
     "typegen": "next typegen"
