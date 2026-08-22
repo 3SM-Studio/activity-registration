@@ -1,6 +1,6 @@
 import { REGISTRATION_STATUS } from "@/domain/registration";
 
-export const SYSTEM_SCHEMA_VERSION = 4 as const;
+export const SYSTEM_SCHEMA_VERSION = 5 as const;
 
 export const SHEET = {
   cities: "MIASTA",
@@ -8,6 +8,7 @@ export const SHEET = {
   offerings: "OFERTY_ZAJEC",
   groups: "GRUPY",
   registrations: "ZAPISY",
+  notifications: "POWIADOMIENIA",
   settings: "USTAWIENIA",
 } as const;
 
@@ -206,6 +207,22 @@ export const REGISTRATION_TABLE_COLUMNS = REGISTRATION_HEADERS.map((columnName, 
   return { columnIndex, columnName, columnType: "TEXT" } as const;
 });
 
+export const NOTIFICATION_HEADERS = [
+  "NOTIFICATION_ID",
+  "REGISTRATION_ID",
+  "TYPE",
+  "STATUS",
+  "ATTEMPT_COUNT",
+  "NEXT_ATTEMPT_AT",
+  "LAST_ATTEMPT_AT",
+  "LEASE_TOKEN",
+  "LEASE_UNTIL",
+  "ERROR_CODE",
+  "CREATED_AT",
+  "UPDATED_AT",
+  "SENT_AT",
+] as const;
+
 export const SETTINGS_HEADERS = ["KEY", "VALUE"] as const;
 
 export const SHEET_SCHEMA = {
@@ -214,6 +231,7 @@ export const SHEET_SCHEMA = {
   [SHEET.offerings]: OFFERING_HEADERS,
   [SHEET.groups]: GROUP_HEADERS,
   [SHEET.registrations]: REGISTRATION_HEADERS,
+  [SHEET.notifications]: NOTIFICATION_HEADERS,
   [SHEET.settings]: SETTINGS_HEADERS,
 } as const;
 
