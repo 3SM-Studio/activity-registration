@@ -97,16 +97,26 @@ function isAllowedLicenseExpression(expression) {
   return false;
 }
 
+function packageLabel(packageInfo) {
+  if (!packageInfo || typeof packageInfo !== "object") {
+    return String(packageInfo);
+  }
+
+  const name = typeof packageInfo.name === "string" ? packageInfo.name : "unknown-package";
+  const version = typeof packageInfo.version === "string" ? packageInfo.version : "unknown-version";
+  return `${name}@${version}`;
+}
+
 const groups = Object.entries(report)
   .map(([license, packages]) => ({
     license,
-    count: Array.isArray(packages) ? packages.length : 0,
+    packages: Array.isArray(packages) ? packages : [],
   }))
   .sort((left, right) => left.license.localeCompare(right.license));
 
 console.log("Installed dependency license inventory:");
 for (const group of groups) {
-  console.log(`- ${group.license}: ${group.count}`);
+  console.log(`- ${group.license}: ${group.packages.length}`);
 }
 
 const failures = [];
@@ -117,14 +127,17 @@ for (const group of groups) {
   );
 
   if (explicitlyReviewRequired || !isAllowedLicenseExpression(group.license)) {
-    failures.push(group.license);
+    failures.push(group);
   }
 }
 
 if (failures.length > 0) {
+  console.error("ERROR: dependency license review required:");
+  for (const group of failures) {
+    console.error(`- ${group.license}: ${group.packages.map(packageLabel).join(", ")}`);
+  }
   console.error(
-    `ERROR: dependency license review required for: ${failures.join(", ")}. ` +
-      "Update docs/THIRD_PARTY_LICENSE_AUDIT.md only after reviewing the exact package(s).",
+    "Review the exact package(s) before changing the allowlist or docs/THIRD_PARTY_LICENSE_AUDIT.md.",
   );
   process.exit(1);
 }
