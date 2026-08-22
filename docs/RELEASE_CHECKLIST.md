@@ -2,7 +2,7 @@
 
 Date: 2026-08-22
 Target: Pozytywka Registration v4
-Status: Production deployed and intentionally closed pending final physical/manual acceptance
+Status: Production deployed with durable outbox and intentionally closed pending remaining command-level and physical/manual acceptance
 
 `REGISTRATIONS_OPEN=TRUE` in Production is the final controlled release action. Until every blocking item below is closed, Production remains intentionally closed.
 
@@ -45,6 +45,7 @@ Canonical decisions: `docs/PRODUCTION_DECISIONS_2026-08-20.md`.
 - [x] PR #50 safe Sheet runtime/schema split passed full CI
 - [x] PR #51 durable notification outbox passed `pnpm check`, Chrome verification and Critical E2E
 - [x] PR #52 repository licensing/source-visible policy passed CI
+- [x] release PR #54 passed full CI before promotion to `main`
 
 ## Notification reliability
 
@@ -60,8 +61,11 @@ Canonical decisions: `docs/PRODUCTION_DECISIONS_2026-08-20.md`.
 - [x] TEST adoption performed while registrations were closed
 - [x] four historical TEST registrations mapped to exactly eight `SKIPPED` jobs
 - [x] no historical TEST notification resend during adoption
-- [ ] PROD outbox created/protected and historical Registration adopted after final code promotion to `main`
-- [ ] PROD outbox health rechecked after adoption
+- [x] PROD outbox created and hard-protected after final code promotion to `main`
+- [x] one historical PROD Registration mapped to exactly two terminal `SKIPPED` jobs
+- [x] PROD adoption uses `PRE_OUTBOX_REGISTRATION`, `ATTEMPT_COUNT=0`, no retry schedule, lease or `SENT_AT`
+- [x] PROD outbox health rechecked directly after adoption
+- [x] durable-outbox issue #3 closed as completed after Production evidence
 
 Canonical design: `docs/NOTIFICATION_OUTBOX.md`.
 
@@ -105,10 +109,13 @@ Canonical PROD Sheet ID:
 - [x] production catalog/settings verified
 - [x] `SYSTEM_SCHEMA_VERSION=4`
 - [x] `CURRENT_SEASON_ID=2026-2027`
-- [x] `REGISTRATIONS_OPEN=FALSE` rechecked on 2026-08-22
-- [x] existing registration data preserved through v4 migration
+- [x] `REGISTRATIONS_OPEN=FALSE` rechecked after outbox rollout on 2026-08-22
+- [x] existing registration data preserved through v4 migration and outbox rollout
 - [x] native `ASSIGNED_GROUP_ID` dropdown configured from eight active production groups
 - [x] five warning conditional-format rules verified directly on 2026-08-22
+- [x] `POWIADOMIENIA` created with the exact 13-column runtime contract
+- [x] `POWIADOMIENIA` hard protection created for the dedicated PROD service account
+- [x] historical PROD Registration count remained exactly one after adoption
 - [x] dedicated PROD service account is the only application service account on PROD Sheet ACL
 - [x] TEST service account absent from PROD Sheet ACL
 - [x] PROD Sheet sharing restricted to explicit accounts
@@ -132,6 +139,11 @@ TEST/Preview service account:
 - [x] TEST WIF binding previously verified as `environment:preview`
 - [x] Vercel Production uses Google Sheets backend and canonical PROD identity
 - [x] TEST identity is not present on PROD Sheet ACL
+- [x] release PR #54 merged to `main` as `797ad4151a9511daddc3572c438f976b6df2f56b`
+- [x] matching Vercel Production deployment `dpl_Cw2hmKfx6jKqwDCifjRkbd75ZyLc` reached `READY`
+- [x] Vercel deployment metadata reports the exact same Production git SHA
+- [x] post-rollout Production GET returned HTTP 200 and the closed-state UX
+- [x] no warning/error/fatal logs found for the new Production deployment during post-rollout verification
 - [ ] broader Google Cloud IAM least-privilege review beyond Sheet ACL
 - [ ] `pnpm prod:env:validate` against an exported copy of the exact final Production environment
 
@@ -158,7 +170,8 @@ TEST/Preview service account:
 - [x] admin delivery previously confirmed
 - [x] canonical production admin recipient configured
 - [x] durable outbox now replaces untracked best-effort failure handling
-- [ ] post-promotion PROD outbox adoption and health verification
+- [x] post-promotion PROD outbox adoption completed without historical resend
+- [x] direct post-adoption health verification shows only two terminal `SKIPPED` legacy jobs and no failed/leased jobs
 
 ## TEST / Preview
 
@@ -191,15 +204,14 @@ These checks require a real device or human operator and are not replaced by CI:
 - [ ] final human visual/contrast review
 - [ ] final human read-through of privacy notice and adopted Standardy v1.1
 
-## Final release sequence
+## Remaining release sequence
 
-1. promote verified `preview` to `main`,
-2. wait for exact-SHA Production deployment to become `READY`,
-3. keep PROD intake closed,
-4. create/protect PROD `POWIADOMIENIA`,
-5. adopt pre-outbox PROD Registration as `SKIPPED` without sending historical mail,
-6. verify outbox counts/health and runtime logs,
-7. complete remaining physical/manual/legal acceptance,
-8. configure GitHub repository protection with admin access,
-9. only then set Production `REGISTRATIONS_OPEN=TRUE`,
-10. perform minimal live smoke and monitor without logging PII.
+Production code promotion and durable-outbox rollout are complete. Do not repeat the historical adoption.
+
+1. execute the remaining exact Production command-level validation/diagnostics/environment checks,
+2. complete broader Google Cloud IAM least-privilege review,
+3. physically display both adopted Standardy versions,
+4. complete remaining real-device, keyboard, focus, reflow, contrast and legal read-through acceptance,
+5. configure GitHub `main`/`preview` repository protection/rulesets,
+6. only then set Production `REGISTRATIONS_OPEN=TRUE`,
+7. perform minimal live smoke and monitor without logging PII.
