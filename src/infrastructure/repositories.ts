@@ -1,5 +1,6 @@
 import type { ApplicationRepositories } from "@/domain/repositories";
 import { GoogleSheetsCatalogRepository } from "@/infrastructure/google/catalog.repository";
+import { GoogleSheetsNotificationOutboxRepository } from "@/infrastructure/google/notification-outbox.repository";
 import { GoogleSheetsRegistrationRepository } from "@/infrastructure/google/registration.repository";
 import { GoogleSheetsSettingsRepository } from "@/infrastructure/google/settings.repository";
 import { GoogleSheetsClient } from "@/infrastructure/google/sheets-client";
@@ -23,5 +24,6 @@ export function createApplicationRepositories(): ApplicationRepositories {
     catalog: new GoogleSheetsCatalogRepository(client),
     registrations: new GoogleSheetsRegistrationRepository(client),
     settings: new GoogleSheetsSettingsRepository(client),
+    notifications: new GoogleSheetsNotificationOutboxRepository(client),
   };
 }

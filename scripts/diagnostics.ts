@@ -1,4 +1,11 @@
+import {
+  NOTIFICATION_STATUS,
+  NOTIFICATION_TYPE,
+  notificationJobId,
+} from "../src/domain/notification-outbox";
 import { LEGACY_REGISTRATION_STATUS } from "../src/domain/registration";
+import { GoogleSheetsNotificationOutboxRepository } from "../src/infrastructure/google/notification-outbox.repository";
+import { GoogleSheetsRegistrationRepository } from "../src/infrastructure/google/registration.repository";
 import { validateSheetStructure } from "../src/infrastructure/google/sheet-admin";
 import { cell, createHeaderMap } from "../src/infrastructure/google/header-map";
 import { REGISTRATION_HEADERS, SHEET } from "../src/infrastructure/google/sheets-contracts";
@@ -46,6 +53,39 @@ async function main() {
     );
   }
 
+  const registrationRepository = new GoogleSheetsRegistrationRepository(client);
+  const outboxRepository = new GoogleSheetsNotificationOutboxRepository(client);
+  const [registrations, notificationJobs] = await Promise.all([
+    registrationRepository.listAll(),
+    outboxRepository.listAll(),
+  ]);
+  const notificationIds = new Set(notificationJobs.map((job) => job.id));
+  const missingNotificationJobs = registrations.flatMap((registration) =>
+    Object.values(NOTIFICATION_TYPE)
+      .map((type) => notificationJobId(registration.id, type))
+      .filter((id) => !notificationIds.has(id)),
+  );
+  const failedNotificationJobs = notificationJobs.filter(
+    (job) => job.status === NOTIFICATION_STATUS.failed,
+  );
+  const nowMs = Date.now();
+  const expiredNotificationLeases = notificationJobs.filter(
+    (job) =>
+      job.status === NOTIFICATION_STATUS.sending &&
+      job.leaseUntil !== null &&
+      Date.parse(job.leaseUntil) <= nowMs,
+  );
+
+  if (
+    missingNotificationJobs.length > 0 ||
+    failedNotificationJobs.length > 0 ||
+    expiredNotificationLeases.length > 0
+  ) {
+    throw new Error(
+      `Notification outbox unhealthy: ${missingNotificationJobs.length} missing job(s), ${failedNotificationJobs.length} failed job(s), ${expiredNotificationLeases.length} expired lease(s). Run notifications:reconcile or notifications:retry before treating diagnostics as green.`,
+    );
+  }
+
   console.info(
     JSON.stringify(
       {
@@ -58,6 +98,10 @@ async function main() {
         offeringCount: report.offeringCount,
         groupCount: report.groupCount,
         legacyWorkflowStatusCount: 0,
+        notificationJobCount: notificationJobs.length,
+        missingNotificationJobCount: 0,
+        failedNotificationJobCount: 0,
+        expiredNotificationLeaseCount: 0,
         warnings: report.warnings,
       },
       null,

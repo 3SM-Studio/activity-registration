@@ -1,3 +1,4 @@
+import { protectNotificationOutbox } from "../src/infrastructure/google/notification-outbox-admin";
 import {
   syncOperatorSheetSchema,
   validateSafeOperatorSheetExperience,
@@ -26,6 +27,7 @@ async function main() {
     client,
     hardProtectionEditorEmails ? { hardProtectionEditorEmails } : {},
   );
+  await protectNotificationOutbox(client, hardProtectionEditorEmails ?? []);
   await bootstrapSupportingSheetTables(client);
   await syncOperatorSheetSchema(client);
 
@@ -42,6 +44,7 @@ async function main() {
         offeringCount: report.offeringCount,
         nativeTables: "schema-synced",
         operatorExperience: "ready",
+        notificationOutbox: "protected",
         protectionMode: hardProtectionEditorEmails ? "hard" : "warning-only-test",
         structuralMutations: true,
         warnings: report.warnings,
