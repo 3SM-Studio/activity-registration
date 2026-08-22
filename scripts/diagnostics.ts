@@ -1,4 +1,8 @@
-import { NOTIFICATION_STATUS, NOTIFICATION_TYPE, notificationJobId } from "../src/domain/notification-outbox";
+import {
+  NOTIFICATION_STATUS,
+  NOTIFICATION_TYPE,
+  notificationJobId,
+} from "../src/domain/notification-outbox";
 import { LEGACY_REGISTRATION_STATUS } from "../src/domain/registration";
 import { GoogleSheetsNotificationOutboxRepository } from "../src/infrastructure/google/notification-outbox.repository";
 import { GoogleSheetsRegistrationRepository } from "../src/infrastructure/google/registration.repository";
