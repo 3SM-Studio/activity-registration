@@ -1,4 +1,7 @@
-import { NOTIFICATION_HEADERS, SHEET } from "@/infrastructure/google/sheets-contracts";
+import {
+  NOTIFICATION_HEADERS,
+  SHEET,
+} from "@/infrastructure/google/sheets-contracts";
 import type { SheetsClient } from "@/infrastructure/google/sheets-client";
 
 const OUTBOX_PROTECTION_DESCRIPTION =
@@ -9,7 +12,9 @@ export async function protectNotificationOutbox(
   hardProtectionEditorEmails: readonly string[] = [],
 ): Promise<void> {
   const metadata = await client.getSheetMetadata();
-  const sheet = metadata.find((candidate) => candidate.title === SHEET.notifications);
+  const sheet = metadata.find(
+    (candidate) => candidate.title === SHEET.notifications,
+  );
   if (!sheet) {
     throw new Error(`${SHEET.notifications} sheet is missing.`);
   }
@@ -18,7 +23,9 @@ export async function protectNotificationOutbox(
   for (const protectedRange of sheet.protectedRanges ?? []) {
     if (protectedRange.description === OUTBOX_PROTECTION_DESCRIPTION) {
       requests.push({
-        deleteProtectedRange: { protectedRangeId: protectedRange.protectedRangeId },
+        deleteProtectedRange: {
+          protectedRangeId: protectedRange.protectedRangeId,
+        },
       });
     }
   }
