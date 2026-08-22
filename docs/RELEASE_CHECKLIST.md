@@ -1,10 +1,10 @@
 # Release checklist
 
-Date: 2026-08-21
+Date: 2026-08-22
 Target: Pozytywka Registration v4
-Status: Production deployed, migrated to schema v4 and intentionally closed pending final physical/manual acceptance
+Status: Production deployed and intentionally closed pending final physical/manual acceptance
 
-`REGISTRATIONS_OPEN=TRUE` in Production is the final action. Until every remaining release blocker is closed, Production remains intentionally closed.
+`REGISTRATIONS_OPEN=TRUE` in Production is the final controlled release action. Until every blocking item below is closed, Production remains intentionally closed.
 
 ## Product and business
 
@@ -27,20 +27,43 @@ Canonical decisions: `docs/PRODUCTION_DECISIONS_2026-08-20.md`.
 
 - [x] schema v4 code deployed
 - [x] `SEZONY`, `GRUPY`, `CURRENT_SEASON_ID`
-- [x] v4 operator lifecycle fields: `ASSIGNED_GROUP_ID`, `CONTACTED_AT`, `CONFIRMED_AT`, `CLOSED_AT`, `POSSIBLE_DUPLICATE_OF`
+- [x] v4 operator lifecycle fields
 - [x] business duplicate handling
-- [x] native Google Tables and operator-first `ZAPISY`
-- [x] native `ASSIGNED_GROUP_ID` Table dropdown driven by current-season groups
+- [x] native Google Table `Rejestracje`
+- [x] native `ASSIGNED_GROUP_ID` dropdown driven by current-season groups
 - [x] `PANEL_OPERATORA` dashboard with group capacity formulas
-- [x] four operator filter views present
-- [x] twelve operator conditional-format rules present on `ZAPISY`
+- [x] four operator filter views
+- [x] five actionable warning conditional-format rules on PROD `ZAPISY`
+- [x] legacy whole-cell STATUS color conditional formats removed
+- [x] native STATUS dropdown presentation left UI-owned
 - [x] international phone input and controlled DOB picker
 - [x] participant/admin transactional e-mail
+- [x] durable notification outbox implemented
+- [x] outbox retry/reconciliation and health diagnostics implemented
 - [x] production runtime fails closed for wrong PROD Sheet or service-account identity
 - [x] Google authentication provider errors sanitized before logging
-- [x] hardening PR #41 passed `pnpm check`, Chrome verification and Critical E2E
-- [x] admin-recipient PR #42 passed full CI
-- [x] native group dropdown hotfix PR #45 passed full CI including Critical E2E
+- [x] PR #50 safe Sheet runtime/schema split passed full CI
+- [x] PR #51 durable notification outbox passed `pnpm check`, Chrome verification and Critical E2E
+- [x] PR #52 repository licensing/source-visible policy passed CI
+
+## Notification reliability
+
+- [x] `POWIADOMIENIA` contract contains technical identifiers/state only, no participant PII columns
+- [x] stable confirmation/admin job IDs double as provider idempotency keys
+- [x] `PENDING`, `SENDING`, `SENT`, `FAILED`, `SKIPPED` lifecycle
+- [x] lease token + expiry
+- [x] attempt counter and exponential backoff
+- [x] `notifications:reconcile`
+- [x] `notifications:retry`
+- [x] safe one-time `notifications:adopt`
+- [x] `diagnostics` fails on missing jobs, `FAILED`, or expired `SENDING` lease
+- [x] TEST adoption performed while registrations were closed
+- [x] four historical TEST registrations mapped to exactly eight `SKIPPED` jobs
+- [x] no historical TEST notification resend during adoption
+- [ ] PROD outbox created/protected and historical Registration adopted after final code promotion to `main`
+- [ ] PROD outbox health rechecked after adoption
+
+Canonical design: `docs/NOTIFICATION_OUTBOX.md`.
 
 ## Privacy / RODO
 
@@ -59,28 +82,17 @@ Canonical policy: `docs/RODO_AND_RETENTION_POLICY.md`.
 
 ## Child protection
 
-- [x] v1.0 originally adopted on 2026-08-20
-- [x] 2026 legal gap audit completed against current Article 22c
-- [x] v1.1 prepared with explicit reporting channel
-- [x] v1.1 covers children with disabilities and special educational needs
-- [x] v1.1 includes documented periodic review rules
-- [x] v1.1 requires full + shortened web publication and visible physical display
-- [x] full Standardy v1.1 formally adopted by Iwona Pilarz on 2026-08-21
-- [x] shortened child-friendly v1.1 formally adopted by Iwona Pilarz on 2026-08-21
-- [x] v1.1 effective date: 2026-08-21
-- [x] canonical full repository document updated to v1.1
-- [x] canonical shortened repository document updated to v1.1
-- [x] public full route updated to v1.1
-- [x] public child-friendly route updated to v1.1
+- [x] Standardy Ochrony Małoletnich v1.1 adopted on 2026-08-21
+- [x] shortened child-friendly v1.1 adopted on 2026-08-21
+- [x] full and shortened public routes updated
+- [x] reporting/accessibility/review requirements documented
 - [ ] adopted full Standardy physically displayed in the Pozytywka premises
 - [ ] adopted shortened Standardy physically displayed in the Pozytywka premises
 
 Canonical documents:
 
-- full: `docs/STANDARDY_OCHRONY_MALOLETNICH.md`
-- shortened: `docs/STANDARDY_OCHRONY_MALOLETNICH_SKROT.md`
-
-Previous versions remain recoverable from Git history. Personnel verification and incident documentation remain outside the registration Sheet and repository.
+- `docs/STANDARDY_OCHRONY_MALOLETNICH.md`
+- `docs/STANDARDY_OCHRONY_MALOLETNICH_SKROT.md`
 
 ## Production Google Sheet
 
@@ -89,26 +101,21 @@ Canonical PROD Sheet ID:
 `1DRcWvY8xfZDGjJLWOr8Ax1XsyBw4dWU8C6u9WGNvFfM`
 
 - [x] separate PROD Sheet created
-- [x] schema v4 structure and native Tables verified on 2026-08-21
+- [x] schema v4 structure verified
 - [x] production catalog/settings verified
 - [x] `SYSTEM_SCHEMA_VERSION=4`
 - [x] `CURRENT_SEASON_ID=2026-2027`
-- [x] `REGISTRATIONS_OPEN=FALSE` during release preparation
-- [x] v4 migration completed while registrations remained closed
-- [x] existing registration data preserved through the v4 migration
-- [x] native `ASSIGNED_GROUP_ID` dropdown contains the eight active current-season production groups
-- [x] real Vercel Production registration matched to the canonical PROD Sheet
-- [x] PROD runtime remained HTTP 200 and closed after the migration
-- [x] no Production warning/error/fatal runtime logs observed after the final v4 deployment and migration verification
-- [x] old TEST/general service account removed from PROD Sheet ACL on 2026-08-21
-- [x] dedicated PROD service account remains the only application service account on the PROD Sheet ACL
-- [x] PROD Sheet general access verified as restricted
-- [ ] repository `sheet:validate` command executed through the exact final PROD Vercel identity
-- [ ] repository `diagnostics` command executed through the exact final PROD Vercel identity
+- [x] `REGISTRATIONS_OPEN=FALSE` rechecked on 2026-08-22
+- [x] existing registration data preserved through v4 migration
+- [x] native `ASSIGNED_GROUP_ID` dropdown configured from eight active production groups
+- [x] five warning conditional-format rules verified directly on 2026-08-22
+- [x] dedicated PROD service account is the only application service account on PROD Sheet ACL
+- [x] TEST service account absent from PROD Sheet ACL
+- [x] PROD Sheet sharing restricted to explicit accounts
+- [ ] exact final PROD command-level `sheet:validate` through production Vercel identity
+- [ ] exact final PROD command-level `diagnostics` through production Vercel identity after outbox adoption
 
-The command-level checks are not replaced by a public debug endpoint. Direct Sheet validation plus a proven real Vercel-runtime write provide the current runtime evidence without creating a temporary production attack surface.
-
-Google native Table columns typed as `DATE` currently render with the Table-managed `yyyy-MM-dd` display pattern even when a later `repeatCell` request asks for a different date pattern. Values remain native dates and this is treated as a presentation limitation, not a data-integrity blocker.
+Historical `ZAPISY` rows may retain older row-level schema versions. `SYSTEM_SCHEMA_VERSION=4` defines the current Sheet contract; historical values must not be fabricated merely to make all rows numerically identical.
 
 ## Production identity / hosting
 
@@ -120,21 +127,13 @@ TEST/Preview service account:
 
 `activity-registration@pozytywka-reg-3sm-260819.iam.gserviceaccount.com`
 
-- [x] dedicated PROD Google service account exists
-- [x] PROD service account is the only application service account on the PROD Sheet ACL
-- [x] PROD WIF service-account binding independently verified as `environment:production`
-- [x] TEST WIF service-account binding independently verified as `environment:preview`
-- [x] TEST service-account binding does not contain `environment:production`
-- [x] WIF issuer independently verified: `https://oidc.vercel.com/atypicalmichas`
-- [x] WIF allowed audience independently verified as the canonical provider resource
-- [x] Vercel Production uses `APP_ENV=production`
-- [x] Vercel Production uses `DATA_BACKEND=google-sheets`
-- [x] Vercel Production points at the canonical PROD Sheet
-- [x] Vercel Production uses the dedicated PROD service account
-- [x] `ALLOW_TEST_SEED=false` verified in Vercel Production
-- [x] `ALLOW_PRODUCTION_CATALOG_SEED=false` verified in Vercel Production
-- [ ] broader Google IAM/Drive access for the PROD service account independently reviewed for least privilege beyond the Sheet
-- [ ] `pnpm prod:env:validate` executed against an exported copy of the exact final Production environment
+- [x] dedicated PROD service account exists
+- [x] PROD WIF binding previously verified as `environment:production`
+- [x] TEST WIF binding previously verified as `environment:preview`
+- [x] Vercel Production uses Google Sheets backend and canonical PROD identity
+- [x] TEST identity is not present on PROD Sheet ACL
+- [ ] broader Google Cloud IAM least-privilege review beyond Sheet ACL
+- [ ] `pnpm prod:env:validate` against an exported copy of the exact final Production environment
 
 ## Security and abuse
 
@@ -147,25 +146,19 @@ TEST/Preview service account:
 - [x] no service-account private key in repo
 - [x] Vercel OIDC/WIF architecture
 - [x] hardened security headers and CSP baseline
-- [x] WAF strategy selected for production volume control
-- [x] Vercel WAF rule created for `POST /api/registrations`
-- [x] WAF fixed window configured: 10 requests / 60 seconds / IP
-- [x] WAF action configured as `429 Too Many Requests`
-- [x] WAF physically verified on 2026-08-21: requests 1-10 reached the app, requests 11-12 returned `429`
-- [x] Turnstile remains an escalation option rather than default friction
+- [x] WAF fixed-window rule previously verified at 10 requests / 60 seconds / IP with 429 after limit
+- [x] Turnstile remains escalation rather than default friction
+- [ ] GitHub `main`/`preview` branch protection or repository ruleset configured by an account with admin capability
 
 ## E-mail production
 
 - [x] Resend provider enabled
-- [x] custom production sender operational: `Pracownia Twórcza Pozytywka <zapisy@3stupidmen.com>`
-- [x] real participant delivery previously confirmed
-- [x] notification transport confirmed from Production
-- [x] canonical production admin recipient is `michal.szwindowski@gmail.com`
-- [x] `REGISTRATION_ADMIN_EMAILS` Production environment changed to `michal.szwindowski@gmail.com`
-- [x] current runtime and release validator both enforce the canonical admin recipient
-- [x] final admin notification delivered to `michal.szwindowski@gmail.com` and present in Inbox on 2026-08-21
-
-The public Pozytywka contact mailbox remains a separate business decision and does not have to equal the technical registration-notification recipient.
+- [x] custom production sender operational
+- [x] participant delivery previously confirmed
+- [x] admin delivery previously confirmed
+- [x] canonical production admin recipient configured
+- [x] durable outbox now replaces untracked best-effort failure handling
+- [ ] post-promotion PROD outbox adoption and health verification
 
 ## TEST / Preview
 
@@ -173,18 +166,18 @@ Canonical TEST Sheet ID:
 
 `11-wmT8OCSVinFNjAFE7oHvIYUKnVOBgxmwIgvGgWH-8`
 
-- [x] canonical Preview architecture uses the TEST service account
-- [x] TEST identity independently verified as `environment:preview`
-- [x] TEST Sheet ACL contains the TEST service account and does not contain the PROD service account
-- [x] controlled real submit previously reached `201`
-- [x] participant/admin notification path previously reported success
-- [x] manual real-delivery QA rows removed after testing
-- [x] `preview` branch fast-forwarded to final v4 application SHA `caafa3184b61727ab9f05a4bedc6162b4935d926`
-- [x] final canonical Preview deployment `dpl_EQTR2YFkDZLJL2DqxypYEjivTq2R` reached READY
-- [x] final Preview GET read returned the exact TEST settings (`test-2026-2027`, `test-2026-08-18`) from the canonical TEST Sheet
-- [x] no Preview warning/error/fatal runtime logs observed during the final real-Google read verification
+- [x] Preview uses isolated TEST identity
+- [x] controlled real submit/write previously verified
+- [x] notification path previously verified
+- [x] TEST returned to `REGISTRATIONS_OPEN=FALSE` on 2026-08-22
+- [x] TEST outbox created/protected
+- [x] historical TEST registrations safely adopted as `SKIPPED`
+- [x] durable-outbox PR merged to `preview` as `59894364592e13932d2a3fcb0ab53f5ebae92806`
+- [x] matching Vercel Preview deployment `dpl_59NB6WRR7v1qZceL5v1ew1dVn6my` reached `READY`
+- [x] Vercel deployment metadata reports the exact same Preview git SHA
+- [x] no Preview warning/error/fatal runtime logs found in the post-deploy check window
 
-The final Preview verification proves current HEAD can authenticate through Preview WIF and read the isolated TEST Sheet. The earlier controlled `201` proves the TEST write path. It does not claim a new write was performed on 2026-08-21.
+Vercel Authentication remains enabled for Preview. SSO redirect from an unauthenticated HTTP fetch is expected and is not treated as application failure.
 
 ## Manual acceptance
 
@@ -197,16 +190,16 @@ These checks require a real device or human operator and are not replaced by CI:
 - [ ] 200% zoom/reflow human review
 - [ ] final human visual/contrast review
 - [ ] final human read-through of privacy notice and adopted Standardy v1.1
-- [ ] Sheet operator flow using the real production catalog
 
 ## Final release sequence
 
-Production may open only after the remaining real-world blockers are closed.
-
-1. physically display both adopted Standardy versions in the premises,
-2. complete final real-device accessibility/form QA,
-3. complete operator Sheet QA,
-4. execute remaining environment-specific command checks where credentials can be safely obtained,
-5. review broader PROD service-account IAM/Drive least privilege,
-6. only then set Production `REGISTRATIONS_OPEN=TRUE`,
-7. perform the final live smoke and immediately remove any synthetic production record.
+1. promote verified `preview` to `main`,
+2. wait for exact-SHA Production deployment to become `READY`,
+3. keep PROD intake closed,
+4. create/protect PROD `POWIADOMIENIA`,
+5. adopt pre-outbox PROD Registration as `SKIPPED` without sending historical mail,
+6. verify outbox counts/health and runtime logs,
+7. complete remaining physical/manual/legal acceptance,
+8. configure GitHub repository protection with admin access,
+9. only then set Production `REGISTRATIONS_OPEN=TRUE`,
+10. perform minimal live smoke and monitor without logging PII.
