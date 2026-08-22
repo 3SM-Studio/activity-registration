@@ -20,7 +20,11 @@ import type { SheetsClient } from "@/infrastructure/google/sheets-client";
 const notificationTypes = new Set<string>(Object.values(NOTIFICATION_TYPE));
 const notificationStatuses = new Set<string>(Object.values(NOTIFICATION_STATUS));
 
-function parseOptionalTimestamp(value: string, label: string, notificationId: string): string | null {
+function parseOptionalTimestamp(
+  value: string,
+  label: string,
+  notificationId: string,
+): string | null {
   if (!value) {
     return null;
   }
@@ -30,7 +34,9 @@ function parseOptionalTimestamp(value: string, label: string, notificationId: st
   return value;
 }
 
-function notificationToCells(job: NotificationOutboxJob): Readonly<Record<string, string | number>> {
+function notificationToCells(
+  job: NotificationOutboxJob,
+): Readonly<Record<string, string | number>> {
   return {
     NOTIFICATION_ID: job.id,
     REGISTRATION_ID: job.registrationId,
@@ -176,14 +182,18 @@ export class GoogleSheetsNotificationOutboxRepository implements NotificationOut
     return (await this.readJobsWithRows()).map(({ job }) => job);
   }
 
-  async listForRegistration(registrationId: RegistrationId): Promise<readonly NotificationOutboxJob[]> {
+  async listForRegistration(
+    registrationId: RegistrationId,
+  ): Promise<readonly NotificationOutboxJob[]> {
     return (await this.readJobsWithRows())
       .map(({ job }) => job)
       .filter((job) => job.registrationId === registrationId);
   }
 
   async create(job: NotificationOutboxJob): Promise<void> {
-    const existing = (await this.readJobsWithRows()).find(({ job: candidate }) => candidate.id === job.id);
+    const existing = (await this.readJobsWithRows()).find(
+      ({ job: candidate }) => candidate.id === job.id,
+    );
     if (existing) {
       return;
     }
@@ -220,7 +230,9 @@ export class GoogleSheetsNotificationOutboxRepository implements NotificationOut
     };
     await this.updateJob(current.rowNumber, claimed);
 
-    const verified = (await this.readJobsWithRows()).find(({ job }) => job.id === notificationId)?.job;
+    const verified = (await this.readJobsWithRows()).find(
+      ({ job }) => job.id === notificationId,
+    )?.job;
     return verified?.status === NOTIFICATION_STATUS.sending && verified.leaseToken === leaseToken
       ? verified
       : null;

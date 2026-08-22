@@ -10,10 +10,7 @@ import {
   type Season,
   type SeasonId,
 } from "@/domain/catalog";
-import {
-  NOTIFICATION_STATUS,
-  type NotificationOutboxJob,
-} from "@/domain/notification-outbox";
+import { NOTIFICATION_STATUS, type NotificationOutboxJob } from "@/domain/notification-outbox";
 import type {
   ApplicationRepositories,
   CatalogRepository,
@@ -186,7 +183,9 @@ class MemoryNotificationOutboxRepository implements NotificationOutboxRepository
     return [...getNotificationJobs()];
   }
 
-  async listForRegistration(registrationId: RegistrationId): Promise<readonly NotificationOutboxJob[]> {
+  async listForRegistration(
+    registrationId: RegistrationId,
+  ): Promise<readonly NotificationOutboxJob[]> {
     return getNotificationJobs().filter((job) => job.registrationId === registrationId);
   }
 

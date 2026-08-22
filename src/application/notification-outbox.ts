@@ -50,7 +50,9 @@ export async function ensureRegistrationNotificationJobs(
   outbox: NotificationOutboxRepository,
   now = new Date().toISOString(),
 ): Promise<void> {
-  const existing = new Set((await outbox.listForRegistration(registration.id)).map((job) => job.id));
+  const existing = new Set(
+    (await outbox.listForRegistration(registration.id)).map((job) => job.id),
+  );
 
   for (const type of Object.values(NOTIFICATION_TYPE)) {
     const job = pendingJob(registration, type, now);

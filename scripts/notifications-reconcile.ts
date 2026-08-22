@@ -32,6 +32,8 @@ async function main() {
 }
 
 main().catch((error: unknown) => {
-  console.error(error instanceof Error ? error.message : "Unknown notification reconciliation error.");
+  console.error(
+    error instanceof Error ? error.message : "Unknown notification reconciliation error.",
+  );
   process.exitCode = 1;
 });

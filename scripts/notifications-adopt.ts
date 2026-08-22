@@ -7,7 +7,11 @@ import {
 import type { Registration } from "../src/domain/registration";
 import { createApplicationRepositories } from "../src/infrastructure/repositories";
 
-function skippedJob(registration: Registration, type: (typeof NOTIFICATION_TYPE)[keyof typeof NOTIFICATION_TYPE], now: string): NotificationOutboxJob {
+function skippedJob(
+  registration: Registration,
+  type: (typeof NOTIFICATION_TYPE)[keyof typeof NOTIFICATION_TYPE],
+  now: string,
+): NotificationOutboxJob {
   return {
     id: notificationJobId(registration.id, type),
     registrationId: registration.id,
