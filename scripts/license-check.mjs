@@ -103,8 +103,18 @@ function packageLabel(packageInfo) {
   }
 
   const name = typeof packageInfo.name === "string" ? packageInfo.name : "unknown-package";
-  const version = typeof packageInfo.version === "string" ? packageInfo.version : "unknown-version";
-  return `${name}@${version}`;
+  const versions = Array.isArray(packageInfo.versions)
+    ? packageInfo.versions.filter((version) => typeof version === "string")
+    : typeof packageInfo.version === "string"
+      ? [packageInfo.version]
+      : [];
+  const versionLabel = versions.length > 0 ? versions.join("|") : "unknown-version";
+  const paths = Array.isArray(packageInfo.paths)
+    ? packageInfo.paths.filter((path) => typeof path === "string")
+    : [];
+  const pathLabel = paths.length > 0 ? ` [${paths.join(", ")}]` : "";
+
+  return `${name}@${versionLabel}${pathLabel}`;
 }
 
 const groups = Object.entries(report)
