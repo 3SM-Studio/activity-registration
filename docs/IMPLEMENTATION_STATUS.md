@@ -6,7 +6,7 @@ Integration branch: `preview`
 
 ## Current product state
 
-The v4 software core and production business/legal baseline are implemented. Production is deployed but intentionally fail-closed until the remaining physical/manual release gates are completed.
+The v4 software core, durable notification outbox and production business/legal baseline are implemented. Production is deployed but intentionally fail-closed until the remaining command-level, infrastructure and physical/manual release gates are completed.
 
 The system remains a focused registration request intake application, not a full CRM, payment system or attendance platform.
 
@@ -110,7 +110,14 @@ System sheets:
 - TEST returned to `REGISTRATIONS_OPEN=FALSE` after QA.
 - TEST outbox was adopted while closed.
 - four historical TEST registrations have exactly eight terminal `SKIPPED` jobs, with no historical mail resend.
-- PROD remains `REGISTRATIONS_OPEN=FALSE`.
+- release PR #54 passed full CI and was merged to `main` as `797ad4151a9511daddc3572c438f976b6df2f56b`.
+- Vercel Production deployment `dpl_Cw2hmKfx6jKqwDCifjRkbd75ZyLc` reached `READY` for exactly that SHA.
+- PROD remains `REGISTRATIONS_OPEN=FALSE` and the public Production page returned HTTP 200 with the closed-state UX after rollout.
+- PROD `POWIADOMIENIA` now exists with the exact 13-column runtime contract and hard protection for the dedicated PROD service account.
+- one pre-outbox PROD Registration was adopted as exactly two terminal `SKIPPED` jobs, `CONFIRMATION` and `ADMIN`, with `PRE_OUTBOX_REGISTRATION`, zero attempts, no retry schedule, no lease and no `SENT_AT`.
+- historical PROD Registration count remained exactly one after adoption.
+- no Production warning/error/fatal runtime logs were found for the new deployment during post-rollout verification.
+- durable notification issue #3 was closed as completed after Production evidence.
 - PROD uses the canonical v4 Sheet and dedicated production service account.
 - TEST service account is absent from the PROD Sheet ACL.
 - PROD `ZAPISY` has five actionable warning conditional-format rules and no legacy whole-cell STATUS color rules.
@@ -119,15 +126,18 @@ System sheets:
 
 ## Remaining release blockers
 
-Engineering should not fabricate completion of these items:
+Do not fabricate completion of these items:
 
-1. physically display both adopted Standardy versions in the Pozytywka premises,
-2. physical Android Chrome acceptance,
-3. physical iPhone Safari acceptance,
-4. keyboard/focus/200% zoom/visual contrast human acceptance,
-5. final human read-through of public legal/safety documents,
-6. broader Google Cloud IAM least-privilege review beyond the Sheet ACL,
-7. GitHub repository ruleset/branch-protection configuration through an account with the required admin capability.
+1. exact final Production `sheet:validate` command through the Production runtime identity,
+2. exact final Production `diagnostics` command through the Production runtime identity,
+3. `pnpm prod:env:validate` against an exported copy of the exact final Production environment,
+4. broader Google Cloud IAM least-privilege review beyond the Sheet ACL,
+5. physically display both adopted Standardy versions in the Pozytywka premises,
+6. physical Android Chrome acceptance,
+7. physical iPhone Safari acceptance,
+8. keyboard/focus/200% zoom/visual contrast human acceptance,
+9. final human read-through of public legal/safety documents,
+10. GitHub repository ruleset/branch-protection configuration through an account with the required admin capability.
 
 Production must stay closed until the blocking release checklist is complete.
 
