@@ -1,12 +1,12 @@
 # Implementation status
 
-Date: 2026-08-20
-Runtime: Pozytywka Registration v3
+Date: 2026-08-22
+Runtime: Pozytywka Registration v4
 Integration branch: `preview`
 
 ## Current product state
 
-The v3 software core is implemented. The production business/legal baseline is also now adopted rather than left as TBD.
+The v4 software core and production business/legal baseline are implemented. Production is deployed but intentionally fail-closed until the remaining physical/manual release gates are completed.
 
 The system remains a focused registration request intake application, not a full CRM, payment system or attendance platform.
 
@@ -20,22 +20,43 @@ The system remains a focused registration request intake application, not a full
 - international phone input and E.164 storage
 - full DOB picker
 - adult/minor guardian flow
-- Google Sheets repository
-- native Google Tables
+- Google Sheets repositories
+- native Google Tables for canonical registration data
 - Vercel OIDC/WIF architecture
 - PII-safe structured logging
 - Resend participant/admin notifications
+- durable notification outbox with retry/reconciliation
 - business duplicate detection
 - requestId idempotency
-- v3 season/offering/group/status model
+- v4 season/offering/group/status model
 - operator-first Sheet UX
-- semantic status colors
+- `PANEL_OPERATORA` dashboard
 - repeat child/activity flows
-- abuse controls and WAF strategy
+- abuse controls and verified Vercel WAF baseline
 
-## Production business baseline
+## Notification reliability
 
-Adopted in `docs/PRODUCTION_DECISIONS_2026-08-20.md`:
+`POWIADOMIENIA` is a protected technical outbox without participant PII. Each new Registration has two stable jobs: participant confirmation and admin notification.
+
+Implemented safeguards:
+
+- `PENDING`, `SENDING`, `SENT`, `FAILED`, `SKIPPED` lifecycle,
+- lease token and lease expiry,
+- attempt counter,
+- exponential retry backoff,
+- stable provider idempotency keys,
+- reconciliation of missing/due jobs,
+- manual retry for failed jobs,
+- health checks in `pnpm diagnostics`,
+- safe adoption of pre-outbox registrations as terminal `SKIPPED` jobs.
+
+Google Sheets is not a transactional queue, so this is not claimed as mathematical exactly-once delivery. Application leases plus stable provider idempotency keys provide the duplicate-send safeguards appropriate to the current architecture.
+
+Canonical design/runbook: `docs/NOTIFICATION_OUTBOX.md`.
+
+## Production business and legal baseline
+
+Adopted and implemented:
 
 - season 2026/2027,
 - Olkusz production city baseline,
@@ -44,87 +65,70 @@ Adopted in `docs/PRODUCTION_DECISIONS_2026-08-20.md`:
 - theatre window baseline,
 - contact/status semantics,
 - contract/payment boundary,
-- operational contact process.
-
-These values are editable business configuration. They are not hard product constraints.
-
-## Production privacy/legal baseline
-
-Adopted:
-
 - controller/contact baseline,
-- public production privacy notice,
+- public privacy notice,
 - GDPR purpose/legal-basis model,
-- documented legitimate-interest balancing assessment,
 - finite status-based retention,
-- processor/transfer inventory,
 - data-subject request process,
 - production access model,
-- NOTES minimization policy.
+- NOTES minimization policy,
+- Standardy Ochrony Małoletnich v1.1 and child-friendly shortened version.
 
-Canonical policy: `docs/RODO_AND_RETENTION_POLICY.md`.
+Canonical sources:
 
-## Child protection baseline
-
-Adopted:
-
-- full Standardy Ochrony Małoletnich,
-- child-friendly shortened version,
-- Iwona Pilarz as process owner,
-- Article 21 personnel-verification procedure,
-- intervention/reporting/support/documentation rules,
-- separation of staff verification and incident records from `ZAPISY`.
-
-Canonical documents:
-
+- `docs/PRODUCTION_DECISIONS_2026-08-20.md`
+- `docs/RODO_AND_RETENTION_POLICY.md`
 - `docs/STANDARDY_OCHRONY_MALOLETNICH.md`
 - `docs/STANDARDY_OCHRONY_MALOLETNICH_SKROT.md`
 
-## Canonical Production Sheet
+## Canonical Google Sheets
 
-Created on 2026-08-20:
+TEST:
+
+`11-wmT8OCSVinFNjAFE7oHvIYUKnVOBgxmwIgvGgWH-8`
+
+PROD:
 
 `1DRcWvY8xfZDGjJLWOr8Ax1XsyBw4dWU8C6u9WGNvFfM`
 
-Verified state during production-finalization work:
+Current system contract remains `SYSTEM_SCHEMA_VERSION=4`. The notification outbox is an additive system sheet and does not change the `ZAPISY` row schema version.
 
-- v3 sheet structure copied with native Tables and formatting,
-- inherited TEST registration values removed,
-- `ZAPISY` empty,
-- production city/season/Offerings/Groups populated,
-- `SYSTEM_SCHEMA_VERSION=3`,
-- `CURRENT_SEASON_ID=2026-2027`,
-- `PRIVACY_NOTICE_VERSION=2026-08-20`,
-- `REGISTRATIONS_OPEN=FALSE`.
+System sheets:
 
-The catalog is reproducible through the guarded `pnpm seed:production-catalog` command. That command refuses an unexpected Sheet ID and refuses to seed a Production Sheet that already contains registrations.
+- `MIASTA`
+- `SEZONY`
+- `OFERTY_ZAJEC`
+- `GRUPY`
+- `ZAPISY`
+- `POWIADOMIENIA`
+- `USTAWIENIA`
 
-## TEST
+`PANEL_OPERATORA` is intentionally a normal derived dashboard rather than a native Table.
 
-TEST remains the canonical QA environment for Preview. Recent controlled QA proved the real Google submit path and Resend notification path after the locale-date fix.
+## Verified state on 2026-08-22
 
-Manual real-delivery rows created during the current QA cycle must be removed and TEST returned to `REGISTRATIONS_OPEN=FALSE` after final Preview testing.
+- TEST returned to `REGISTRATIONS_OPEN=FALSE` after QA.
+- TEST outbox was adopted while closed.
+- four historical TEST registrations have exactly eight terminal `SKIPPED` jobs, with no historical mail resend.
+- PROD remains `REGISTRATIONS_OPEN=FALSE`.
+- PROD uses the canonical v4 Sheet and dedicated production service account.
+- TEST service account is absent from the PROD Sheet ACL.
+- PROD `ZAPISY` has five actionable warning conditional-format rules and no legacy whole-cell STATUS color rules.
+- PR #51 durable outbox passed repository quality gate, Chrome verification and Critical E2E before merge to `preview`.
+- PR #52 clarified the public source-visible, non-open-source licensing policy and passed CI before merge to `preview`.
 
-## Remaining work
+## Remaining release blockers
 
-No further product/legal invention is required for v3 launch preparation.
+Engineering should not fabricate completion of these items:
 
-The only remaining gates require actual platform execution/evidence:
+1. physically display both adopted Standardy versions in the Pozytywka premises,
+2. physical Android Chrome acceptance,
+3. physical iPhone Safari acceptance,
+4. keyboard/focus/200% zoom/visual contrast human acceptance,
+5. final human read-through of public legal/safety documents,
+6. broader Google Cloud IAM least-privilege review beyond the Sheet ACL,
+7. GitHub repository ruleset/branch-protection configuration through an account with the required admin capability.
 
-1. create/use a separate PROD Google service account,
-2. bind Production OIDC/WIF only to that identity,
-3. grant that identity minimum access to the canonical PROD Sheet,
-4. ensure Preview/TEST identity has no PROD access,
-5. configure Vercel Production environment,
-6. configure a Resend sender on a verified production domain,
-7. create/verify the selected Vercel WAF rule,
-8. run final Production validate/diagnostics/reconciliation while closed,
-9. run closed Production smoke and mail delivery checks,
-10. complete physical/manual device/accessibility checks,
-11. open registrations only after those checks.
+Production must stay closed until the blocking release checklist is complete.
 
-Current detailed evidence checklist: `docs/RELEASE_CHECKLIST.md`.
-
-## Safety rule
-
-Do not set Production `REGISTRATIONS_OPEN=TRUE` merely to make a checklist look complete. It is the final controlled release action after the infrastructure evidence above is real.
+Current detailed evidence: `docs/RELEASE_CHECKLIST.md`.

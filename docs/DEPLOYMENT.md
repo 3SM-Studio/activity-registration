@@ -16,23 +16,20 @@ Preview nie może dostać produkcyjnego `GOOGLE_SPREADSHEET_ID` ani tożsamości
 feat/*, fix/*, docs/*, chore/*
 -> Pull Request do preview
 -> GitHub CI
--> BEZ automatycznego deploymentu Vercel
 -> merge do preview
--> stały Vercel Preview TEST
+-> kanoniczny Vercel Preview TEST
 -> kontrolowany smoke/E2E
 -> Pull Request preview -> main
--> CI
+-> GitHub CI
 -> merge do main
 -> Vercel Production
 ```
 
-`preview` jest jedyną gałęzią Vercel Preview, która ma otrzymywać pełny TEST deployment aplikacji. Feature branche nie powinny zużywać quota Vercela i nie są kanonicznym środowiskiem QA.
+`preview` jest jedyną gałęzią Vercel Preview, która ma otrzymywać pełny TEST deployment aplikacji. Feature branches są wyłączone przez `vercel.json`.
 
 Hotfix produkcyjny może wyjątkowo wejść bezpośrednio do `main`, ale po opanowaniu incydentu musi zostać zsynchronizowany z `preview`.
 
 ## Vercel branch deployment filtering
-
-Vercel używa minimatch dla `git.deploymentEnabled`.
 
 Prawidłowy kontrakt repo:
 
@@ -48,36 +45,28 @@ Prawidłowy kontrakt repo:
 }
 ```
 
-Dlaczego `**`, a nie `*`:
+`scripts/repo-validate.mjs` pilnuje tego kontraktu.
 
-- wcześniejsze `"*": false` nie obejmowało branchy zawierających `/`, np. `feat/...`, `fix/...`, `docs/...`,
-- branche niepasujące do żadnej reguły Vercela domyślnie mają deployment włączony,
-- efektem były niepotrzebne deploymenty praktycznie każdego technicznego commita i powtarzające się build-rate-limit,
-- `"**": false` jest catch-all także dla branchy ze slashami,
-- `preview` i `main` są jawnie ponownie włączone; przy nakładających się regułach Vercel deployuje, jeśli co najmniej jedna pasująca reguła ma `true`.
+## Canonical deployment rule
 
-`scripts/repo-validate.mjs` pilnuje tego kontraktu, aby przypadkowa zmiana z powrotem na `*` nie wróciła.
-
-Nie rozwiązuj problemów quota przez seryjne no-op commity.
-
-## Canonical preview rule
-
-Jedynym kanonicznym URL do QA jest stały alias `preview`.
-
-Przed testem produktu należy sprawdzić:
+Przed testem produktu sprawdź:
 
 ```text
-GitHub preview HEAD == canonical Vercel preview deployment git SHA
+GitHub branch HEAD == odpowiedni Vercel deployment githubCommitSha
 ```
 
-Jeżeli SHA są różne, środowisko ma deployment drift. Nie wolno mówić, że zmiana jest na preview tylko dlatego, że znajduje się w GitHubie.
+Dla QA używaj branch aliasu `preview`, nie przypadkowego feature deploymentu.
+
+Nie uznawaj merge w GitHub za dowód wdrożenia, dopóki odpowiadający deployment Vercela nie ma stanu `READY`.
 
 ## Aktualny stan infrastruktury
 
-Zweryfikowane 2026-08-19:
+Zweryfikowane 2026-08-22:
 
 ```text
 Vercel project      pozytywka-activity-registration
+Vercel project ID   prj_G9iXemQYiX8fuFkhHuSPTwZ8fQAa
+Vercel team         atypicalmichas
 Vercel framework    nextjs
 Production branch   main
 Preview branch      preview
@@ -89,39 +78,44 @@ Google Sheets:
 
 ```text
 TEST  11-wmT8OCSVinFNjAFE7oHvIYUKnVOBgxmwIgvGgWH-8
-PROD  1YvPxYSPHkiWetpYjPfCq-KrXncjGy6bSCWIIwjl-v38
+PROD  1DRcWvY8xfZDGjJLWOr8Ax1XsyBw4dWU8C6u9WGNvFfM
 ```
 
-Current runtime sheet contract is schema v2:
+Current runtime contract:
 
 ```text
+SYSTEM_SCHEMA_VERSION=4
 MIASTA
+SEZONY
 OFERTY_ZAJEC
+GRUPY
 ZAPISY
+POWIADOMIENIA
 USTAWIENIA
+PANEL_OPERATORA  # derived dashboard, not a native Table
 ```
 
-Target v3 adds `SEZONY` and `GRUPY` only through the explicit migration stage described in `docs/REGISTRATION_V3_PLAN.md`.
+`POWIADOMIENIA` is an additive technical outbox. It does not change the schema version stored on historical `ZAPISY` rows.
 
-TEST contains a synthetic catalog. As part of v3 hygiene, registrations are kept closed outside controlled QA and manual/real-looking PII rows are removed after a full backup.
-
-PROD remains fail-closed and must not be used during v3 development.
+Both TEST and PROD must normally remain closed outside an explicitly controlled release/QA window.
 
 ## Izolacja TEST i PROD
 
-TEST and PROD must use different service accounts.
-
-Current TEST service account:
+TEST service account:
 
 ```text
 activity-registration@pozytywka-reg-3sm-260819.iam.gserviceaccount.com
 ```
 
-It may access TEST Sheet only and is used by Vercel Preview.
+PROD service account:
 
-PROD service account is still a pre-production gate. It must receive access to PROD only and must be bound only to the production Vercel subject.
+```text
+activity-registration-prod@pozytywka-reg-3sm-260819.iam.gserviceaccount.com
+```
 
-Do not grant PROD Sheet access to the TEST service account.
+Preview uses the TEST identity. Production uses the dedicated PROD identity. The TEST service account must not have access to the PROD Sheet.
+
+The PROD Sheet ACL was rechecked on 2026-08-22 and contains the dedicated PROD application service account, not the TEST application service account. This verifies Sheet-level isolation, not the complete Google Cloud IAM surface.
 
 ## Google WIF
 
@@ -151,20 +145,33 @@ Production subject:
 owner:atypicalmichas:project:pozytywka-activity-registration:environment:production
 ```
 
-Vercel OIDC `sub` does not encode the Git branch name, so the application still validates `VERCEL_GIT_COMMIT_REF` and only canonical `preview` may act as full TEST intake.
+Vercel OIDC `sub` does not encode the Git branch name, so the application also validates `VERCEL_GIT_COMMIT_REF` and only canonical `preview` may act as full TEST intake.
 
 Detailed runbook: `docs/GCP_WIF_SETUP.md`.
 
-## E-mail through Resend
+## E-mail and durable outbox
 
-After successful persistence the application can send:
+After successful Registration persistence the application maintains two technical jobs:
 
 1. participant confirmation,
 2. admin notification.
 
-E-mail failure does not roll back Registration. Notifications run after persistence and use stable idempotency keys.
+A provider failure does not roll back Registration. The job remains durable and can be retried/reconciled.
 
-This remains best-effort. Durable outbox/reconciliation is deferred hardening.
+Operational commands:
+
+```bash
+pnpm notifications:reconcile
+pnpm notifications:retry
+```
+
+First deployment to an existing environment also requires a one-time closed-intake adoption:
+
+```bash
+pnpm notifications:adopt
+```
+
+Historical jobs are marked `SKIPPED`; adoption must not resend old mail. See `docs/NOTIFICATION_OUTBOX.md`.
 
 ## Preview environment
 
@@ -172,34 +179,43 @@ Canonical `preview` uses TEST-only configuration including TEST Sheet, TEST iden
 
 Do not manually set `VERCEL_OIDC_TOKEN`.
 
-If canonical preview lacks required TEST configuration, the application must fail closed instead of falling back to a fake memory success.
+If canonical Preview lacks required TEST configuration, the application must fail closed instead of falling back to a fake memory success.
+
+Outside controlled QA:
+
+```text
+TEST REGISTRATIONS_OPEN=FALSE
+```
 
 ## Production environment
 
-Production remains blocked until separate PROD identity/access, approved privacy/retention/legal gates, final catalog and production e-mail sender are ready.
-
-## Local development with Google
-
-Use Application Default Credentials / TEST identity only. Do not use long-lived JSON private keys.
-
-## TEST operating rule
-
-Outside an explicit controlled QA session:
+Production remains fail-closed until all blocking release gates are complete.
 
 ```text
-REGISTRATIONS_OPEN=FALSE
+PROD REGISTRATIONS_OPEN=FALSE
 ```
 
-When opening TEST temporarily:
+Do not use long-lived service-account JSON private keys. Production authentication uses Vercel OIDC/WIF and the dedicated PROD service account.
 
-1. confirm canonical preview SHA,
-2. use synthetic data,
-3. run the planned smoke/integration flow,
-4. clean the test row if the test does not already clean itself,
-5. close TEST again.
+## Structural Sheet rollout
+
+For an existing environment, intake must be closed before structural work.
+
+Recommended order:
+
+1. verify environment and Sheet ID,
+2. verify `REGISTRATIONS_OPEN=FALSE`,
+3. ensure no operator is concurrently editing structural Sheet metadata,
+4. run the approved structural sync/migration,
+5. validate headers/tables/protections,
+6. for first outbox rollout, run safe historical adoption,
+7. run `sheet:validate`, `diagnostics` and reconciliation,
+8. keep intake closed until the environment-specific smoke is complete.
+
+`sheet:bootstrap` is the routine-safe operator refresh path. `sheet:schema-sync` is the explicit structural maintenance path. Do not use them interchangeably.
 
 ## Production gates
 
-Before production all repository quality gates, Google validation, infrastructure isolation, privacy/retention requirements, child-protection organizational gates, operator access review and manual device/accessibility tests must be complete.
+Before public opening, all repository quality gates, Google validation, infrastructure isolation, privacy/retention requirements, child-protection organizational gates, operator access review and manual device/accessibility tests must be complete.
 
 Only then may PROD `REGISTRATIONS_OPEN` become `TRUE`.

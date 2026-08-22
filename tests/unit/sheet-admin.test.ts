@@ -56,6 +56,7 @@ function createValidationClient(): SheetsClient {
     [`${SHEET.offerings}!1:1`, [SHEET_SCHEMA[SHEET.offerings]]],
     [`${SHEET.groups}!1:1`, [SHEET_SCHEMA[SHEET.groups]]],
     [`${SHEET.registrations}!1:1`, [SHEET_SCHEMA[SHEET.registrations]]],
+    [`${SHEET.notifications}!1:1`, [SHEET_SCHEMA[SHEET.notifications]]],
     [`${SHEET.settings}!1:1`, [SHEET_SCHEMA[SHEET.settings]]],
     [
       `${SHEET.settings}!A:ZZ`,
@@ -91,6 +92,7 @@ function createValidationClient(): SheetsClient {
       ],
     ],
     [`${SHEET.groups}!A:ZZ`, [SHEET_SCHEMA[SHEET.groups]]],
+    [`${SHEET.notifications}!A:ZZ`, [SHEET_SCHEMA[SHEET.notifications]]],
   ]);
 
   return {

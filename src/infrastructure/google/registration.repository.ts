@@ -78,6 +78,10 @@ export class GoogleSheetsRegistrationRepository implements RegistrationRepositor
       .filter((registration): registration is Registration => registration !== null);
   }
 
+  async listAll(): Promise<readonly Registration[]> {
+    return this.readRegistrations();
+  }
+
   async findByRequestId(requestId: RequestId): Promise<Registration | null> {
     const registrations = await this.readRegistrations();
     const matching = registrations.filter((registration) => registration.requestId === requestId);

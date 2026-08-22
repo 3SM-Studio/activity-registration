@@ -1,15 +1,25 @@
 # Contributing
 
-To repozytorium jest publiczne i przyjmuje sensowne propozycje zmian przez Pull Request.
+To repozytorium jest publiczne i przyjmuje sensowne propozycje zmian przez Pull Request, ale publiczna widoczność kodu nie oznacza licencji open source. Zasady używania kodu opisuje `LICENSE`.
 
 ## Model pracy
 
 - `main` jest branchem release/Production.
-- Normalne zmiany powstają na osobnym branchu lub forku i trafiają do `main` przez Pull Request.
+- `preview` jest stałym branchem integracyjnym i źródłem pełnego Vercel Preview TEST.
+- Normalne zmiany powstają na osobnym branchu lub forku i trafiają Pull Requestem do `preview`.
+- Po zielonym CI i realnej weryfikacji na Preview `preview` jest promowany osobnym Pull Requestem do `main`.
 - Maintainer może samodzielnie zatwierdzać i mergować zmiany po przejściu quality gate.
-- Zewnętrzny contributor nie potrzebuje bezpośredniego write access do `main`.
-- Preferowany merge po zamknięciu review to squash, jeden logiczny PR = jeden logiczny commit na `main`.
-- Bezpośredni push do `main` jest zarezerwowany wyłącznie dla pilnego hotfixu bezpieczeństwa/produkcji, po którym należy odtworzyć normalny stan CI i udokumentować przyczynę.
+- Zewnętrzny contributor nie potrzebuje bezpośredniego write access do `main` ani `preview`.
+- Preferowany merge po zamknięciu review to squash, jeden logiczny PR = jeden logiczny commit na branchu docelowym.
+- Bezpośredni push do `main` lub `preview` jest zarezerwowany wyłącznie dla pilnego hotfixu bezpieczeństwa/produkcji, po którym należy odtworzyć normalny stan CI i udokumentować przyczynę.
+
+## Prawa do zewnętrznych contribution
+
+Samo otwarcie Pull Requesta nie przenosi praw autorskich i nie zmienia warunków `LICENSE`.
+
+Kod od osoby spoza aktualnego zespołu nie powinien zostać zmergowany, dopóki maintainer i autor nie mają jawnie udokumentowanego prawa pozwalającego projektowi używać, modyfikować i utrzymywać daną zmianę. Dzięki temu publiczny PR może służyć do review lub propozycji bez automatycznego tworzenia niejasności dotyczących praw do kodu.
+
+Nie kopiuj do PR kodu, assetów lub treści, do których nie masz odpowiednich praw.
 
 ## Przed PR
 

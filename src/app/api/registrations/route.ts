@@ -1,6 +1,10 @@
 import { after, NextResponse } from "next/server";
 
 import { APPLICATION_ERROR_CODE, ApplicationError } from "@/application/errors";
+import {
+  dispatchRegistrationNotificationJobs,
+  ensureRegistrationNotificationJobs,
+} from "@/application/notification-outbox";
 import { sendRegistrationNotifications } from "@/application/registration-notifications";
 import { submitRegistration } from "@/application/submit-registration";
 import { isRequestId } from "@/domain/registration";
@@ -149,34 +153,77 @@ export async function POST(request: Request) {
       businessDuplicate: result.businessDuplicate,
     });
 
-    if (notificationDependencies && !result.idempotentReplay && !result.businessDuplicate) {
-      after(async () => {
+    if (notificationDependencies && !result.businessDuplicate) {
+      const outbox = repositories.notifications;
+
+      if (outbox) {
         try {
-          const notificationResult = await sendRegistrationNotifications(
-            result.registration,
-            notificationDependencies,
-          );
-
-          if (notificationResult.failed > 0) {
-            logger.warn("registration.notifications.partial_failure", {
-              ...(requestId ? { requestId } : {}),
-              registrationId: result.registrationId,
-              warningCount: notificationResult.failed,
-            });
-            return;
-          }
-
-          logger.info("registration.notifications.succeeded", {
-            ...(requestId ? { requestId } : {}),
-            registrationId: result.registrationId,
-          });
+          await ensureRegistrationNotificationJobs(result.registration, outbox);
         } catch {
-          logger.error("registration.notifications.failed", {
+          logger.error("registration.notifications.enqueue_failed", {
             ...(requestId ? { requestId } : {}),
             registrationId: result.registrationId,
           });
         }
-      });
+
+        after(async () => {
+          try {
+            const notificationResult = await dispatchRegistrationNotificationJobs(
+              result.registration,
+              { ...notificationDependencies, outbox },
+            );
+
+            if (notificationResult.failed > 0) {
+              logger.warn("registration.notifications.partial_failure", {
+                ...(requestId ? { requestId } : {}),
+                registrationId: result.registrationId,
+                warningCount: notificationResult.failed,
+              });
+              return;
+            }
+
+            if (notificationResult.attempted > 0) {
+              logger.info("registration.notifications.succeeded", {
+                ...(requestId ? { requestId } : {}),
+                registrationId: result.registrationId,
+              });
+            }
+          } catch {
+            logger.error("registration.notifications.failed", {
+              ...(requestId ? { requestId } : {}),
+              registrationId: result.registrationId,
+            });
+          }
+        });
+      } else if (!result.idempotentReplay) {
+        after(async () => {
+          try {
+            const notificationResult = await sendRegistrationNotifications(
+              result.registration,
+              notificationDependencies,
+            );
+
+            if (notificationResult.failed > 0) {
+              logger.warn("registration.notifications.partial_failure", {
+                ...(requestId ? { requestId } : {}),
+                registrationId: result.registrationId,
+                warningCount: notificationResult.failed,
+              });
+              return;
+            }
+
+            logger.info("registration.notifications.succeeded", {
+              ...(requestId ? { requestId } : {}),
+              registrationId: result.registrationId,
+            });
+          } catch {
+            logger.error("registration.notifications.failed", {
+              ...(requestId ? { requestId } : {}),
+              registrationId: result.registrationId,
+            });
+          }
+        });
+      }
     }
 
     return NextResponse.json(
