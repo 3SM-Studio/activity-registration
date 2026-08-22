@@ -91,6 +91,7 @@ function createValidationClient(): SheetsClient {
       ],
     ],
     [`${SHEET.groups}!A:ZZ`, [SHEET_SCHEMA[SHEET.groups]]],
+    [`${SHEET.notifications}!A:ZZ`, [SHEET_SCHEMA[SHEET.notifications]]],
   ]);
 
   return {
