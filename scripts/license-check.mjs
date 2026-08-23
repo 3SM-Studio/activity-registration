@@ -1,4 +1,17 @@
 import { spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const ROOT = fileURLToPath(new URL("../", import.meta.url));
+const REQUIRED_EVIDENCE = ["THIRD_PARTY_NOTICES.md", "docs/THIRD_PARTY_LICENSE_AUDIT.md"];
+
+for (const file of REQUIRED_EVIDENCE) {
+  if (!existsSync(join(ROOT, file))) {
+    console.error(`ERROR: required third-party license evidence is missing: ${file}`);
+    process.exit(1);
+  }
+}
 
 const pnpmCli = process.env.npm_execpath;
 if (!pnpmCli) {
@@ -55,19 +68,32 @@ const permissiveLicenses = new Set([
   "Zlib",
 ]);
 
-const reviewRequiredFragments = [
-  "AGPL",
-  "BUSL",
-  "CC-BY-NC",
-  "Commons-Clause",
-  "EUPL",
-  "GPL",
-  "LGPL",
-  "MPL",
-  "OSL",
-  "SSPL",
-  "UNLICENSED",
-  "UNKNOWN",
+const reviewedExceptions = [
+  {
+    license: "CC-BY-4.0",
+    packagePattern: /^caniuse-lite$/,
+    versions: new Set(["1.0.30001809"]),
+  },
+  {
+    license: "LGPL-3.0-or-later",
+    packagePattern: /^@img\/sharp-libvips-[a-z0-9-]+$/,
+    versions: new Set(["1.3.2"]),
+  },
+  {
+    license: "MPL-2.0",
+    packagePattern: /^axe-core$/,
+    versions: new Set(["4.13.0"]),
+  },
+  {
+    license: "MPL-2.0",
+    packagePattern: /^lightningcss$/,
+    versions: new Set(["1.32.0", "1.33.0"]),
+  },
+  {
+    license: "MPL-2.0",
+    packagePattern: /^lightningcss-[a-z0-9-]+$/,
+    versions: new Set(["1.32.0", "1.33.0"]),
+  },
 ];
 
 function cleanExpression(expression) {
@@ -97,17 +123,31 @@ function isAllowedLicenseExpression(expression) {
   return false;
 }
 
+function packageName(packageInfo) {
+  return packageInfo && typeof packageInfo === "object" && typeof packageInfo.name === "string"
+    ? packageInfo.name
+    : "unknown-package";
+}
+
+function packageVersions(packageInfo) {
+  if (!packageInfo || typeof packageInfo !== "object") {
+    return [];
+  }
+
+  if (Array.isArray(packageInfo.versions)) {
+    return packageInfo.versions.filter((version) => typeof version === "string");
+  }
+
+  return typeof packageInfo.version === "string" ? [packageInfo.version] : [];
+}
+
 function packageLabel(packageInfo) {
   if (!packageInfo || typeof packageInfo !== "object") {
     return String(packageInfo);
   }
 
-  const name = typeof packageInfo.name === "string" ? packageInfo.name : "unknown-package";
-  const versions = Array.isArray(packageInfo.versions)
-    ? packageInfo.versions.filter((version) => typeof version === "string")
-    : typeof packageInfo.version === "string"
-      ? [packageInfo.version]
-      : [];
+  const name = packageName(packageInfo);
+  const versions = packageVersions(packageInfo);
   const versionLabel = versions.length > 0 ? versions.join("|") : "unknown-version";
   const paths = Array.isArray(packageInfo.paths)
     ? packageInfo.paths.filter((path) => typeof path === "string")
@@ -115,6 +155,21 @@ function packageLabel(packageInfo) {
   const pathLabel = paths.length > 0 ? ` [${paths.join(", ")}]` : "";
 
   return `${name}@${versionLabel}${pathLabel}`;
+}
+
+function isReviewedException(license, packageInfo) {
+  const name = packageName(packageInfo);
+  const versions = packageVersions(packageInfo);
+  if (versions.length === 0) {
+    return false;
+  }
+
+  return reviewedExceptions.some(
+    (exception) =>
+      exception.license === license &&
+      exception.packagePattern.test(name) &&
+      versions.every((version) => exception.versions.has(version)),
+  );
 }
 
 const groups = Object.entries(report)
@@ -130,14 +185,27 @@ for (const group of groups) {
 }
 
 const failures = [];
+const reviewed = [];
 for (const group of groups) {
-  const upper = group.license.toUpperCase();
-  const explicitlyReviewRequired = reviewRequiredFragments.some((fragment) =>
-    upper.includes(fragment.toUpperCase()),
+  if (isAllowedLicenseExpression(group.license)) {
+    continue;
+  }
+
+  const unreviewedPackages = group.packages.filter(
+    (packageInfo) => !isReviewedException(group.license, packageInfo),
   );
 
-  if (explicitlyReviewRequired || !isAllowedLicenseExpression(group.license)) {
-    failures.push(group);
+  if (group.packages.length === 0 || unreviewedPackages.length > 0) {
+    failures.push({ ...group, packages: unreviewedPackages.length > 0 ? unreviewedPackages : group.packages });
+  } else {
+    reviewed.push(group);
+  }
+}
+
+if (reviewed.length > 0) {
+  console.log("Reviewed package-scoped license exceptions:");
+  for (const group of reviewed) {
+    console.log(`- ${group.license}: ${group.packages.map(packageLabel).join(", ")}`);
   }
 }
 
@@ -147,7 +215,7 @@ if (failures.length > 0) {
     console.error(`- ${group.license}: ${group.packages.map(packageLabel).join(", ")}`);
   }
   console.error(
-    "Review the exact package(s) before changing the allowlist or docs/THIRD_PARTY_LICENSE_AUDIT.md.",
+    "Review the exact package, license and version before changing the reviewed exceptions or compliance evidence.",
   );
   process.exit(1);
 }
