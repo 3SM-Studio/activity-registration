@@ -19,11 +19,15 @@ if (!pnpmCli) {
   process.exit(1);
 }
 
-const result = spawnSync(process.execPath, [pnpmCli, "licenses", "list", "--json", "--long"], {
-  encoding: "utf8",
-  maxBuffer: 32 * 1024 * 1024,
-  env: process.env,
-});
+const result = spawnSync(
+  process.execPath,
+  [pnpmCli, "licenses", "list", "--json", "--long"],
+  {
+    encoding: "utf8",
+    maxBuffer: 32 * 1024 * 1024,
+    env: process.env,
+  },
+);
 
 if (result.error) {
   console.error(`ERROR: failed to execute pnpm license inventory: ${result.error.message}`);
@@ -97,7 +101,11 @@ const reviewedExceptions = [
 ];
 
 function cleanExpression(expression) {
-  return expression.replaceAll("(", "").replaceAll(")", "").replaceAll(/\s+/g, " ").trim();
+  return expression
+    .replaceAll("(", "")
+    .replaceAll(")", "")
+    .replaceAll(/\s+/g, " ")
+    .trim();
 }
 
 function isAllowedLicenseExpression(expression) {
@@ -124,9 +132,9 @@ function isAllowedLicenseExpression(expression) {
 }
 
 function packageName(packageInfo) {
-  return packageInfo && typeof packageInfo === "object" && typeof packageInfo.name === "string"
-    ? packageInfo.name
-    : "unknown-package";
+  const hasName =
+    packageInfo && typeof packageInfo === "object" && typeof packageInfo.name === "string";
+  return hasName ? packageInfo.name : "unknown-package";
 }
 
 function packageVersions(packageInfo) {
@@ -196,7 +204,10 @@ for (const group of groups) {
   );
 
   if (group.packages.length === 0 || unreviewedPackages.length > 0) {
-    failures.push({ ...group, packages: unreviewedPackages.length > 0 ? unreviewedPackages : group.packages });
+    failures.push({
+      ...group,
+      packages: unreviewedPackages.length > 0 ? unreviewedPackages : group.packages,
+    });
   } else {
     reviewed.push(group);
   }
