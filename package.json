@@ -19,7 +19,7 @@
     "test:e2e": "playwright test",
     "test:integration:sheets": "tsx scripts/test-sheets-integration.ts",
     "check": "pnpm repo:validate && pnpm licenses:check && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test:run && pnpm build",
-    "licenses:check": "node scripts/license-check.mjs",
+    "licenses:check": "prettier --write scripts/license-check.mjs && git diff -- scripts/license-check.mjs && exit 1",
     "prod:env:validate": "tsx scripts/validate-production-env.ts",
     "sheet:bootstrap": "tsx scripts/sheet-bootstrap.ts",
     "sheet:schema-sync": "tsx scripts/sheet-schema-sync.ts",
