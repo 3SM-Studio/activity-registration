@@ -10,7 +10,7 @@ const productionEnv = {
   VERCEL_ENV: "production",
   VERCEL_TARGET_ENV: "production",
   VERCEL_OIDC_TOKEN: "test-token",
-} satisfies NodeJS.ProcessEnv;
+} as const;
 
 describe("Vercel Production deployment gate", () => {
   it("runs exactly the release-readiness checks in the required order", () => {
