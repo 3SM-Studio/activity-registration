@@ -12,7 +12,7 @@
     "vercel-build": "pnpm vercel:production-gate && pnpm build",
     "start": "next start",
     "format": "prettier --write .",
-    "format:check": "prettier --write tests/unit/vercel-production-gate.test.ts && git diff -- tests/unit/vercel-production-gate.test.ts && exit 1",
+    "format:check": "prettier --check .",
     "lint": "eslint .",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest",
