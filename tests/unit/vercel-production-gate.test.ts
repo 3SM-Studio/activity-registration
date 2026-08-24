@@ -14,11 +14,7 @@ const productionEnv = {
 
 describe("Vercel Production deployment gate", () => {
   it("runs exactly the release-readiness checks in the required order", () => {
-    expect(PRODUCTION_GATE_SCRIPTS).toEqual([
-      "prod:env:validate",
-      "sheet:validate",
-      "diagnostics",
-    ]);
+    expect(PRODUCTION_GATE_SCRIPTS).toEqual(["prod:env:validate", "sheet:validate", "diagnostics"]);
   });
 
   it("runs for an unambiguous Vercel Production build with OIDC", () => {
