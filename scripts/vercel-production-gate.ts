@@ -13,7 +13,9 @@ type GateDecision = Readonly<
   | { run: true; reason: "production"; target: "production" }
 >;
 
-export function decideProductionDeploymentGate(env: NodeJS.ProcessEnv): GateDecision {
+type EnvironmentSnapshot = Readonly<Record<string, string | undefined>>;
+
+export function decideProductionDeploymentGate(env: EnvironmentSnapshot): GateDecision {
   if (env.VERCEL !== "1") {
     return { run: false, reason: "not-vercel", target: null };
   }
