@@ -32,6 +32,7 @@ const tableMetadataResponse = {
             endColumnIndex: 22,
           },
           columnProperties: [
+            { columnName: "REGISTRATION_ID", columnType: "TEXT" },
             { columnIndex: 9, columnName: "BIRTH_DATE", columnType: "DATE" },
             {
               columnIndex: 15,
@@ -204,6 +205,7 @@ describe("GoogleSheetsClient", () => {
             startColumnIndex: 0,
             endColumnIndex: 22,
             columnProperties: [
+              { columnIndex: 0, columnName: "REGISTRATION_ID", columnType: "TEXT" },
               { columnIndex: 9, columnName: "BIRTH_DATE", columnType: "DATE" },
               {
                 columnIndex: 15,
