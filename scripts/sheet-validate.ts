@@ -1,9 +1,6 @@
 import { validateSheetStructure } from "../src/infrastructure/google/sheet-admin";
 import { validateSupportingSheetTables } from "../src/infrastructure/google/supporting-sheet-tables";
-import {
-  REGISTRATIONS_TABLE_ID,
-  SHEET,
-} from "../src/infrastructure/google/sheets-contracts";
+import { REGISTRATIONS_TABLE_ID, SHEET } from "../src/infrastructure/google/sheets-contracts";
 import { createAdminSheetsClient } from "./_google-admin";
 
 async function main() {
