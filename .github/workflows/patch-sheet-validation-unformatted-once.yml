@@ -1,0 +1,198 @@
+name: Patch sheet validation catalog render mode once
+
+on:
+  push:
+    branches:
+      - fix/sheet-validation-unformatted-catalog
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: fix/sheet-validation-unformatted-catalog
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11.20.0
+          run_install: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24.19.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Apply deterministic patch
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('src/infrastructure/google/sheet-admin.ts')
+          text = path.read_text()
+
+          anchor = 'const VALID_ACTIVE_VALUES = new Set(["TAK", "NIE", "TRUE", "FALSE", "1", "0", "YES", "NO"]);\n'
+          replacement = anchor + 'const UNFORMATTED_VALUES = { valueRenderOption: "UNFORMATTED_VALUE" } as const;\n'
+          if text.count(anchor) != 1:
+              raise SystemExit('VALID_ACTIVE_VALUES anchor mismatch')
+          text = text.replace(anchor, replacement)
+
+          old = '''  const [cityRows, seasonRows, offeringRows, groupRows, settingsRows] = await Promise.all([\n    client.getValues(`${SHEET.cities}!A:ZZ`),\n    client.getValues(`${SHEET.seasons}!A:ZZ`),\n    client.getValues(`${SHEET.offerings}!A:ZZ`),\n    client.getValues(`${SHEET.groups}!A:ZZ`),\n    client.getValues(`${SHEET.settings}!A:ZZ`),\n  ]);'''
+          new = '''  const [cityRows, seasonRows, offeringRows, groupRows, settingsRows] = await Promise.all([\n    client.getValues(`${SHEET.cities}!A:ZZ`, UNFORMATTED_VALUES),\n    client.getValues(`${SHEET.seasons}!A:ZZ`, UNFORMATTED_VALUES),\n    client.getValues(`${SHEET.offerings}!A:ZZ`, UNFORMATTED_VALUES),\n    client.getValues(`${SHEET.groups}!A:ZZ`, UNFORMATTED_VALUES),\n    client.getValues(`${SHEET.settings}!A:ZZ`),\n  ]);'''
+          if text.count(old) != 1:
+              raise SystemExit('catalog Promise.all block mismatch')
+          path.write_text(text.replace(old, new))
+          PY
+
+          cat > tests/unit/sheet-validation-render-mode.test.ts <<'EOF'
+          import { describe, expect, it } from "vitest";
+
+          import { REGISTRATION_STATUS } from "@/domain/registration";
+          import { validateSheetStructure } from "@/infrastructure/google/sheet-admin";
+          import {
+            REGISTRATION_HEADERS,
+            REGISTRATION_TABLE_COLUMNS,
+            REGISTRATIONS_TABLE_ID,
+            REGISTRATIONS_TABLE_NAME,
+            SHEET,
+            SHEET_SCHEMA,
+            SYSTEM_SCHEMA_VERSION,
+          } from "@/infrastructure/google/sheets-contracts";
+          import type { SheetsClient, TableMetadata } from "@/infrastructure/google/sheets-client";
+
+          const UNFORMATTED_VALUES = { valueRenderOption: "UNFORMATTED_VALUE" } as const;
+
+          function registrationTable(): TableMetadata {
+            return {
+              tableId: REGISTRATIONS_TABLE_ID,
+              name: REGISTRATIONS_TABLE_NAME,
+              startRowIndex: 0,
+              endRowIndex: 2,
+              startColumnIndex: 0,
+              endColumnIndex: REGISTRATION_HEADERS.length,
+              columnProperties: REGISTRATION_TABLE_COLUMNS.map((column) => ({
+                columnIndex: column.columnIndex,
+                columnName: column.columnName,
+                columnType: column.columnType,
+                ...(column.columnName === "STATUS"
+                  ? { dropdownValues: Object.values(REGISTRATION_STATUS) }
+                  : {}),
+              })),
+            };
+          }
+
+          describe("validateSheetStructure catalog value rendering", () => {
+            it("reads catalog sheets unformatted so native Google date serials stay locale-independent", async () => {
+              const calls: Array<
+                Readonly<{
+                  range: string;
+                  valueRenderOption?: "FORMATTED_VALUE" | "UNFORMATTED_VALUE" | "FORMULA";
+                }>
+              > = [];
+
+              const rowsByRange = new Map<string, readonly (readonly unknown[])[]>([
+                [`${SHEET.cities}!1:1`, [SHEET_SCHEMA[SHEET.cities]]],
+                [`${SHEET.seasons}!1:1`, [SHEET_SCHEMA[SHEET.seasons]]],
+                [`${SHEET.offerings}!1:1`, [SHEET_SCHEMA[SHEET.offerings]]],
+                [`${SHEET.groups}!1:1`, [SHEET_SCHEMA[SHEET.groups]]],
+                [`${SHEET.registrations}!1:1`, [SHEET_SCHEMA[SHEET.registrations]]],
+                [`${SHEET.notifications}!1:1`, [SHEET_SCHEMA[SHEET.notifications]]],
+                [`${SHEET.settings}!1:1`, [SHEET_SCHEMA[SHEET.settings]]],
+                [
+                  `${SHEET.cities}!A:ZZ`,
+                  [SHEET_SCHEMA[SHEET.cities], ["gdynia", "Gdynia", true, 10]],
+                ],
+                [
+                  `${SHEET.seasons}!A:ZZ`,
+                  [
+                    SHEET_SCHEMA[SHEET.seasons],
+                    ["test-2026-2027", "2026/2027", 46266, 46599, true, 10],
+                  ],
+                ],
+                [
+                  `${SHEET.offerings}!A:ZZ`,
+                  [
+                    SHEET_SCHEMA[SHEET.offerings],
+                    [
+                      "off-1",
+                      "gdynia",
+                      "Hip-hop",
+                      "",
+                      true,
+                      10,
+                      "ROLLING",
+                      "CLOSED",
+                      "",
+                      "",
+                      false,
+                    ],
+                  ],
+                ],
+                [`${SHEET.groups}!A:ZZ`, [SHEET_SCHEMA[SHEET.groups]]],
+                [
+                  `${SHEET.settings}!A:ZZ`,
+                  [
+                    SHEET_SCHEMA[SHEET.settings],
+                    ["SYSTEM_SCHEMA_VERSION", String(SYSTEM_SCHEMA_VERSION)],
+                    ["REGISTRATIONS_OPEN", "FALSE"],
+                    ["CURRENT_SEASON_ID", "test-2026-2027"],
+                    ["PUBLIC_FORM_TITLE", "Zapisy"],
+                    ["SUCCESS_MESSAGE", "Dziękujemy"],
+                    ["PRIVACY_NOTICE_URL", "/privacy"],
+                    ["PRIVACY_NOTICE_VERSION", "test-v4"],
+                  ],
+                ],
+              ]);
+
+              const client: SheetsClient = {
+                async getValues(range, options) {
+                  calls.push({
+                    range,
+                    ...(options?.valueRenderOption
+                      ? { valueRenderOption: options.valueRenderOption }
+                      : {}),
+                  });
+                  return rowsByRange.get(range) ?? [];
+                },
+                async updateValues() {},
+                async appendValues() {},
+                async appendTableRow() {},
+                async clearValues() {},
+                async getSheetMetadata() {
+                  return Object.keys(SHEET_SCHEMA).map((title, index) => ({
+                    title,
+                    sheetId: index + 1,
+                    ...(title === SHEET.registrations ? { tables: [registrationTable()] } : {}),
+                  }));
+                },
+                async batchUpdate() {},
+              };
+
+              const report = await validateSheetStructure(client);
+
+              expect(report.seasonCount).toBe(1);
+              for (const sheet of [SHEET.cities, SHEET.seasons, SHEET.offerings, SHEET.groups]) {
+                expect(calls).toContainEqual({
+                  range: `${sheet}!A:ZZ`,
+                  ...UNFORMATTED_VALUES,
+                });
+              }
+              expect(calls).toContainEqual({ range: `${SHEET.settings}!A:ZZ` });
+            });
+          });
+          EOF
+
+          pnpm prettier --write src/infrastructure/google/sheet-admin.ts tests/unit/sheet-validation-render-mode.test.ts
+          rm .github/workflows/patch-sheet-validation-unformatted-once.yml
+      - name: Commit clean patch
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/infrastructure/google/sheet-admin.ts tests/unit/sheet-validation-render-mode.test.ts .github/workflows/patch-sheet-validation-unformatted-once.yml
+          git diff --cached --check
+          git commit -m 'fix: validate catalog using unformatted Sheets values'
+          git push origin HEAD:fix/sheet-validation-unformatted-catalog
