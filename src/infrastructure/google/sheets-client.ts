@@ -332,8 +332,15 @@ export class GoogleSheetsClient implements SheetsClient {
           return [];
         }
 
-        const columnProperties = (table.columnProperties ?? []).flatMap((column) => {
-          if (typeof column.columnIndex !== "number" || !column.columnName || !column.columnType) {
+        const columnProperties = (table.columnProperties ?? []).flatMap((column, position) => {
+          const columnIndex =
+            typeof column.columnIndex === "number"
+              ? column.columnIndex
+              : position === 0
+                ? 0
+                : undefined;
+
+          if (typeof columnIndex !== "number" || !column.columnName || !column.columnType) {
             return [];
           }
 
@@ -343,7 +350,7 @@ export class GoogleSheetsClient implements SheetsClient {
 
           return [
             {
-              columnIndex: column.columnIndex,
+              columnIndex,
               columnName: column.columnName,
               columnType: column.columnType,
               ...(dropdownValues.length > 0 ? { dropdownValues } : {}),
