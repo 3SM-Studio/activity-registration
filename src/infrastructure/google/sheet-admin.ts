@@ -56,6 +56,7 @@ const DEFAULT_SETTINGS = [
 
 const REQUIRED_SETTING_KEYS = DEFAULT_SETTINGS.map(([key]) => key);
 const VALID_ACTIVE_VALUES = new Set(["TAK", "NIE", "TRUE", "FALSE", "1", "0", "YES", "NO"]);
+const UNFORMATTED_VALUES = { valueRenderOption: "UNFORMATTED_VALUE" } as const;
 
 const REGISTRATION_PROTECTION_SPECS = [
   {
@@ -452,10 +453,10 @@ export async function validateSheetStructure(client: SheetsClient): Promise<Shee
   );
 
   const [cityRows, seasonRows, offeringRows, groupRows, settingsRows] = await Promise.all([
-    client.getValues(`${SHEET.cities}!A:ZZ`),
-    client.getValues(`${SHEET.seasons}!A:ZZ`),
-    client.getValues(`${SHEET.offerings}!A:ZZ`),
-    client.getValues(`${SHEET.groups}!A:ZZ`),
+    client.getValues(`${SHEET.cities}!A:ZZ`, UNFORMATTED_VALUES),
+    client.getValues(`${SHEET.seasons}!A:ZZ`, UNFORMATTED_VALUES),
+    client.getValues(`${SHEET.offerings}!A:ZZ`, UNFORMATTED_VALUES),
+    client.getValues(`${SHEET.groups}!A:ZZ`, UNFORMATTED_VALUES),
     client.getValues(`${SHEET.settings}!A:ZZ`),
   ]);
 
