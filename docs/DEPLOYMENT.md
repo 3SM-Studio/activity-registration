@@ -61,7 +61,7 @@ Nie uznawaj merge w GitHub za dowód wdrożenia, dopóki odpowiadający deployme
 
 ## Aktualny stan infrastruktury
 
-Zweryfikowane 2026-08-22:
+Zweryfikowane 2026-08-26:
 
 ```text
 Vercel project      pozytywka-activity-registration
@@ -189,11 +189,27 @@ TEST REGISTRATIONS_OPEN=FALSE
 
 ## Production environment
 
-Production remains fail-closed until all blocking release gates are complete.
+Production remains fail-closed until all blocking release gates are complete. The command-level Production gate itself is now verified.
 
 ```text
 PROD REGISTRATIONS_OPEN=FALSE
 ```
+
+Latest verified Production evidence, 2026-08-26:
+
+```text
+Git SHA              01e07a11be2214bbf3fd4380dc2c34b3190ed4ba
+Vercel deployment    dpl_8eEVcfawVZL3pixSDBdjkrWphcUP
+Deployment state     READY
+prod:env:validate    PASS
+sheet:validate       PASS, warnings=[]
+diagnostics          PASS, jobs=2 missing=0 failed=0 expired_leases=0
+Next.js build         PASS
+post-deploy GET       200, registrationsOpen=false, closed-state UX
+runtime errors        none found after smoke
+```
+
+These checks ran inside the exact Vercel Production build environment before the normal Next.js build. They supersede the earlier release-checklist placeholders for exported-env, Sheet validation and diagnostics. Re-run them when Production code, environment or Sheet contract changes.
 
 Do not use long-lived service-account JSON private keys. Production authentication uses Vercel OIDC/WIF and the dedicated PROD service account.
 

@@ -1,8 +1,8 @@
 # Release checklist
 
-Date: 2026-08-22
+Date: 2026-08-26
 Target: Pozytywka Registration v4
-Status: Production deployed with durable outbox and intentionally closed pending remaining command-level and physical/manual acceptance
+Status: Production deployed and command-level Production gates verified; intentionally closed pending remaining infrastructure/governance and physical/manual acceptance
 
 `REGISTRATIONS_OPEN=TRUE` in Production is the final controlled release action. Until every blocking item below is closed, Production remains intentionally closed.
 
@@ -46,6 +46,9 @@ Canonical decisions: `docs/PRODUCTION_DECISIONS_2026-08-20.md`.
 - [x] PR #51 durable notification outbox passed `pnpm check`, Chrome verification and Critical E2E
 - [x] PR #52 repository licensing/source-visible policy passed CI
 - [x] release PR #54 passed full CI before promotion to `main`
+- [x] PR #70 fixed locale-sensitive Google Sheets validation and passed full CI on `preview`
+- [x] PR #71 promoted the exact validated fix to `main` and passed full CI
+- [x] Production deployment gate on `main` SHA `01e07a11be2214bbf3fd4380dc2c34b3190ed4ba` passed `prod:env:validate`, `sheet:validate` and `diagnostics` before the normal Next.js build
 
 ## Notification reliability
 
@@ -119,8 +122,8 @@ Canonical PROD Sheet ID:
 - [x] dedicated PROD service account is the only application service account on PROD Sheet ACL
 - [x] TEST service account absent from PROD Sheet ACL
 - [x] PROD Sheet sharing restricted to explicit accounts
-- [ ] exact final PROD command-level `sheet:validate` through production Vercel identity
-- [ ] exact final PROD command-level `diagnostics` through production Vercel identity after outbox adoption
+- [x] exact final PROD command-level `sheet:validate` through production Vercel identity on 2026-08-26, with zero warnings
+- [x] exact final PROD command-level `diagnostics` through production Vercel identity on 2026-08-26 after outbox adoption: 2 jobs, 0 missing, 0 failed, 0 expired leases
 
 Historical `ZAPISY` rows may retain older row-level schema versions. `SYSTEM_SCHEMA_VERSION=4` defines the current Sheet contract; historical values must not be fabricated merely to make all rows numerically identical.
 
@@ -144,8 +147,14 @@ TEST/Preview service account:
 - [x] Vercel deployment metadata reports the exact same Production git SHA
 - [x] post-rollout Production GET returned HTTP 200 and the closed-state UX
 - [x] no warning/error/fatal logs found for the new Production deployment during post-rollout verification
+- [x] PR #71 merged to `main` as `01e07a11be2214bbf3fd4380dc2c34b3190ed4ba`
+- [x] matching Vercel Production deployment `dpl_8eEVcfawVZL3pixSDBdjkrWphcUP` reached `READY` for exactly that SHA
+- [x] `pnpm prod:env:validate` ran inside the exact Vercel Production build environment and returned `ok: true`, including canonical Sheet, dedicated PROD identity, WIF and disabled test/catalog seeds
+- [x] the same Production gate completed `sheet:validate` with zero warnings and `diagnostics` with zero outbox health failures
+- [x] normal Next.js production build completed after the Production gate
+- [x] post-deploy GET returned HTTP 200 and rendered `Zapisy są zamknięte` with `registrationsOpen=false`
+- [x] no warning/error/fatal runtime logs and no runtime error clusters were found for the verified deployment after smoke
 - [ ] broader Google Cloud IAM least-privilege review beyond Sheet ACL
-- [ ] `pnpm prod:env:validate` against an exported copy of the exact final Production environment
 
 ## Security and abuse
 
@@ -206,12 +215,11 @@ These checks require a real device or human operator and are not replaced by CI:
 
 ## Remaining release sequence
 
-Production code promotion and durable-outbox rollout are complete. Do not repeat the historical adoption.
+Production code promotion, durable-outbox rollout and exact Production command-level validation are complete. Do not repeat the historical adoption. Re-run the command-level gate only when Production code, environment or Sheet contract changes.
 
-1. execute the remaining exact Production command-level validation/diagnostics/environment checks,
-2. complete broader Google Cloud IAM least-privilege review,
-3. physically display both adopted Standardy versions,
-4. complete remaining real-device, keyboard, focus, reflow, contrast and legal read-through acceptance,
-5. configure GitHub `main`/`preview` repository protection/rulesets,
-6. only then set Production `REGISTRATIONS_OPEN=TRUE`,
-7. perform minimal live smoke and monitor without logging PII.
+1. complete broader Google Cloud IAM least-privilege review,
+2. physically display both adopted Standardy versions,
+3. complete remaining real-device, keyboard, focus, reflow, contrast and legal read-through acceptance,
+4. configure GitHub `main`/`preview` repository protection/rulesets,
+5. only then set Production `REGISTRATIONS_OPEN=TRUE`,
+6. perform minimal live smoke and monitor without logging PII.
