@@ -1,0 +1,116 @@
+name: Record Production gate evidence once v2
+
+on:
+  push:
+    branches:
+      - docs/record-production-gates-2026-08-26
+    paths:
+      - .github/workflows/patch-production-gate-docs-once-v2.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: docs/record-production-gates-2026-08-26
+          fetch-depth: 0
+
+      - name: Apply deterministic documentation patch
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_exact(path: str, old: str, new: str) -> None:
+              p = Path(path)
+              text = p.read_text()
+              if old not in text:
+                  raise SystemExit(f"Expected block not found in {path}: {old[:120]!r}")
+              p.write_text(text.replace(old, new, 1))
+
+          release = "docs/RELEASE_CHECKLIST.md"
+          replace_exact(
+              release,
+              "Date: 2026-08-22\nTarget: Pozytywka Registration v4\nStatus: Production deployed with durable outbox and intentionally closed pending remaining command-level and physical/manual acceptance",
+              "Date: 2026-08-26\nTarget: Pozytywka Registration v4\nStatus: Production deployed and command-level Production gates verified; intentionally closed pending remaining infrastructure/governance and physical/manual acceptance",
+          )
+          replace_exact(
+              release,
+              "- [x] release PR #54 passed full CI before promotion to `main`",
+              "- [x] release PR #54 passed full CI before promotion to `main`\n- [x] PR #70 fixed locale-sensitive Google Sheets validation and passed full CI on `preview`\n- [x] PR #71 promoted the exact validated fix to `main` and passed full CI\n- [x] Production deployment gate on `main` SHA `01e07a11be2214bbf3fd4380dc2c34b3190ed4ba` passed `prod:env:validate`, `sheet:validate` and `diagnostics` before the normal Next.js build",
+          )
+          replace_exact(
+              release,
+              "- [ ] exact final PROD command-level `sheet:validate` through production Vercel identity\n- [ ] exact final PROD command-level `diagnostics` through production Vercel identity after outbox adoption",
+              "- [x] exact final PROD command-level `sheet:validate` through production Vercel identity on 2026-08-26, with zero warnings\n- [x] exact final PROD command-level `diagnostics` through production Vercel identity on 2026-08-26 after outbox adoption: 2 jobs, 0 missing, 0 failed, 0 expired leases",
+          )
+          replace_exact(
+              release,
+              "- [x] no warning/error/fatal logs found for the new Production deployment during post-rollout verification\n- [ ] broader Google Cloud IAM least-privilege review beyond Sheet ACL\n- [ ] `pnpm prod:env:validate` against an exported copy of the exact final Production environment",
+              "- [x] no warning/error/fatal logs found for the new Production deployment during post-rollout verification\n- [x] PR #71 merged to `main` as `01e07a11be2214bbf3fd4380dc2c34b3190ed4ba`\n- [x] matching Vercel Production deployment `dpl_8eEVcfawVZL3pixSDBdjkrWphcUP` reached `READY` for exactly that SHA\n- [x] `pnpm prod:env:validate` ran inside the exact Vercel Production build environment and returned `ok: true`, including canonical Sheet, dedicated PROD identity, WIF and disabled test/catalog seeds\n- [x] the same Production gate completed `sheet:validate` with zero warnings and `diagnostics` with zero outbox health failures\n- [x] normal Next.js production build completed after the Production gate\n- [x] post-deploy GET returned HTTP 200 and rendered `Zapisy są zamknięte` with `registrationsOpen=false`\n- [x] no warning/error/fatal runtime logs and no runtime error clusters were found for the verified deployment after smoke\n- [ ] broader Google Cloud IAM least-privilege review beyond Sheet ACL",
+          )
+          replace_exact(
+              release,
+              "Production code promotion and durable-outbox rollout are complete. Do not repeat the historical adoption.\n\n1. execute the remaining exact Production command-level validation/diagnostics/environment checks,\n2. complete broader Google Cloud IAM least-privilege review,\n3. physically display both adopted Standardy versions,\n4. complete remaining real-device, keyboard, focus, reflow, contrast and legal read-through acceptance,\n5. configure GitHub `main`/`preview` repository protection/rulesets,\n6. only then set Production `REGISTRATIONS_OPEN=TRUE`,\n7. perform minimal live smoke and monitor without logging PII.",
+              "Production code promotion, durable-outbox rollout and exact Production command-level validation are complete. Do not repeat the historical adoption. Re-run the command-level gate only when Production code, environment or Sheet contract changes.\n\n1. complete broader Google Cloud IAM least-privilege review,\n2. physically display both adopted Standardy versions,\n3. complete remaining real-device, keyboard, focus, reflow, contrast and legal read-through acceptance,\n4. configure GitHub `main`/`preview` repository protection/rulesets,\n5. only then set Production `REGISTRATIONS_OPEN=TRUE`,\n6. perform minimal live smoke and monitor without logging PII.",
+          )
+
+          status = "docs/IMPLEMENTATION_STATUS.md"
+          replace_exact(status, "Date: 2026-08-22", "Date: 2026-08-26")
+          replace_exact(
+              status,
+              "The v4 software core, durable notification outbox and production business/legal baseline are implemented. Production is deployed but intentionally fail-closed until the remaining command-level, infrastructure and physical/manual release gates are completed.",
+              "The v4 software core, durable notification outbox and production business/legal baseline are implemented. Production is deployed and the exact command-level Production environment, Sheet and diagnostics gates are verified. It remains intentionally fail-closed until the remaining infrastructure/governance and physical/manual release gates are completed.",
+          )
+          replace_exact(status, "## Verified state on 2026-08-22", "## Verified state through 2026-08-26")
+          replace_exact(
+              status,
+              "- PR #52 clarified the public source-visible, non-open-source licensing policy and passed CI before merge to `preview`.",
+              "- PR #52 clarified the public source-visible, non-open-source licensing policy and passed CI before merge to `preview`.\n- PR #70 corrected the validator/runtime mismatch by reading catalog sheets with `UNFORMATTED_VALUE`; full CI passed before merge to `preview`.\n- PR #71 promoted the exact validated change to `main` as `01e07a11be2214bbf3fd4380dc2c34b3190ed4ba`; full CI passed.\n- Vercel Production deployment `dpl_8eEVcfawVZL3pixSDBdjkrWphcUP` reached `READY` for exactly that SHA.\n- the exact Vercel Production build ran `prod:env:validate` successfully.\n- the exact Vercel Production build ran `sheet:validate` successfully with zero warnings.\n- the exact Vercel Production build ran `diagnostics` successfully: 2 notification jobs, 0 missing jobs, 0 failed jobs and 0 expired leases.\n- the normal Next.js production build completed after those gates.\n- post-deploy GET returned HTTP 200 with `registrationsOpen=false` and the `Zapisy są zamknięte` UX.\n- post-deploy verification found no warning/error/fatal runtime logs and no runtime error clusters for the verified deployment.",
+          )
+          old_block = (
+              "1. exact final Production `sheet:validate` command through the Production runtime identity,\n"
+              "2. exact final Production `diagnostics` command through the Production runtime identity,\n"
+              "3. `pnpm prod:env:validate` against an exported copy of the exact final Production environment,\n"
+              "4. broader Google Cloud IAM least-privilege review beyond the Sheet ACL,\n"
+              "5. physically display both adopted Standardy versions in the Pozytywka premises,\n"
+              "6. physical Android Chrome acceptance,\n"
+              "7. physical iPhone Safari acceptance,\n"
+              "8. keyboard/focus/200% zoom/visual contrast human acceptance,\n"
+              "9. final human read-through of public legal/safety documents,\n"
+              "10. GitHub repository ruleset/branch-protection configuration through an account with the required admin capability."
+          )
+          new_block = (
+              "1. broader Google Cloud IAM least-privilege review beyond the Sheet ACL,\n"
+              "2. physically display both adopted Standardy versions in the Pozytywka premises,\n"
+              "3. physical Android Chrome acceptance,\n"
+              "4. physical iPhone Safari acceptance,\n"
+              "5. keyboard/focus/200% zoom/visual contrast human acceptance,\n"
+              "6. final human read-through of public legal/safety documents,\n"
+              "7. GitHub repository ruleset/branch-protection configuration through an account with the required admin capability."
+          )
+          replace_exact(status, old_block, new_block)
+
+          deployment = "docs/DEPLOYMENT.md"
+          replace_exact(deployment, "Zweryfikowane 2026-08-22:", "Zweryfikowane 2026-08-26:")
+          replace_exact(
+              deployment,
+              "Production remains fail-closed until all blocking release gates are complete.\n\n```text\nPROD REGISTRATIONS_OPEN=FALSE\n```\n\nDo not use long-lived service-account JSON private keys. Production authentication uses Vercel OIDC/WIF and the dedicated PROD service account.",
+              "Production remains fail-closed until all blocking release gates are complete. The command-level Production gate itself is now verified.\n\n```text\nPROD REGISTRATIONS_OPEN=FALSE\n```\n\nLatest verified Production evidence, 2026-08-26:\n\n```text\nGit SHA              01e07a11be2214bbf3fd4380dc2c34b3190ed4ba\nVercel deployment    dpl_8eEVcfawVZL3pixSDBdjkrWphcUP\nDeployment state     READY\nprod:env:validate    PASS\nsheet:validate       PASS, warnings=[]\ndiagnostics          PASS, jobs=2 missing=0 failed=0 expired_leases=0\nNext.js build         PASS\npost-deploy GET       200, registrationsOpen=false, closed-state UX\nruntime errors        none found after smoke\n```\n\nThese checks ran inside the exact Vercel Production build environment before the normal Next.js build. They supersede the earlier release-checklist placeholders for exported-env, Sheet validation and diagnostics. Re-run them when Production code, environment or Sheet contract changes.\n\nDo not use long-lived service-account JSON private keys. Production authentication uses Vercel OIDC/WIF and the dedicated PROD service account.",
+          )
+          PY
+
+      - name: Commit clean documentation evidence
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/RELEASE_CHECKLIST.md docs/IMPLEMENTATION_STATUS.md docs/DEPLOYMENT.md
+          git rm .github/workflows/patch-production-gate-docs-once.yml
+          git rm .github/workflows/patch-production-gate-docs-once-v2.yml
+          git commit -m "docs: record verified Production command gates"
+          git push origin HEAD:docs/record-production-gates-2026-08-26
