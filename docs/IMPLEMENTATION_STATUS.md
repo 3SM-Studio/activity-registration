@@ -1,12 +1,12 @@
 # Implementation status
 
-Date: 2026-08-22
+Date: 2026-08-26
 Runtime: Pozytywka Registration v4
 Integration branch: `preview`
 
 ## Current product state
 
-The v4 software core, durable notification outbox and production business/legal baseline are implemented. Production is deployed but intentionally fail-closed until the remaining command-level, infrastructure and physical/manual release gates are completed.
+The v4 software core, durable notification outbox and production business/legal baseline are implemented. Production is deployed and the exact command-level Production environment, Sheet and diagnostics gates are verified. It remains intentionally fail-closed until the remaining infrastructure/governance and physical/manual release gates are completed.
 
 The system remains a focused registration request intake application, not a full CRM, payment system or attendance platform.
 
@@ -105,7 +105,7 @@ System sheets:
 
 `PANEL_OPERATORA` is intentionally a normal derived dashboard rather than a native Table.
 
-## Verified state on 2026-08-22
+## Verified state through 2026-08-26
 
 - TEST returned to `REGISTRATIONS_OPEN=FALSE` after QA.
 - TEST outbox was adopted while closed.
@@ -123,21 +123,27 @@ System sheets:
 - PROD `ZAPISY` has five actionable warning conditional-format rules and no legacy whole-cell STATUS color rules.
 - PR #51 durable outbox passed repository quality gate, Chrome verification and Critical E2E before merge to `preview`.
 - PR #52 clarified the public source-visible, non-open-source licensing policy and passed CI before merge to `preview`.
+- PR #70 corrected the validator/runtime mismatch by reading catalog sheets with `UNFORMATTED_VALUE`; full CI passed before merge to `preview`.
+- PR #71 promoted the exact validated change to `main` as `01e07a11be2214bbf3fd4380dc2c34b3190ed4ba`; full CI passed.
+- Vercel Production deployment `dpl_8eEVcfawVZL3pixSDBdjkrWphcUP` reached `READY` for exactly that SHA.
+- the exact Vercel Production build ran `prod:env:validate` successfully.
+- the exact Vercel Production build ran `sheet:validate` successfully with zero warnings.
+- the exact Vercel Production build ran `diagnostics` successfully: 2 notification jobs, 0 missing jobs, 0 failed jobs and 0 expired leases.
+- the normal Next.js production build completed after those gates.
+- post-deploy GET returned HTTP 200 with `registrationsOpen=false` and the `Zapisy są zamknięte` UX.
+- post-deploy verification found no warning/error/fatal runtime logs and no runtime error clusters for the verified deployment.
 
 ## Remaining release blockers
 
 Do not fabricate completion of these items:
 
-1. exact final Production `sheet:validate` command through the Production runtime identity,
-2. exact final Production `diagnostics` command through the Production runtime identity,
-3. `pnpm prod:env:validate` against an exported copy of the exact final Production environment,
-4. broader Google Cloud IAM least-privilege review beyond the Sheet ACL,
-5. physically display both adopted Standardy versions in the Pozytywka premises,
-6. physical Android Chrome acceptance,
-7. physical iPhone Safari acceptance,
-8. keyboard/focus/200% zoom/visual contrast human acceptance,
-9. final human read-through of public legal/safety documents,
-10. GitHub repository ruleset/branch-protection configuration through an account with the required admin capability.
+1. broader Google Cloud IAM least-privilege review beyond the Sheet ACL,
+2. physically display both adopted Standardy versions in the Pozytywka premises,
+3. physical Android Chrome acceptance,
+4. physical iPhone Safari acceptance,
+5. keyboard/focus/200% zoom/visual contrast human acceptance,
+6. final human read-through of public legal/safety documents,
+7. GitHub repository ruleset/branch-protection configuration through an account with the required admin capability.
 
 Production must stay closed until the blocking release checklist is complete.
 
