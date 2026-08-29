@@ -29,6 +29,7 @@
     "sheet:migrate": "tsx scripts/sheet-migrate.ts",
     "seed:test": "tsx scripts/seed-test.ts && tsx scripts/sheet-schema-sync.ts",
     "seed:production-catalog": "tsx scripts/seed-production-catalog.ts && tsx scripts/sheet-schema-sync.ts",
+    "catalog:refresh:2026-2027": "tsx scripts/refresh-pozytywka-offer-2026-2027.ts && tsx scripts/sheet-schema-sync.ts",
     "diagnostics": "tsx scripts/diagnostics.ts",
     "registrations:reconcile": "tsx scripts/reconcile-registrations.ts",
     "notifications:adopt": "tsx scripts/notifications-adopt.ts",
