@@ -375,7 +375,7 @@ describe("submitRegistration", () => {
     expect(registrations.records).toHaveLength(0);
   });
 
-  it("starts a direct WAITLIST_ONLY submission in WAITLISTED", async () => {
+  it("starts a direct WAITLIST_ONLY submission in NEW for operator review", async () => {
     const catalog = new FakeCatalogRepository({
       cities: publicCatalog.cities,
       offerings: publicCatalog.offerings.map((offering) => ({
@@ -387,7 +387,7 @@ describe("submitRegistration", () => {
     const result = await submitRegistration(baseRequest, {
       repositories: createRepositories(registrations, {}, catalog),
     });
-    expect(result.registration.status).toBe(REGISTRATION_STATUS.waitlisted);
+    expect(result.registration.status).toBe(REGISTRATION_STATUS.new);
     expect(registrations.records).toHaveLength(1);
   });
 
