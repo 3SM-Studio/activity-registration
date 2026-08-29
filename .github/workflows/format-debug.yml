@@ -1,0 +1,37 @@
+name: Format debug
+
+on:
+  push:
+    branches:
+      - feat/2026-2027-offer-refresh
+
+permissions:
+  contents: read
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11.20.0
+          run_install: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24.19.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Show Prettier diff
+        run: |
+          pnpm exec prettier --write \
+            scripts/refresh-pozytywka-offer-2026-2027.ts \
+            scripts/seed-production-catalog.ts \
+            src/config/pozytywka-offer-2026-2027.ts \
+            tests/unit/pozytywka-offer-2026-2027.test.ts
+          git diff -- \
+            scripts/refresh-pozytywka-offer-2026-2027.ts \
+            scripts/seed-production-catalog.ts \
+            src/config/pozytywka-offer-2026-2027.ts \
+            tests/unit/pozytywka-offer-2026-2027.test.ts
