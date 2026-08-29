@@ -98,6 +98,14 @@ export const CLOSED_WITHOUT_DATE_FORMULA =
   '=OR(AND($P2="REJECTED";$AA2="");AND($P2="CANCELLED";$AA2=""))';
 export const POSSIBLE_DUPLICATE_COUNT_FORMULA = "=SUMPRODUCT(--(LEN(ZAPISY!AB2:AB)>0))";
 
+export function buildFreePlacesSummaryFormula(firstGroupRow: number, lastGroupRow: number): string {
+  if (lastGroupRow < firstGroupRow) {
+    return '="BRAK DANYCH"';
+  }
+
+  return `=IF(COUNT(F${firstGroupRow}:F${lastGroupRow})<>ROWS(F${firstGroupRow}:F${lastGroupRow});"BRAK DANYCH";SUM(H${firstGroupRow}:H${lastGroupRow}))`;
+}
+
 export const OPERATOR_DASHBOARD_LAYOUT = {
   hiddenGroupIdColumnIndex: 0,
   visibleStartColumnIndex: 1,
@@ -315,7 +323,7 @@ async function bootstrapDashboard(client: SheetsClient, dashboard: SheetMetadata
 
   const firstGroupRow = OPERATOR_DASHBOARD_LAYOUT.groupStartRow;
   const lastGroupRow = firstGroupRow + groups.length - 1;
-  const freePlacesFormula = groups.length > 0 ? `=SUM(H${firstGroupRow}:H${lastGroupRow})` : "=0";
+  const freePlacesFormula = buildFreePlacesSummaryFormula(firstGroupRow, lastGroupRow);
   const attentionFormula =
     "=SUMPRODUCT(--(LEN(ZAPISY!AB2:AB)>0))" +
     '+COUNTIFS(ZAPISY!P2:P;"CONFIRMED";ZAPISY!X2:X;"")' +
