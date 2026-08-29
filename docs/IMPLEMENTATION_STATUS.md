@@ -1,12 +1,12 @@
 # Implementation status
 
-Date: 2026-08-26
+Date: 2026-08-29
 Runtime: Pozytywka Registration v4
 Integration branch: `preview`
 
 ## Current product state
 
-The v4 software core, durable notification outbox and production business/legal baseline are implemented. Production is deployed and the exact command-level Production environment, Sheet and diagnostics gates are verified. It remains intentionally fail-closed until the remaining infrastructure/governance and physical/manual release gates are completed.
+The v4 software core, durable notification outbox and production business/legal baseline are implemented. Production is deployed and remains intentionally fail-closed while the release checklist and the 2026/2027 offer refresh are verified.
 
 The system remains a focused registration request intake application, not a full CRM, payment system or attendance platform.
 
@@ -34,6 +34,30 @@ The system remains a focused registration request intake application, not a full
 - repeat child/activity flows
 - abuse controls and verified Vercel WAF baseline
 
+## 2026/2027 offer refresh
+
+The repository now contains the current Pozytywka offer as 18 concrete public offerings across three locations:
+
+- Olkusz · Klub Przyjaźń: 9 offerings,
+- Bukowno · MOK Bukowno: 8 offerings,
+- Bolesław · Centrum Kultury: 1 offering.
+
+Canonical source: `docs/OFFER_CATALOG_2026-2027.md`.
+
+Implementation details:
+
+- the previous broad categories are no longer the target public catalog,
+- each declared class is represented as a concrete public Offering,
+- each Offering has one corresponding operational Group for the current season,
+- old catalog rows are preserved by the refresh operation but deactivated,
+- `ZAPISY` and `POWIADOMIENIA` are never cleared by the refresh,
+- Production refresh refuses to run unless registrations are closed, the season is `2026-2027` and the exact Production Sheet is selected,
+- unconfirmed instructors and capacities remain empty,
+- missing end times remain empty,
+- SynTeza Street Dance Squad remains one group with both weekly sessions represented in its schedule text.
+
+The code change does not itself open public registrations. `REGISTRATIONS_OPEN` remains a separate release switch.
+
 ## Notification reliability
 
 `POWIADOMIENIA` is a protected technical outbox without participant PII. Each new Registration has two stable jobs: participant confirmation and admin notification.
@@ -59,10 +83,7 @@ Canonical design/runbook: `docs/NOTIFICATION_OUTBOX.md`.
 Adopted and implemented:
 
 - season 2026/2027,
-- Olkusz production city baseline,
-- six public Offerings,
-- eight initial internal Groups,
-- theatre window baseline,
+- registration-request rather than automatic-reservation semantics,
 - contact/status semantics,
 - contract/payment boundary,
 - controller/contact baseline,
@@ -74,8 +95,11 @@ Adopted and implemented:
 - NOTES minimization policy,
 - Standardy Ochrony Małoletnich v1.1 and child-friendly shortened version.
 
+Current catalog truth is in `docs/OFFER_CATALOG_2026-2027.md`. Earlier catalog details in `docs/PRODUCTION_DECISIONS_2026-08-20.md` are historical where they conflict with the newer catalog document.
+
 Canonical sources:
 
+- `docs/OFFER_CATALOG_2026-2027.md`
 - `docs/PRODUCTION_DECISIONS_2026-08-20.md`
 - `docs/RODO_AND_RETENTION_POLICY.md`
 - `docs/STANDARDY_OCHRONY_MALOLETNICH.md`
@@ -91,7 +115,7 @@ PROD:
 
 `1DRcWvY8xfZDGjJLWOr8Ax1XsyBw4dWU8C6u9WGNvFfM`
 
-Current system contract remains `SYSTEM_SCHEMA_VERSION=4`. The notification outbox is an additive system sheet and does not change the `ZAPISY` row schema version.
+Current system contract remains `SYSTEM_SCHEMA_VERSION=4`. The offer refresh is a data migration inside the existing v4 schema; it does not change the `ZAPISY` row schema version.
 
 System sheets:
 
@@ -116,22 +140,27 @@ System sheets:
 - PROD `POWIADOMIENIA` now exists with the exact 13-column runtime contract and hard protection for the dedicated PROD service account.
 - one pre-outbox PROD Registration was adopted as exactly two terminal `SKIPPED` jobs, `CONFIRMATION` and `ADMIN`, with `PRE_OUTBOX_REGISTRATION`, zero attempts, no retry schedule, no lease and no `SENT_AT`.
 - historical PROD Registration count remained exactly one after adoption.
-- no Production warning/error/fatal runtime logs were found for the new deployment during post-rollout verification.
-- durable notification issue #3 was closed as completed after Production evidence.
+- no Production warning/error/fatal runtime logs were found for the verified deployment.
 - PROD uses the canonical v4 Sheet and dedicated production service account.
 - TEST service account is absent from the PROD Sheet ACL.
 - PROD `ZAPISY` has five actionable warning conditional-format rules and no legacy whole-cell STATUS color rules.
-- PR #51 durable outbox passed repository quality gate, Chrome verification and Critical E2E before merge to `preview`.
-- PR #52 clarified the public source-visible, non-open-source licensing policy and passed CI before merge to `preview`.
 - PR #70 corrected the validator/runtime mismatch by reading catalog sheets with `UNFORMATTED_VALUE`; full CI passed before merge to `preview`.
 - PR #71 promoted the exact validated change to `main` as `01e07a11be2214bbf3fd4380dc2c34b3190ed4ba`; full CI passed.
 - Vercel Production deployment `dpl_8eEVcfawVZL3pixSDBdjkrWphcUP` reached `READY` for exactly that SHA.
-- the exact Vercel Production build ran `prod:env:validate` successfully.
-- the exact Vercel Production build ran `sheet:validate` successfully with zero warnings.
-- the exact Vercel Production build ran `diagnostics` successfully: 2 notification jobs, 0 missing jobs, 0 failed jobs and 0 expired leases.
-- the normal Next.js production build completed after those gates.
-- post-deploy GET returned HTTP 200 with `registrationsOpen=false` and the `Zapisy są zamknięte` UX.
-- post-deploy verification found no warning/error/fatal runtime logs and no runtime error clusters for the verified deployment.
+- the exact Vercel Production build ran `prod:env:validate`, `sheet:validate` and `diagnostics` successfully before the normal Next.js build.
+
+## Offer refresh verification still required
+
+Before the refreshed offer can be opened publicly:
+
+1. run the catalog refresh against TEST while registrations are closed,
+2. run `sheet:validate` and `diagnostics`,
+3. verify all 3 places and all 18 offerings in the real Preview form,
+4. verify age rejection for exact ranges and broad guards,
+5. verify SynTeza Street Dance Squad displays as one group with both weekly sessions,
+6. confirm the currently unresolved business inputs listed in `docs/OFFER_CATALOG_2026-2027.md`,
+7. only after TEST acceptance, run the same guarded refresh against Production,
+8. run Production `sheet:validate`, `diagnostics` and closed-state smoke again.
 
 ## Remaining release blockers
 
