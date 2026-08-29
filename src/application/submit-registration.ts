@@ -298,10 +298,7 @@ export async function submitRegistration(
     guardianLastName: normalized.guardianLastName,
     phone: normalized.phone,
     email: normalized.email,
-    status:
-      offering.intakeStatus === PUBLIC_INTAKE_STATUS.waitlistOnly
-        ? REGISTRATION_STATUS.waitlisted
-        : REGISTRATION_STATUS.new,
+    status: REGISTRATION_STATUS.new,
     assignedGroupId: null,
     contactedAt: null,
     confirmedAt: null,
