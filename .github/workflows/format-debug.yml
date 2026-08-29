@@ -1,4 +1,4 @@
-name: Format debug
+name: Apply formatting
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
       - feat/2026-2027-offer-refresh
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   format:
@@ -14,6 +14,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: feat/2026-2027-offer-refresh
       - uses: pnpm/action-setup@v6
         with:
           version: 11.20.0
@@ -23,15 +25,19 @@ jobs:
           node-version: 24.19.0
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Show Prettier diff
+      - name: Format and remove helper workflow
         run: |
           pnpm exec prettier --write \
             scripts/refresh-pozytywka-offer-2026-2027.ts \
             scripts/seed-production-catalog.ts \
             src/config/pozytywka-offer-2026-2027.ts \
             tests/unit/pozytywka-offer-2026-2027.test.ts
-          git diff -- \
-            scripts/refresh-pozytywka-offer-2026-2027.ts \
+          git rm .github/workflows/format-debug.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add scripts/refresh-pozytywka-offer-2026-2027.ts \
             scripts/seed-production-catalog.ts \
             src/config/pozytywka-offer-2026-2027.ts \
             tests/unit/pozytywka-offer-2026-2027.test.ts
+          git commit -m "chore: format offer refresh"
+          git push origin HEAD:feat/2026-2027-offer-refresh
