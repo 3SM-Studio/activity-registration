@@ -36,9 +36,7 @@ describe("Pozytywka 2026/2027 offer catalog", () => {
   });
 
   it("keeps Street Dance Squad as one group with both weekly sessions", () => {
-    const squad = groups.find(
-      (row) => row.OFFERING_ID === "bukowno-synteza-street-dance-squad",
-    );
+    const squad = groups.find((row) => row.OFFERING_ID === "bukowno-synteza-street-dance-squad");
 
     expect(squad).toMatchObject({
       AGE_MIN: 9,

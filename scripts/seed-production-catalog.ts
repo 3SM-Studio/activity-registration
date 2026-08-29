@@ -77,12 +77,7 @@ async function main() {
 
   await appendMappedRows(client, SHEET.cities, CITY_HEADERS, POZYTYWKA_CITIES_2026_2027);
   await appendMappedRows(client, SHEET.seasons, SEASON_HEADERS, [POZYTYWKA_SEASON_2026_2027]);
-  await appendMappedRows(
-    client,
-    SHEET.offerings,
-    OFFERING_HEADERS,
-    POZYTYWKA_OFFERINGS_2026_2027,
-  );
+  await appendMappedRows(client, SHEET.offerings, OFFERING_HEADERS, POZYTYWKA_OFFERINGS_2026_2027);
   await appendMappedRows(
     client,
     SHEET.groups,

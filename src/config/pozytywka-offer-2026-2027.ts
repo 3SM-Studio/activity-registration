@@ -147,8 +147,7 @@ export const POZYTYWKA_OFFERINGS_2026_2027: readonly CatalogRow[] = [
     OFFERING_ID: "bukowno-psikusy",
     CITY_ID: "bukowno",
     NAME: "Psikusy · 4-6 lat",
-    PUBLIC_DESCRIPTION:
-      "Zespół wokalno-taneczny. Czwartki 16:45-17:45. Opłata 160 zł / miesiąc.",
+    PUBLIC_DESCRIPTION: "Zespół wokalno-taneczny. Czwartki 16:45-17:45. Opłata 160 zł / miesiąc.",
     ACTIVE: "TAK",
     SORT_ORDER: 110,
     REGISTRATION_MODE: "ROLLING",

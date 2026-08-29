@@ -30,10 +30,7 @@ function writableCell(value: unknown): WritableCell {
   return String(value ?? "");
 }
 
-function requireSingleSetting(
-  rows: readonly (readonly unknown[])[],
-  key: string,
-): string {
+function requireSingleSetting(rows: readonly (readonly unknown[])[], key: string): string {
   const headerRow = rows[0] ?? [];
   const headers = createHeaderMap(headerRow, SETTINGS_HEADERS);
   const matches = rows.slice(1).filter((row) => cell(row, headers, "KEY") === key);
@@ -109,15 +106,10 @@ async function main() {
   }
 
   if (process.env.ALLOW_POZYTYWKA_OFFER_REFRESH !== "true") {
-    throw new Error(
-      "Refusing catalog refresh. Require ALLOW_POZYTYWKA_OFFER_REFRESH=true.",
-    );
+    throw new Error("Refusing catalog refresh. Require ALLOW_POZYTYWKA_OFFER_REFRESH=true.");
   }
 
-  if (
-    env.APP_ENV === "production" &&
-    env.GOOGLE_SPREADSHEET_ID !== PRODUCTION_SPREADSHEET_ID
-  ) {
+  if (env.APP_ENV === "production" && env.GOOGLE_SPREADSHEET_ID !== PRODUCTION_SPREADSHEET_ID) {
     throw new Error("Refusing production catalog refresh for an unexpected spreadsheet ID.");
   }
 
@@ -136,10 +128,7 @@ async function main() {
   if (!currentSeasonId) {
     throw new Error("Refusing catalog refresh without CURRENT_SEASON_ID.");
   }
-  if (
-    env.APP_ENV === "production" &&
-    currentSeasonId !== POZYTYWKA_SEASON_2026_2027.SEASON_ID
-  ) {
+  if (env.APP_ENV === "production" && currentSeasonId !== POZYTYWKA_SEASON_2026_2027.SEASON_ID) {
     throw new Error(
       `Refusing production catalog refresh for season ${currentSeasonId}; expected ${POZYTYWKA_SEASON_2026_2027.SEASON_ID}.`,
     );
