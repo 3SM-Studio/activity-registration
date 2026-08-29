@@ -1,0 +1,94 @@
+name: Apply offer audit fixes
+
+on:
+  push:
+    branches:
+      - feat/2026-2027-offer-refresh
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: feat/2026-2027-offer-refresh
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11.20.0
+          run_install: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24.19.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Apply reviewed patches
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          submit = Path("src/application/submit-registration.ts")
+          text = submit.read_text()
+          old = '''    status:\n      offering.intakeStatus === PUBLIC_INTAKE_STATUS.waitlistOnly\n        ? REGISTRATION_STATUS.waitlisted\n        : REGISTRATION_STATUS.new,'''
+          new = '''    status: REGISTRATION_STATUS.new,'''
+          if old not in text:
+              raise SystemExit("submit-registration status block not found")
+          submit.write_text(text.replace(old, new))
+
+          submit_test = Path("tests/unit/submit-registration.test.ts")
+          text = submit_test.read_text()
+          text = text.replace(
+              'it("starts a direct WAITLIST_ONLY submission in WAITLISTED", async () => {',
+              'it("starts a direct WAITLIST_ONLY submission in NEW for operator review", async () => {',
+          )
+          text = text.replace(
+              'expect(result.registration.status).toBe(REGISTRATION_STATUS.waitlisted);',
+              'expect(result.registration.status).toBe(REGISTRATION_STATUS.new);',
+          )
+          submit_test.write_text(text)
+
+          operator = Path("src/infrastructure/google/operator-sheet.ts")
+          text = operator.read_text()
+          marker = '''export const POSSIBLE_DUPLICATE_COUNT_FORMULA = "=SUMPRODUCT(--(LEN(ZAPISY!AB2:AB)>0))";\n'''
+          helper = '''export const POSSIBLE_DUPLICATE_COUNT_FORMULA = "=SUMPRODUCT(--(LEN(ZAPISY!AB2:AB)>0))";\n\nexport function buildFreePlacesSummaryFormula(firstGroupRow: number, lastGroupRow: number): string {\n  if (lastGroupRow < firstGroupRow) {\n    return '=\"BRAK DANYCH\"';\n  }\n\n  return `=IF(COUNT(F${firstGroupRow}:F${lastGroupRow})<>ROWS(F${firstGroupRow}:F${lastGroupRow});\"BRAK DANYCH\";SUM(H${firstGroupRow}:H${lastGroupRow}))`;\n}\n'''
+          if marker not in text:
+              raise SystemExit("operator helper insertion marker not found")
+          text = text.replace(marker, helper, 1)
+          old_formula = '''  const freePlacesFormula = groups.length > 0 ? `=SUM(H${firstGroupRow}:H${lastGroupRow})` : "=0";'''
+          new_formula = '''  const freePlacesFormula = buildFreePlacesSummaryFormula(firstGroupRow, lastGroupRow);'''
+          if old_formula not in text:
+              raise SystemExit("free places formula block not found")
+          operator.write_text(text.replace(old_formula, new_formula, 1))
+
+          dashboard_test = Path("tests/unit/operator-dashboard-formulas.test.ts")
+          text = dashboard_test.read_text()
+          text = text.replace(
+              'import { POSSIBLE_DUPLICATE_COUNT_FORMULA } from "@/infrastructure/google/operator-sheet";',
+              'import {\n  POSSIBLE_DUPLICATE_COUNT_FORMULA,\n  buildFreePlacesSummaryFormula,\n} from "@/infrastructure/google/operator-sheet";',
+          )
+          insert = '''\n  it("does not report zero free places when group capacities are unknown", () => {\n    expect(buildFreePlacesSummaryFormula(12, 29)).toBe(\n      '=IF(COUNT(F12:F29)<>ROWS(F12:F29);"BRAK DANYCH";SUM(H12:H29))',\n    );\n    expect(buildFreePlacesSummaryFormula(12, 11)).toBe('="BRAK DANYCH"');\n  });\n'''
+          closing = '''  });\n});\n'''
+          if closing not in text:
+              raise SystemExit("dashboard test closing marker not found")
+          text = text.replace(closing, '  });\n' + insert + '});\n', 1)
+          dashboard_test.write_text(text)
+          PY
+
+          pnpm exec prettier --write \
+            src/application/submit-registration.ts \
+            src/infrastructure/google/operator-sheet.ts \
+            tests/unit/submit-registration.test.ts \
+            tests/unit/operator-dashboard-formulas.test.ts
+
+          git rm .github/workflows/apply-offer-fixes.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/application/submit-registration.ts \
+            src/infrastructure/google/operator-sheet.ts \
+            tests/unit/submit-registration.test.ts \
+            tests/unit/operator-dashboard-formulas.test.ts
+          git commit -m "fix: align offer intake and capacity semantics"
+          git push origin HEAD:feat/2026-2027-offer-refresh
