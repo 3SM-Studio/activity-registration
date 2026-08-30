@@ -24,11 +24,8 @@ jobs:
           from pathlib import Path
           path = Path('src/components/registration/registration-form.tsx')
           text = path.read_text(encoding='utf-8')
-          old = '''          Wysłanie formularza jest zgłoszeniem na zajęcia. Pozytywka musi je najpierw zweryfikować i
-          skontaktuje się z Tobą, żeby potwierdzić odpowiednią grupę oraz termin.'''
-          new = '''          Wysłanie formularza jest zgłoszeniem na wybrane zajęcia, nie automatyczną rezerwacją
-          miejsca. Pozytywka sprawdzi dostępność i skontaktuje się z Tobą w sprawie potwierdzenia
-          udziału.'''
+          old = 'Wysłanie formularza jest zgłoszeniem na zajęcia. Pozytywka musi je najpierw zweryfikować i\n          skontaktuje się z Tobą, żeby potwierdzić odpowiednią grupę oraz termin.'
+          new = 'Wysłanie formularza jest zgłoszeniem na wybrane zajęcia, nie automatyczną rezerwacją\n          miejsca. Pozytywka sprawdzi dostępność i skontaktuje się z Tobą w sprawie potwierdzenia\n          udziału.'
           if text.count(old) != 1:
               raise SystemExit(f'Expected exactly one disclaimer match, got {text.count(old)}')
           path.write_text(text.replace(old, new), encoding='utf-8')
