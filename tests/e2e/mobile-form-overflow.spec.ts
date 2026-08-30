@@ -40,7 +40,10 @@ async function expectPhoneCountryDropdownInsideField(page: Page) {
   const dropdown = page.locator('[data-slot="select-content"]').filter({ hasText: "Polska" });
   await expect(dropdown).toBeVisible();
 
-  const [shellBox, dropdownBox] = await Promise.all([phoneShell.boundingBox(), dropdown.boundingBox()]);
+  const [shellBox, dropdownBox] = await Promise.all([
+    phoneShell.boundingBox(),
+    dropdown.boundingBox(),
+  ]);
   expect(shellBox).not.toBeNull();
   expect(dropdownBox).not.toBeNull();
 
