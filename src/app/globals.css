@@ -176,8 +176,12 @@ select {
   --PhoneInputCountrySelectArrow-color: var(--foreground);
   --PhoneInputCountrySelectArrow-opacity: 0.7;
   --PhoneInput-color--focus: var(--brand);
+  display: flex;
+  min-width: 0;
+  max-width: 100%;
   height: 3rem;
   width: 100%;
+  overflow: hidden;
   border: 1px solid var(--color-neutral-400);
   border-radius: 1rem;
   background: #ffffff;
@@ -212,7 +216,10 @@ select {
 }
 
 .pozytywka-phone-input .PhoneInputInput {
+  flex: 1 1 0%;
+  width: 0;
   min-width: 0;
+  max-width: 100%;
   height: 100%;
   border: 0;
   border-radius: 0 1rem 1rem 0;
