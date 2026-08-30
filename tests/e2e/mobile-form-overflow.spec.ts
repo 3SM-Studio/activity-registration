@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
+// Regression coverage for the narrow mobile layout used by the public registration form.
 async function expectNoHorizontalOverflow(page: Page) {
   const pageMetrics = await page.evaluate(() => ({
     clientWidth: document.documentElement.clientWidth,
