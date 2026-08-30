@@ -1,6 +1,7 @@
 import type { EmailMessage, EmailSender } from "@/application/registration-notifications";
 
 const RESEND_EMAILS_ENDPOINT = "https://api.resend.com/emails";
+const RESEND_REQUEST_TIMEOUT_MS = 10_000;
 
 type FetchLike = typeof fetch;
 
@@ -29,31 +30,38 @@ export class ResendEmailSender implements EmailSender {
   ) {}
 
   async send(message: EmailMessage): Promise<Readonly<{ id: string }>> {
-    const response = await this.fetchImpl(RESEND_EMAILS_ENDPOINT, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${this.apiKey}`,
-        "Content-Type": "application/json",
-        "Idempotency-Key": message.idempotencyKey,
-      },
-      body: JSON.stringify({
-        from: message.from,
-        to: [...message.to],
-        subject: message.subject,
-        text: message.text,
-        html: message.html,
-        ...(message.replyTo ? { reply_to: message.replyTo } : {}),
-        ...(message.attachments
-          ? {
-              attachments: message.attachments.map((attachment) => ({
-                path: attachment.path,
-                filename: attachment.filename,
-                ...(attachment.contentId ? { content_id: attachment.contentId } : {}),
-              })),
-            }
-          : {}),
-      }),
-    });
+    let response: Response;
+
+    try {
+      response = await this.fetchImpl(RESEND_EMAILS_ENDPOINT, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${this.apiKey}`,
+          "Content-Type": "application/json",
+          "Idempotency-Key": message.idempotencyKey,
+        },
+        body: JSON.stringify({
+          from: message.from,
+          to: [...message.to],
+          subject: message.subject,
+          text: message.text,
+          html: message.html,
+          ...(message.replyTo ? { reply_to: message.replyTo } : {}),
+          ...(message.attachments
+            ? {
+                attachments: message.attachments.map((attachment) => ({
+                  path: attachment.path,
+                  filename: attachment.filename,
+                  ...(attachment.contentId ? { content_id: attachment.contentId } : {}),
+                })),
+              }
+            : {}),
+        }),
+        signal: AbortSignal.timeout(RESEND_REQUEST_TIMEOUT_MS),
+      });
+    } catch {
+      throw new ResendEmailError("Resend request failed or timed out.", null);
+    }
 
     let payload: unknown = null;
     try {

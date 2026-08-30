@@ -35,6 +35,23 @@ describe("Pozytywka 2026/2027 offer catalog", () => {
     }
   });
 
+  it("uses confirmed durations when the source listed only a start time", () => {
+    const endTimes = Object.fromEntries(
+      groups.map((row) => [String(row.OFFERING_ID), String(row.END_TIME)]),
+    );
+
+    expect(endTimes).toMatchObject({
+      "olkusz-zespol-wokalny": "19:30",
+      "olkusz-stepdance": "19:15",
+      "olkusz-acrodance-5-8": "17:15",
+      "olkusz-acrodance-9-plus": "18:15",
+      "olkusz-plasanie": "18:00",
+      "bukowno-inside-5-8": "16:15",
+      "bukowno-inside-9-plus": "18:45",
+      "bukowno-babeczki": "19:45",
+    });
+  });
+
   it("keeps Street Dance Squad as one group with both weekly sessions", () => {
     const squad = groups.find((row) => row.OFFERING_ID === "bukowno-synteza-street-dance-squad");
 

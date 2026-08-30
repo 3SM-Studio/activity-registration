@@ -57,6 +57,10 @@ const optionalNonEmptyStringSchema = z.preprocess(
   emptyStringToUndefined,
   z.string().trim().min(1).optional(),
 );
+const optionalCronSecretSchema = z.preprocess(
+  emptyStringToUndefined,
+  z.string().trim().min(32, "CRON_SECRET must contain at least 32 characters.").optional(),
+);
 const optionalEmailSchema = z.preprocess(
   emptyStringToUndefined,
   z.string().trim().pipe(z.email()).optional(),
@@ -90,6 +94,7 @@ const serverEnvSchema = z
     RESEND_API_KEY: optionalNonEmptyStringSchema,
     EMAIL_FROM: optionalNonEmptyStringSchema,
     REGISTRATION_ADMIN_EMAILS: adminEmailsSchema,
+    CRON_SECRET: optionalCronSecretSchema,
     ALLOW_TEST_SEED: z.enum(["true", "false"]).default("false"),
     VERCEL: optionalTrimmedStringSchema,
     VERCEL_OIDC_TOKEN: optionalTrimmedStringSchema,
@@ -189,6 +194,14 @@ const serverEnvSchema = z
           message: "Production admin recipients must include the approved admin mailbox.",
         });
       }
+
+      if (!env.CRON_SECRET) {
+        context.addIssue({
+          code: "custom",
+          path: ["CRON_SECRET"],
+          message: "Production requires CRON_SECRET for the notification retry worker.",
+        });
+      }
     }
   });
 
@@ -217,6 +230,7 @@ export function isUnconfiguredVercelProduction(input: unknown = process.env): bo
     "RESEND_API_KEY",
     "EMAIL_FROM",
     "REGISTRATION_ADMIN_EMAILS",
+    "CRON_SECRET",
   ].some((key) => !hasNonEmptyString(env[key]));
 }
 
