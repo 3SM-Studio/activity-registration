@@ -1,24 +1,38 @@
 # Implementation status
 
-Date: 2026-08-29
+Date: 2026-08-30
 Runtime: Pozytywka Registration v4
+Production branch: `main`
 Integration branch: `preview`
 
 ## Current product state
 
-The v4 software core, durable notification outbox and production business/legal baseline are implemented. Production is deployed and remains intentionally fail-closed while the release checklist and the 2026/2027 offer refresh are verified.
+Pozytywka Registration v4 is live in Production and accepting registration requests for the 2026/2027 offer.
 
-The system remains a focused registration request intake application, not a full CRM, payment system or attendance platform.
+The system is intentionally a registration request-intake application, not a CRM, payment system or automatic reservation engine. A submitted form does not guarantee a place; Pozytywka verifies availability and confirms participation separately.
+
+Current verified Production state:
+
+- Git SHA: `5d8628f5bf908b304dcfc172c95d2b8a5c1244f6`
+- Vercel deployment: `dpl_5zQbApatboZBQp3J2CX63KT4fn1w`
+- deployment: `READY`
+- `REGISTRATIONS_OPEN=TRUE`
+- schema: v4
+- season: `2026-2027`
+- 3 active locations
+- 18 active public offerings
+- Production GET: HTTP 200
+- post-launch runtime check: no new warning/error/fatal cluster found
 
 ## Implemented runtime
 
-- Next.js App Router
+- Next.js 16.3.3 App Router
 - strict TypeScript
 - Zod server validation
 - React Hook Form
 - shadcn/Radix controls
 - international phone input and E.164 storage
-- full DOB picker
+- controlled DOB picker
 - adult/minor guardian flow
 - Google Sheets repositories
 - native Google Tables for canonical registration data
@@ -26,17 +40,18 @@ The system remains a focused registration request intake application, not a full
 - PII-safe structured logging
 - Resend participant/admin notifications
 - durable notification outbox with retry/reconciliation
+- secured Production reconciliation cron endpoint
 - business duplicate detection
-- requestId idempotency
+- requestId idempotency guard
 - v4 season/offering/group/status model
 - operator-first Sheet UX
 - `PANEL_OPERATORA` dashboard
-- repeat child/activity flows
 - abuse controls and verified Vercel WAF baseline
+- Chromium and iPhone WebKit CI coverage
 
-## 2026/2027 offer refresh
+## 2026/2027 offer
 
-The repository now contains the current Pozytywka offer as 18 concrete public offerings across three locations:
+Current public catalog contains 18 concrete offerings across three locations:
 
 - Olkusz · Klub Przyjaźń: 9 offerings,
 - Bukowno · MOK Bukowno: 8 offerings,
@@ -44,19 +59,14 @@ The repository now contains the current Pozytywka offer as 18 concrete public of
 
 Canonical source: `docs/OFFER_CATALOG_2026-2027.md`.
 
-Implementation details:
+Business clarifications adopted on 2026-08-30:
 
-- the previous broad categories are no longer the target public catalog,
-- each declared class is represented as a concrete public Offering,
-- each Offering has one corresponding operational Group for the current season,
-- old catalog rows are preserved by the refresh operation but deactivated,
-- `ZAPISY` and `POWIADOMIENIA` are never cleared by the refresh,
-- Production refresh refuses to run unless registrations are closed, the season is `2026-2027` and the exact Production Sheet is selected,
-- unconfirmed instructors and capacities remain empty,
-- missing end times remain empty,
-- SynTeza Street Dance Squad remains one group with both weekly sessions represented in its schedule text.
+- when only a start time was supplied, the class duration is 60 minutes,
+- `Pląsanie` lasts 30 minutes,
+- missing instructors and capacities remain unknown rather than fabricated,
+- exact unresolved business inputs remain documented rather than guessed.
 
-The code change does not itself open public registrations. `REGISTRATIONS_OPEN` remains a separate release switch.
+The Production Google Sheet and public UI were refreshed consistently. Previous catalog rows remain preserved inactive; historical `ZAPISY` and `POWIADOMIENIA` were not cleared.
 
 ## Notification reliability
 
@@ -72,38 +82,56 @@ Implemented safeguards:
 - reconciliation of missing/due jobs,
 - manual retry for failed jobs,
 - health checks in `pnpm diagnostics`,
-- safe adoption of pre-outbox registrations as terminal `SKIPPED` jobs.
+- safe historical adoption as terminal `SKIPPED`,
+- immediate first delivery attempt after successful Registration,
+- secured `GET /api/cron/notifications`,
+- Production `CRON_SECRET`,
+- Vercel Hobby-compatible daily recovery cron.
 
-Google Sheets is not a transactional queue, so this is not claimed as mathematical exactly-once delivery. Application leases plus stable provider idempotency keys provide the duplicate-send safeguards appropriate to the current architecture.
+Google Sheets is not claimed as an exactly-once transactional queue. This limitation remains an explicit post-launch architecture item.
 
-Canonical design/runbook: `docs/NOTIFICATION_OUTBOX.md`.
+## Launch hardening completed 2026-08-30
 
-## Production business and legal baseline
+PR #81 introduced the launch-critical hardening identified by the audit:
 
-Adopted and implemented:
+- Next.js / eslint-config-next 16.3.3 security maintenance release,
+- `PARTICIPANT_AGE_NOT_ELIGIBLE` returns HTTP 422 instead of false HTTP 500,
+- age eligibility edge case for children born after season start fixed and tested,
+- immutable Production e-mail logo asset reference,
+- reusable Google WIF auth client in warm runtime,
+- Google Sheets request timeout,
+- Resend request timeout,
+- secured notification reconciliation endpoint,
+- Production `CRON_SECRET` requirement,
+- Hobby-compatible daily cron,
+- corrected success/e-mail wording,
+- iPhone WebKit CI project and regression coverage.
 
-- season 2026/2027,
-- registration-request rather than automatic-reservation semantics,
-- contact/status semantics,
-- contract/payment boundary,
-- controller/contact baseline,
-- public privacy notice,
-- GDPR purpose/legal-basis model,
-- finite status-based retention,
-- data-subject request process,
-- production access model,
-- NOTES minimization policy,
-- Standardy Ochrony Małoletnich v1.1 and child-friendly shortened version.
+PR #82 aligned the final registration disclaimer with the request-intake semantics.
 
-Current catalog truth is in `docs/OFFER_CATALOG_2026-2027.md`. Earlier catalog details in `docs/PRODUCTION_DECISIONS_2026-08-20.md` are historical where they conflict with the newer catalog document.
+Production was closed during the rollout, the exact deployment passed the Production build gate, closed-state smoke and cron unauthorized smoke, then `REGISTRATIONS_OPEN` was set back to `TRUE` as the final controlled data change.
 
-Canonical sources:
+## GitHub governance
 
-- `docs/OFFER_CATALOG_2026-2027.md`
-- `docs/PRODUCTION_DECISIONS_2026-08-20.md`
-- `docs/RODO_AND_RETENTION_POLICY.md`
-- `docs/STANDARDY_OCHRONY_MALOLETNICH.md`
-- `docs/STANDARDY_OCHRONY_MALOLETNICH_SKROT.md`
+An active repository ruleset named `Protect main and preview` now covers exactly:
+
+- `refs/heads/main`
+- `refs/heads/preview`
+
+It enforces:
+
+- no branch deletion,
+- no force push/non-fast-forward update,
+- pull request required,
+- required approvals = 0,
+- review conversation resolution,
+- squash as the only allowed merge method for protected branches,
+- required status `check`,
+- required status `webkit`,
+- strict up-to-date status checks,
+- no bypass actors.
+
+Repository-level convenience settings such as auto-merge, automatic head-branch deletion and update-branch remain separate GitHub settings and are tracked as non-blocking repository hygiene.
 
 ## Canonical Google Sheets
 
@@ -115,7 +143,7 @@ PROD:
 
 `1DRcWvY8xfZDGjJLWOr8Ax1XsyBw4dWU8C6u9WGNvFfM`
 
-Current system contract remains `SYSTEM_SCHEMA_VERSION=4`. The offer refresh is a data migration inside the existing v4 schema; it does not change the `ZAPISY` row schema version.
+Current system contract remains `SYSTEM_SCHEMA_VERSION=4`.
 
 System sheets:
 
@@ -129,51 +157,25 @@ System sheets:
 
 `PANEL_OPERATORA` is intentionally a normal derived dashboard rather than a native Table.
 
-## Verified state through 2026-08-26
+## Remaining post-launch work
 
-- TEST returned to `REGISTRATIONS_OPEN=FALSE` after QA.
-- TEST outbox was adopted while closed.
-- four historical TEST registrations have exactly eight terminal `SKIPPED` jobs, with no historical mail resend.
-- release PR #54 passed full CI and was merged to `main` as `797ad4151a9511daddc3572c438f976b6df2f56b`.
-- Vercel Production deployment `dpl_Cw2hmKfx6jKqwDCifjRkbd75ZyLc` reached `READY` for exactly that SHA.
-- PROD remains `REGISTRATIONS_OPEN=FALSE` and the public Production page returned HTTP 200 with the closed-state UX after rollout.
-- PROD `POWIADOMIENIA` now exists with the exact 13-column runtime contract and hard protection for the dedicated PROD service account.
-- one pre-outbox PROD Registration was adopted as exactly two terminal `SKIPPED` jobs, `CONFIRMATION` and `ADMIN`, with `PRE_OUTBOX_REGISTRATION`, zero attempts, no retry schedule, no lease and no `SENT_AT`.
-- historical PROD Registration count remained exactly one after adoption.
-- no Production warning/error/fatal runtime logs were found for the verified deployment.
-- PROD uses the canonical v4 Sheet and dedicated production service account.
-- TEST service account is absent from the PROD Sheet ACL.
-- PROD `ZAPISY` has five actionable warning conditional-format rules and no legacy whole-cell STATUS color rules.
-- PR #70 corrected the validator/runtime mismatch by reading catalog sheets with `UNFORMATTED_VALUE`; full CI passed before merge to `preview`.
-- PR #71 promoted the exact validated change to `main` as `01e07a11be2214bbf3fd4380dc2c34b3190ed4ba`; full CI passed.
-- Vercel Production deployment `dpl_8eEVcfawVZL3pixSDBdjkrWphcUP` reached `READY` for exactly that SHA.
-- the exact Vercel Production build ran `prod:env:validate`, `sheet:validate` and `diagnostics` successfully before the normal Next.js build.
+These items are real but are not falsely marked as solved by the launch hotfix:
 
-## Offer refresh verification still required
+- broader Google Cloud IAM least-privilege review beyond Sheet ACL,
+- physical Android Chrome acceptance,
+- physical iPhone Safari acceptance,
+- keyboard/focus/200% zoom/visual contrast human acceptance,
+- final human legal/safety read-through,
+- physical availability/display of the adopted child-protection standards as required by Pozytywka's procedure,
+- GitHub security-default review (Dependabot/security scanning/secret scanning where available),
+- transactional-core migration planning from Google Sheets to PostgreSQL,
+- atomic idempotency and outbox claiming in the future transactional store,
+- operational alerting and restore-tested disaster recovery,
+- `City` / `Venue` separation,
+- one-to-many `GroupSession`,
+- append-only registration workflow audit events,
+- offering/legal content snapshot/versioning,
+- safer handling of operator free-text notes,
+- exact business age ranges/capacities where Pozytywka wants stronger automatic availability logic.
 
-Before the refreshed offer can be opened publicly:
-
-1. run the catalog refresh against TEST while registrations are closed,
-2. run `sheet:validate` and `diagnostics`,
-3. verify all 3 places and all 18 offerings in the real Preview form,
-4. verify age rejection for exact ranges and broad guards,
-5. verify SynTeza Street Dance Squad displays as one group with both weekly sessions,
-6. confirm the currently unresolved business inputs listed in `docs/OFFER_CATALOG_2026-2027.md`,
-7. only after TEST acceptance, run the same guarded refresh against Production,
-8. run Production `sheet:validate`, `diagnostics` and closed-state smoke again.
-
-## Remaining release blockers
-
-Do not fabricate completion of these items:
-
-1. broader Google Cloud IAM least-privilege review beyond the Sheet ACL,
-2. physically display both adopted Standardy versions in the Pozytywka premises,
-3. physical Android Chrome acceptance,
-4. physical iPhone Safari acceptance,
-5. keyboard/focus/200% zoom/visual contrast human acceptance,
-6. final human read-through of public legal/safety documents,
-7. GitHub repository ruleset/branch-protection configuration through an account with the required admin capability.
-
-Production must stay closed until the blocking release checklist is complete.
-
-Current detailed evidence: `docs/RELEASE_CHECKLIST.md`.
+Canonical remediation scope: `docs/AUDIT_REMEDIATION_2026-08-30.md`.
