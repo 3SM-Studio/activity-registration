@@ -4,11 +4,12 @@ Date: 2026-08-30
 Target: Pozytywka Registration v4
 Status: Production live; automated launch-hardening gate complete. Remaining human/organizational items are tracked explicitly as post-launch residual acceptance and must not be fabricated as completed.
 
-## Current live state
+## Launch runtime evidence and current live state
 
-- [x] Production deployment is `READY`
-- [x] Production SHA `5d8628f5bf908b304dcfc172c95d2b8a5c1244f6`
-- [x] Production deployment `dpl_5zQbApatboZBQp3J2CX63KT4fn1w`
+- [x] launch-hardening runtime deployment is `READY`
+- [x] last runtime-changing Production SHA `5d8628f5bf908b304dcfc172c95d2b8a5c1244f6`
+- [x] launch-hardening runtime deployment `dpl_5zQbApatboZBQp3J2CX63KT4fn1w`
+- [x] later docs-only commits may advance `main`/Vercel without changing runtime behavior; current HEAD is verified directly in GitHub/Vercel
 - [x] `SYSTEM_SCHEMA_VERSION=4`
 - [x] `CURRENT_SEASON_ID=2026-2027`
 - [x] `REGISTRATIONS_OPEN=TRUE`
@@ -158,8 +159,8 @@ Canonical TEST Sheet ID:
 - [x] TEST notification/write path was previously verified
 - [x] TEST historical outbox adoption completed safely
 - [x] feature branches are not canonical TEST deployments
-- [x] PR #84 merged the exact hardened Production tree into protected `preview`
-- [x] `preview` commit `41a5eb7f65a49e27ef68aa6f28e251dc846976cb` has tree `c74a2e425d735b9cc5d8285e68acd8884331b4c0`, identical to Production `main` tree before this docs-only follow-up
+- [x] PR #84 merged the exact hardened Production runtime tree into protected `preview`
+- [x] `preview` commit `41a5eb7f65a49e27ef68aa6f28e251dc846976cb` has tree `c74a2e425d735b9cc5d8285e68acd8884331b4c0`, identical to the runtime-changing Production tree before docs-only follow-ups
 
 ## Human acceptance not replaced by CI
 

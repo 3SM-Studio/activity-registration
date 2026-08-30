@@ -33,7 +33,7 @@ Automated / infrastructure evidence:
 - [x] critical Chromium E2E passed,
 - [x] iPhone WebKit E2E passed,
 - [x] PR #81 merged to `main` only after required checks passed,
-- [x] exact `main` SHA reached Vercel Production `READY`,
+- [x] exact runtime-changing `main` SHA reached Vercel Production `READY`,
 - [x] Production build passed `prod:env:validate`, `sheet:validate` and `diagnostics`,
 - [x] closed-state Production GET returned HTTP 200,
 - [x] notification cron endpoint rejected unauthenticated calls with HTTP 401,
@@ -46,14 +46,16 @@ Automated / infrastructure evidence:
 - [x] Production reopened only after the verified deployment and data path were healthy,
 - [x] live Production GET returns HTTP 200 with `REGISTRATIONS_OPEN=TRUE` and the current 3-location / 18-offering catalog.
 
-Current verified Production:
+Launch-hardening runtime evidence:
 
 ```text
-SHA         5d8628f5bf908b304dcfc172c95d2b8a5c1244f6
-Deployment  dpl_5zQbApatboZBQp3J2CX63KT4fn1w
-State       READY
-Intake      OPEN
+Runtime-changing SHA  5d8628f5bf908b304dcfc172c95d2b8a5c1244f6
+Runtime deployment    dpl_5zQbApatboZBQp3J2CX63KT4fn1w
+State                 READY
+Intake                OPEN
 ```
+
+Later docs-only commits can advance `main` and create newer Production deployments without changing application runtime behavior. Current HEAD/deployment must therefore be checked directly in GitHub/Vercel, not inferred from the evidence block above.
 
 ## 3. Remaining human / organizational evidence
 
@@ -77,14 +79,14 @@ Repository hygiene still requiring UI/admin verification:
 
 ## 4. Preview synchronization
 
-Direct `main -> preview` merge was historically conflicted. A safe sync branch was created from the old `preview` and assigned the exact current Production `main` tree without force-pushing the protected branch.
+Direct `main -> preview` merge was historically conflicted. A safe sync branch was created from the old `preview` and assigned the exact runtime-changing Production `main` tree without force-pushing the protected branch.
 
-- [x] sync branch tree equals current Production `main` tree,
+- [x] sync branch tree equals the runtime-changing Production `main` tree,
 - [x] PR #84 opened against protected `preview`,
 - [x] required `check` passed,
 - [x] required `webkit` passed,
 - [x] PR #84 merged to protected `preview` as `41a5eb7f65a49e27ef68aa6f28e251dc846976cb`,
-- [x] resulting `preview` tree is `c74a2e425d735b9cc5d8285e68acd8884331b4c0`, exactly matching the Production `main` tree before the docs-only follow-up.
+- [x] resulting `preview` tree is `c74a2e425d735b9cc5d8285e68acd8884331b4c0`, exactly matching the Production runtime tree before docs-only follow-ups.
 
 ## 5. Deliberately not rushed into the launch hotfix
 

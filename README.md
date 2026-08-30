@@ -9,8 +9,8 @@ Production jest aktywne i przyjmuje zgłoszenia na ofertę 2026/2027.
 Zweryfikowany stan po launch hardeningu 2026-08-30:
 
 - Production branch: `main`
-- Production SHA: `5d8628f5bf908b304dcfc172c95d2b8a5c1244f6`
-- Vercel deployment: `dpl_5zQbApatboZBQp3J2CX63KT4fn1w`
+- last runtime-changing Production SHA: `5d8628f5bf908b304dcfc172c95d2b8a5c1244f6`
+- launch-hardening runtime deployment: `dpl_5zQbApatboZBQp3J2CX63KT4fn1w`
 - deployment state: `READY`
 - `REGISTRATIONS_OPEN=TRUE`
 - 3 aktywne lokalizacje
@@ -18,6 +18,8 @@ Zweryfikowany stan po launch hardeningu 2026-08-30:
 - Next.js 16.3.3
 - `check` i `webkit` wymagane przez aktywny GitHub ruleset dla `main` i `preview`
 - Production smoke po wdrożeniu: HTTP 200, formularz otwarty, brak nowego klastra warning/error/fatal
+
+Dokumentacja nie przypina bieżącego `main` HEAD jako stałej wartości, ponieważ docs-only merge również tworzy nowy commit i deployment bez zmiany runtime aplikacji. Aktualny HEAD/deployment należy weryfikować bezpośrednio w GitHub/Vercel.
 
 Repozytorium jest świadomie publiczne. Sekrety, tokeny, credentials i PII nie mogą trafiać do Git.
 
