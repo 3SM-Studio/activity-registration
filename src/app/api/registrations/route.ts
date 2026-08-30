@@ -26,6 +26,8 @@ function statusForApplicationError(code: string): number {
   switch (code) {
     case APPLICATION_ERROR_CODE.validation:
       return 400;
+    case APPLICATION_ERROR_CODE.participantAgeNotEligible:
+      return 422;
     case APPLICATION_ERROR_CODE.registrationsClosed:
     case APPLICATION_ERROR_CODE.cityNotAvailable:
     case APPLICATION_ERROR_CODE.offeringNotAvailable:
