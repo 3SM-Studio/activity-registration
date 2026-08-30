@@ -656,8 +656,9 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
         <input type="hidden" {...register("renderedAt", { valueAsNumber: true })} />
 
         <div className="rounded-2xl border border-border bg-muted/45 p-4 text-sm leading-6 text-muted-foreground">
-          Wysłanie formularza jest zgłoszeniem na zajęcia. Pozytywka musi je najpierw zweryfikować i
-          skontaktuje się z Tobą, żeby potwierdzić odpowiednią grupę oraz termin.
+          Wysłanie formularza jest zgłoszeniem na wybrane zajęcia, nie automatyczną rezerwacją
+          miejsca. Pozytywka sprawdzi dostępność i skontaktuje się z Tobą w sprawie potwierdzenia
+          udziału.
         </div>
 
         {settings.privacyNoticeUrl ? (
