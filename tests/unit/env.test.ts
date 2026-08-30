@@ -34,6 +34,7 @@ const canonicalProductionConfig = {
   DATA_BACKEND: "google-sheets",
   GOOGLE_SPREADSHEET_ID: PRODUCTION_SPREADSHEET_ID,
   VERCEL: "1",
+  CRON_SECRET: "test-cron-secret-that-is-longer-than-32-chars",
   ...productionWifConfig,
   ...emailProductionConfig,
 } as const;
@@ -73,6 +74,7 @@ describe("server environment", () => {
         RESEND_API_KEY: "",
         EMAIL_FROM: "",
         REGISTRATION_ADMIN_EMAILS: "",
+        CRON_SECRET: "",
         VERCEL: "",
         VERCEL_OIDC_TOKEN: "",
       }),
@@ -150,7 +152,19 @@ describe("server environment", () => {
       GOOGLE_SPREADSHEET_ID: PRODUCTION_SPREADSHEET_ID,
       GCP_SERVICE_ACCOUNT_EMAIL: PRODUCTION_SERVICE_ACCOUNT_EMAIL,
       REGISTRATION_ADMIN_EMAILS: [PRODUCTION_ADMIN_EMAIL, "zapisy@example.com"],
+      CRON_SECRET: canonicalProductionConfig.CRON_SECRET,
     });
+  });
+
+  it("rejects production without a strong cron secret", () => {
+    const { CRON_SECRET: _cronSecret, ...withoutCronSecret } = canonicalProductionConfig;
+    expect(() => parseServerEnv(withoutCronSecret)).toThrow();
+    expect(() =>
+      parseServerEnv({
+        ...canonicalProductionConfig,
+        CRON_SECRET: "too-short",
+      }),
+    ).toThrow();
   });
 
   it("rejects production pointed at the wrong Sheet or service account", () => {
@@ -206,6 +220,12 @@ describe("server environment", () => {
       isUnconfiguredVercelProduction({
         ...canonicalProductionConfig,
         GCP_SERVICE_ACCOUNT_EMAIL: "activity@example.iam.gserviceaccount.com",
+      }),
+    ).toBe(true);
+    expect(
+      isUnconfiguredVercelProduction({
+        ...canonicalProductionConfig,
+        CRON_SECRET: "",
       }),
     ).toBe(true);
   });
