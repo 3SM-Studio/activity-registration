@@ -94,9 +94,7 @@ export async function createGoogleAuthClient(env: ServerEnv): Promise<AuthClient
     return cached;
   }
 
-  const client = usesVercelOidc
-    ? createVercelOidcClient(env)
-    : createApplicationDefaultClient(env);
+  const client = usesVercelOidc ? createVercelOidcClient(env) : createApplicationDefaultClient(env);
   authClients.set(key, client);
 
   try {
