@@ -103,6 +103,19 @@ function groupSupportsAge(group: InternalGroup, age: number): boolean {
   );
 }
 
+function ageForGroupEligibility(
+  birthDate: string,
+  seasonStartDate: string,
+  ageAtSubmission: number,
+): number {
+  const ageAtSeasonStart = calculateAgeAtDate(birthDate, seasonStartDate);
+
+  // A child can legitimately be born after a season has already started, for example
+  // rolling infant/toddler activities. In that case a negative season-start age is not a
+  // meaningful eligibility value, so use the age at the actual registration instead.
+  return ageAtSeasonStart < 0 ? ageAtSubmission : ageAtSeasonStart;
+}
+
 export async function submitRegistration(
   rawInput: unknown,
   dependencies: SubmitRegistrationDependencies,
@@ -239,12 +252,16 @@ export async function submitRegistration(
   }
 
   const offeringId = asOfferingId(offering.id);
-  const ageAtSeasonStart = calculateAgeAtDate(normalized.birthDate, season.startDate);
+  const eligibilityAge = ageForGroupEligibility(
+    normalized.birthDate,
+    season.startDate,
+    normalized.ageAtSubmission,
+  );
   const groups = await dependencies.repositories.catalog.findGroupsForOffering(
     season.id,
     offeringId,
   );
-  const hasEligibleGroup = groups.some((group) => groupSupportsAge(group, ageAtSeasonStart));
+  const hasEligibleGroup = groups.some((group) => groupSupportsAge(group, eligibilityAge));
 
   if (!hasEligibleGroup) {
     const message = "Dla wieku uczestnika nie ma obecnie aktywnej grupy w wybranych zajęciach.";
