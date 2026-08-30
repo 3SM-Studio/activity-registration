@@ -90,9 +90,19 @@ export function PhoneCountrySelect({
           <span className="text-muted-foreground">Kraj</span>
         )}
       </SelectTrigger>
-      <SelectContent className="max-h-80 min-w-[18rem]">
+      <SelectContent
+        position="popper"
+        align="start"
+        sideOffset={4}
+        collisionPadding={16}
+        className="max-h-80 w-[calc(100vw-4.5rem)] min-w-0 max-w-72"
+      >
         {countries.map((option) => (
-          <SelectItem key={option.value} value={option.value}>
+          <SelectItem
+            key={option.value}
+            value={option.value}
+            className="min-w-0 overflow-hidden"
+          >
             <span className="flex min-w-0 flex-1 items-center gap-2">
               <CountryFlag country={option.value} label={option.label} />
               <span className="min-w-0 flex-1 truncate">{option.label}</span>
