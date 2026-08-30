@@ -14,6 +14,7 @@ const REQUIRED_PRODUCTION_KEYS = [
   "RESEND_API_KEY",
   "EMAIL_FROM",
   "REGISTRATION_ADMIN_EMAILS",
+  "CRON_SECRET",
 ] as const;
 
 const MISSING_ENV_PREFIX = "Missing required production environment variables:";
@@ -103,6 +104,7 @@ function main(): void {
         canonicalSpreadsheet: env.GOOGLE_SPREADSHEET_ID === PRODUCTION_SPREADSHEET_ID,
         dedicatedProdIdentity: env.GCP_SERVICE_ACCOUNT_EMAIL === PRODUCTION_SERVICE_ACCOUNT_EMAIL,
         wifConfigured,
+        cronSecretConfigured: Boolean(env.CRON_SECRET),
         testSeedDisabled: env.ALLOW_TEST_SEED === "false",
         productionCatalogSeedDisabled: process.env.ALLOW_PRODUCTION_CATALOG_SEED !== "true",
         resendTestingDomainRejected: !usesResendTestingDomain(env.EMAIL_FROM),
