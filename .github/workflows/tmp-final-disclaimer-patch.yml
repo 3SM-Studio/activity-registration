@@ -1,0 +1,43 @@
+name: Temporary final disclaimer patch
+
+on:
+  push:
+    branches:
+      - fix/final-registration-disclaimer
+    paths:
+      - .github/workflows/tmp-final-disclaimer-patch.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: fix/final-registration-disclaimer
+      - name: Patch disclaimer
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('src/components/registration/registration-form.tsx')
+          text = path.read_text(encoding='utf-8')
+          old = '''          Wysłanie formularza jest zgłoszeniem na zajęcia. Pozytywka musi je najpierw zweryfikować i
+          skontaktuje się z Tobą, żeby potwierdzić odpowiednią grupę oraz termin.'''
+          new = '''          Wysłanie formularza jest zgłoszeniem na wybrane zajęcia, nie automatyczną rezerwacją
+          miejsca. Pozytywka sprawdzi dostępność i skontaktuje się z Tobą w sprawie potwierdzenia
+          udziału.'''
+          if text.count(old) != 1:
+              raise SystemExit(f'Expected exactly one disclaimer match, got {text.count(old)}')
+          path.write_text(text.replace(old, new), encoding='utf-8')
+          PY
+      - name: Commit patch
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/registration/registration-form.tsx
+          git commit -m "fix: align final registration disclaimer"
+          git push origin HEAD:fix/final-registration-disclaimer
