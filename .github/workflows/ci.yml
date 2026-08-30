@@ -38,3 +38,23 @@ jobs:
         run: pnpm test:e2e
         env:
           PLAYWRIGHT_USE_SYSTEM_CHROME: "1"
+
+  webkit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11.20.0
+          run_install: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24.19.0
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install WebKit
+        run: pnpm exec playwright install --with-deps webkit
+      - name: iPhone WebKit E2E
+        run: pnpm exec playwright test --project=mobile-webkit
