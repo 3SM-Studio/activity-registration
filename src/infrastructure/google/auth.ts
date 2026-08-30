@@ -4,6 +4,7 @@ import { ExternalAccountClient, GoogleAuth, type AuthClient } from "google-auth-
 import type { ServerEnv } from "@/lib/env";
 
 const SHEETS_SCOPE = "https://www.googleapis.com/auth/spreadsheets";
+const authClients = new Map<string, Promise<AuthClient>>();
 
 export class GoogleAuthenticationError extends Error {
   constructor() {
@@ -41,6 +42,20 @@ function requireOidcConfiguration(env: ServerEnv) {
   };
 }
 
+function oidcCacheKey(env: ServerEnv): string {
+  return [
+    "vercel",
+    env.GCP_PROJECT_NUMBER ?? "",
+    env.GCP_SERVICE_ACCOUNT_EMAIL ?? "",
+    env.GCP_WORKLOAD_IDENTITY_POOL_ID ?? "",
+    env.GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID ?? "",
+  ].join("|");
+}
+
+function adcCacheKey(env: ServerEnv): string {
+  return `adc|${env.GCP_PROJECT_ID ?? "default"}`;
+}
+
 async function createVercelOidcClient(env: ServerEnv): Promise<AuthClient> {
   const config = requireOidcConfiguration(env);
 
@@ -72,11 +87,24 @@ async function createApplicationDefaultClient(env: ServerEnv): Promise<AuthClien
 }
 
 export async function createGoogleAuthClient(env: ServerEnv): Promise<AuthClient> {
-  if (env.VERCEL || env.VERCEL_OIDC_TOKEN) {
-    return createVercelOidcClient(env);
+  const usesVercelOidc = Boolean(env.VERCEL || env.VERCEL_OIDC_TOKEN);
+  const key = usesVercelOidc ? oidcCacheKey(env) : adcCacheKey(env);
+  const cached = authClients.get(key);
+  if (cached) {
+    return cached;
   }
 
-  return createApplicationDefaultClient(env);
+  const client = usesVercelOidc
+    ? createVercelOidcClient(env)
+    : createApplicationDefaultClient(env);
+  authClients.set(key, client);
+
+  try {
+    return await client;
+  } catch (error) {
+    authClients.delete(key);
+    throw error;
+  }
 }
 
 export async function getGoogleAccessToken(env: ServerEnv): Promise<string> {
