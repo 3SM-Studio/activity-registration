@@ -7,6 +7,7 @@ import {
   type InternalGroup,
   type PublicOffering,
 } from "@/domain/catalog";
+import { ageForGroupEligibility } from "@/domain/group-eligibility";
 import { offeringAcceptsRegistration } from "@/domain/offering-intake";
 import type { ApplicationRepositories } from "@/domain/repositories";
 import {
@@ -239,12 +240,16 @@ export async function submitRegistration(
   }
 
   const offeringId = asOfferingId(offering.id);
-  const ageAtSeasonStart = calculateAgeAtDate(normalized.birthDate, season.startDate);
+  const eligibilityAge = ageForGroupEligibility(
+    normalized.birthDate,
+    season.startDate,
+    normalized.ageAtSubmission,
+  );
   const groups = await dependencies.repositories.catalog.findGroupsForOffering(
     season.id,
     offeringId,
   );
-  const hasEligibleGroup = groups.some((group) => groupSupportsAge(group, ageAtSeasonStart));
+  const hasEligibleGroup = groups.some((group) => groupSupportsAge(group, eligibilityAge));
 
   if (!hasEligibleGroup) {
     const message = "Dla wieku uczestnika nie ma obecnie aktywnej grupy w wybranych zajęciach.";

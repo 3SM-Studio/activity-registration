@@ -46,5 +46,13 @@ export default defineConfig({
         isMobile: true,
       },
     },
+    ...(!useSystemChrome
+      ? [
+          {
+            name: "mobile-webkit",
+            use: { ...devices["iPhone 13"] },
+          },
+        ]
+      : []),
   ],
 });

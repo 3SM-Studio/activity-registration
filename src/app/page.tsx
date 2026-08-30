@@ -109,9 +109,9 @@ export default async function HomePage() {
               {settings.formTitle}
             </h1>
             <p className="max-w-xl text-pretty text-neutral-600">
-              Wybierz miasto i rodzaj zajęć, a następnie podaj dane uczestnika. Po wysłaniu
-              Pozytywka sprawdzi zgłoszenie i skontaktuje się z Tobą, aby dobrać odpowiednią grupę
-              oraz termin.
+              Wybierz lokalizację i konkretne zajęcia, a następnie podaj dane uczestnika. Wysłanie
+              formularza jest zgłoszeniem, nie automatyczną rezerwacją miejsca. Pozytywka sprawdzi
+              dostępność i skontaktuje się z Tobą w sprawie potwierdzenia udziału.
             </p>
           </div>
         </header>

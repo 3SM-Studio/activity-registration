@@ -2,7 +2,7 @@
 
 Publiczny system zapisów na zajęcia dla projektów 3SM Studio, obecnie wdrażany dla Pracowni Twórczej Pozytywka.
 
-Status: schema v4 działa na Preview i Production. Produkcja jest wdrożona, ale zapisy pozostają celowo zamknięte do czasu domknięcia końcowej checklisty release i fizycznej akceptacji.
+Status: schema v4 działa na Preview i Production. Production jest wdrożone, a `REGISTRATIONS_OPEN` pozostaje celowo `FALSE` podczas launch hardeningu 2026-08-30. Otwarcie zapisów następuje dopiero po zielonym CI, zweryfikowanym wdrożeniu Production i zamknięciu wymaganych manualnych gate'ów release.
 
 Repozytorium jest świadomie publiczne. Sekrety, tokeny, credentials i PII nie mogą trafiać do Git.
 
@@ -10,14 +10,14 @@ Repo jest publiczne do wglądu, ale nie jest projektem open source. Brak dodatko
 
 ## Stack
 
-- Next.js 16.3.0
+- Next.js 16.3.3
 - React 19.2.8
 - TypeScript 6.0.3, strict
 - pnpm 11.20.0
 - Zod 4.4.3
-- React Hook Form 7.84.0
+- React Hook Form 7.86.0
 - Tailwind CSS 4.3.3
-- Vitest 4.1.10
+- Vitest 4.1.11
 - Playwright 1.62.1
 - Google Sheets API
 - Vercel OIDC + Google Workload Identity Federation
@@ -39,6 +39,8 @@ Browser
 Google Sheets jest adapterem storage, a nie domeną aplikacji.
 
 Po skutecznym zapisie Registration aplikacja utrzymuje trwały outbox powiadomień. Każde nowe zgłoszenie ma osobny job potwierdzenia dla uczestnika i powiadomienia administratora. Awaria e-maila nie cofa Registration, ale pozostawia trwały stan do retry/reconciliation zamiast bezpowrotnie gubić wysyłkę.
+
+Pierwsza próba wysyłki odbywa się bezpośrednio po zgłoszeniu. Production ma również zabezpieczony `GET /api/cron/notifications`, autoryzowany przez `CRON_SECRET`, jako dodatkowy reconciliation worker. Na obecnym planie Vercel Hobby awaryjny platformowy cron działa raz dziennie. Szczegóły: `docs/NOTIFICATION_OUTBOX.md`.
 
 ## Wymagania lokalne
 
@@ -125,6 +127,8 @@ pnpm check
 pnpm test:e2e
 ```
 
+CI uruchamia krytyczny zestaw Chromium oraz osobny profil iPhone WebKit.
+
 Przed wdrożeniem Google-backed środowiska:
 
 ```bash
@@ -150,7 +154,7 @@ Vercel Preview
 -> Resend
 ```
 
-Preview nie może korzystać z tożsamości mającej dostęp do PROD Sheet.
+Preview nie może korzystać z tożsamości mającej dostęp do PROD Sheet. Po hotfixie Production `preview` musi zostać ponownie zsynchronizowany z aktualnym `main`, zanim zostanie uznany za kanoniczny staging następnej zmiany.
 
 ## Dokumentacja
 
@@ -168,6 +172,7 @@ Przed większą zmianą przeczytaj:
 - `docs/DEPENDENCIES.md`
 - `docs/IMPLEMENTATION_STATUS.md`
 - `docs/RELEASE_CHECKLIST.md`
+- `docs/AUDIT_REMEDIATION_2026-08-30.md`
 
 `PROJECT_BLUEPRINT.md` jest planem bazowym sprzed implementacji. Późniejsze jawne decyzje w `DECISIONS.md` i zweryfikowany stan w `IMPLEMENTATION_STATUS.md` zastępują sprzeczne założenia planu.
 
@@ -182,7 +187,7 @@ Przed większą zmianą przeczytaj:
 - preview nie używa produkcyjnego arkusza ani produkcyjnej identity,
 - produkcja nie korzysta z długowiecznego private key service account,
 - sekrety nie trafiają do publicznego repo,
-- PROD pozostaje zamknięty, dopóki release checklist nie jest kompletna.
+- Production pozostaje zamknięte podczas hardeningu i otwieramy je dopiero po przejściu aktualnego release gate.
 
 ## Licencja
 
