@@ -1,0 +1,86 @@
+name: Apply launch copy patches
+
+on:
+  push:
+    branches:
+      - fix/launch-hardening-2026-08-30
+
+permissions:
+  contents: write
+
+concurrency:
+  group: launch-copy-patches
+  cancel-in-progress: true
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: fix/launch-hardening-2026-08-30
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11.20.0
+          run_install: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24.19.0
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Apply deterministic copy fixes
+        shell: python
+        run: |
+          from pathlib import Path
+
+          def replace(path: str, old: str, new: str) -> None:
+              file = Path(path)
+              text = file.read_text(encoding="utf-8")
+              if old not in text:
+                  if new in text:
+                      return
+                  raise SystemExit(f"Expected text not found in {path}")
+              file.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+          replace(
+              "src/components/registration/registration-form.tsx",
+              """Pozytywka sprawdzi dostępne grupy i skontaktuje się z Tobą, żeby ustalić odpowiednią\n                grupę oraz termin. Samo wysłanie formularza nie oznacza jeszcze potwierdzenia\n                miejsca.""",
+              """Pozytywka sprawdzi poprawność zgłoszenia i dostępność miejsca. Po weryfikacji\n                skontaktujemy się z Tobą, żeby potwierdzić udział lub przekazać dalsze kroki. Samo\n                wysłanie formularza nie oznacza jeszcze potwierdzenia miejsca.""",
+          )
+          replace(
+              "src/components/registration/registration-form.tsx",
+              "Potwierdzenie otrzymania zgłoszenia wysłaliśmy również na podany adres e-mail.",
+              "Potwierdzenie e-mail powinno dotrzeć na podany adres. Jeśli go nie widzisz, sprawdź folder spam. Nie wysyłaj formularza ponownie tylko z tego powodu.",
+          )
+          replace(
+              "src/emails/registration-confirmation-email.tsx",
+              """sprawdzimy je i wrócimy z informacją o odpowiedniej grupie oraz terminie.""",
+              """sprawdzimy je i wrócimy z potwierdzeniem dostępności oraz dalszymi krokami.""",
+          )
+          replace(
+              "src/emails/registration-confirmation-email.tsx",
+              """title=\"Dobieramy odpowiednią grupę\"\n          description=\"Bierzemy pod uwagę wybrane zajęcia, miasto i wiek uczestnika.\"""",
+              """title=\"Sprawdzamy dostępność\"\n          description=\"Weryfikujemy wybraną ofertę, wiek uczestnika i możliwość przyjęcia zgłoszenia.\"""",
+          )
+          replace(
+              "src/emails/registration-confirmation-email.tsx",
+              """title=\"Kontaktujemy się z Tobą\"\n          description=\"Po weryfikacji Pozytywka przekaże informację o dalszych krokach.\"""",
+              """title=\"Przekazujemy dalsze kroki\"\n          description=\"Po weryfikacji Pozytywka potwierdzi możliwość udziału albo skontaktuje się w sprawie dalszych kroków.\"""",
+          )
+      - name: Format changed files
+        run: pnpm exec prettier --write src/components/registration/registration-form.tsx src/emails/registration-confirmation-email.tsx
+      - name: Commit changes
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo "Copy patches already applied."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/registration/registration-form.tsx src/emails/registration-confirmation-email.tsx
+          git commit -m "fix: align post-submit communication with delivery semantics"
+          git push origin HEAD:fix/launch-hardening-2026-08-30
