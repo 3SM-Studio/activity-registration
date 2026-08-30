@@ -182,10 +182,10 @@ select {
   height: 3rem;
   width: 100%;
   overflow: hidden;
-  border: 1px solid var(--color-neutral-400);
-  border-radius: 1rem;
-  background: #ffffff;
-  box-shadow: 0 1px 0 rgb(41 23 45 / 0.04);
+  border: 1px solid var(--input);
+  border-radius: var(--radius-2xl);
+  background: var(--background);
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   transition:
     border-color 150ms ease,
     box-shadow 150ms ease;
@@ -193,7 +193,7 @@ select {
 
 .pozytywka-phone-input:focus-within {
   border-color: var(--brand);
-  box-shadow: 0 0 0 4px var(--brand-ring);
+  box-shadow: 0 0 0 3px rgb(163 32 90 / 0.3);
 }
 
 .pozytywka-phone-input--invalid {
@@ -222,7 +222,7 @@ select {
   max-width: 100%;
   height: 100%;
   border: 0;
-  border-radius: 0 1rem 1rem 0;
+  border-radius: 0 var(--radius-2xl) var(--radius-2xl) 0;
   background: transparent;
   padding: 0 1rem;
   color: var(--foreground);

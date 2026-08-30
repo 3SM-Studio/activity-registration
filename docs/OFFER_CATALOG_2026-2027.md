@@ -1,6 +1,6 @@
 # Oferta Pozytywki 2026/2027
 
-Date: 2026-08-29
+Date: 2026-08-30
 Status: canonical catalog input for the current offer refresh
 
 Ten dokument zastępuje wcześniejszy roboczy katalog sześciu ogólnych ofert i ośmiu grup z `docs/PRODUCTION_DECISIONS_2026-08-20.md` w zakresie nazw zajęć, lokalizacji, wieku, terminów i cen.
@@ -18,23 +18,23 @@ Wysłanie formularza nadal jest wyłącznie zgłoszeniem. Nie rezerwuje automaty
 1. Psikusy, 4-6 lat, poniedziałki 16:15-17:15, 160 zł / miesiąc.
 2. Psotki, dzieci 7+, wtorki 16:15-18:15, 230 zł / miesiąc.
 3. Szkółka Baletu Pozytywka · Piruet, dzieci 4+, poniedziałki 17:15-18:15, 160 zł / miesiąc.
-4. Zespół wokalny, dzieci 10+, poniedziałki od 18:30, 160 zł / miesiąc.
-5. StepDance, dorośli, poniedziałki od 18:15, cena nie została podana w źródle wejściowym.
-6. AcroDance, grupa początkująca 5-8 lat, wtorki od 16:15, 180 zł / miesiąc.
-7. AcroDance, grupa zaawansowana dla dzieci 9+, wtorki od 17:15, 180 zł / miesiąc.
+4. Zespół wokalny, dzieci 10+, poniedziałki 18:30-19:30, 160 zł / miesiąc.
+5. StepDance, dorośli, poniedziałki 18:15-19:15, cena nie została podana w źródle wejściowym.
+6. AcroDance, grupa początkująca 5-8 lat, wtorki 16:15-17:15, 180 zł / miesiąc.
+7. AcroDance, grupa zaawansowana dla dzieci 9+, wtorki 17:15-18:15, 180 zł / miesiąc.
 8. Teatr pod Czarnym Kotem, dziecięcy teatr muzyczny, wtorki 17:15-19:15, opłata 240 zł. Częstotliwość opłaty nie została dopisana.
-9. Pląsanie, dzieci do 4 lat z opiekunem, poniedziałki od 17:30, 50 zł / zajęcia.
+9. Pląsanie, dzieci do 4 lat z opiekunem, poniedziałki 17:30-18:00, 50 zł / zajęcia.
 
 ### Bukowno · MOK Bukowno
 
 1. Psikusy, 4-6 lat, czwartki 16:45-17:45, 160 zł / miesiąc.
 2. Psotki, dzieci 7+, czwartki 15:45-17:45, 230 zł / miesiąc.
-3. Inside, grupa początkująca 5-8 lat, środy od 15:15, 160 zł / miesiąc.
-4. Inside, grupa zaawansowana dla dzieci 9+, czwartki od 17:45, 160 zł / miesiąc.
+3. Inside, grupa początkująca 5-8 lat, środy 15:15-16:15, 160 zł / miesiąc.
+4. Inside, grupa zaawansowana dla dzieci 9+, czwartki 17:45-18:45, 160 zł / miesiąc.
 5. Szkółka Baletu Pozytywka · Arabeska, dzieci 4+, czwartki 15:45-16:45, 160 zł / miesiąc.
 6. Teatr dziecięcy Bez Kurtyny, czwartki 17:45-19:15, opłata 200 zł. Częstotliwość opłaty nie została dopisana.
 7. SynTeza · Street Dance Squad, 9-12 lat, środy 16:15-17:15 i czwartki 18:45-19:45, 250 zł / miesiąc.
-8. Babeczki · dzikie pląsy, poniedziałki od 18:45, 50 zł / zajęcia lub karnet miesięczny 160 zł. Wiek grupy nie został podany.
+8. Babeczki · dzikie pląsy, poniedziałki 18:45-19:45, 50 zł / zajęcia lub karnet miesięczny 160 zł. Wiek grupy nie został podany.
 
 ### Bolesław · Centrum Kultury
 
@@ -55,13 +55,16 @@ Przyjęte bezpieczne odwzorowanie bieżącego tekstu oferty:
 
 Te punkty należy skorygować w katalogu, jeśli Pozytywka poda dokładniejsze granice. Nie należy zgadywać bardziej szczegółowych zakresów.
 
+## Czas trwania zajęć
+
+Po doprecyzowaniu przez Pozytywkę: jeśli w źródłowej ofercie podano tylko godzinę startu, zajęcia trwają 60 minut. Wyjątkiem jest `Pląsanie`, które trwa 30 minut.
+
 ## Brakujące dane pozostawione puste
 
 Nie przenosimy wcześniejszych roboczych danych, których nowa oferta nie potwierdza:
 
 - pojemności grup,
 - prowadzących,
-- godziny zakończenia tam, gdzie podano tylko godzinę startu,
 - ceny StepDance,
 - dokładnego wieku dwóch teatrów,
 - wieku grupy Babeczki.
