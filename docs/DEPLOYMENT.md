@@ -27,52 +27,62 @@ feat/*, fix/*, docs/*, chore/*
 
 `preview` jest jedyną gałęzią Vercel Preview, która ma otrzymywać pełny TEST deployment aplikacji. Feature branches są wyłączone przez `vercel.json`.
 
-Hotfix produkcyjny może wyjątkowo wejść bezpośrednio do `main`, ale po opanowaniu incydentu musi zostać zsynchronizowany z `preview`.
+Hotfix produkcyjny może wyjątkowo wejść bezpośrednio do `main`, ale po opanowaniu incydentu musi zostać zsynchronizowany z `preview` przez chroniony PR.
 
-## Vercel branch deployment filtering
+## GitHub protection
 
-Prawidłowy kontrakt repo:
+Aktywny ruleset `Protect main and preview` obejmuje dokładnie `main` i `preview` i wymaga:
 
-```json
-{
-  "git": {
-    "deploymentEnabled": {
-      "**": false,
-      "preview": true,
-      "main": true
-    }
-  }
-}
-```
+- Pull Request,
+- statusu `check`,
+- statusu `webkit`,
+- branch up-to-date przed merge,
+- rozwiązania review conversations,
+- squash merge,
+- braku force push,
+- braku usuwania chronionych gałęzi.
 
-`scripts/repo-validate.mjs` pilnuje tego kontraktu.
+Ruleset nie ma bypass actors.
 
 ## Canonical deployment rule
 
-Przed testem produktu sprawdź:
+Przed uznaniem wdrożenia za poprawne sprawdź:
 
 ```text
 GitHub branch HEAD == odpowiedni Vercel deployment githubCommitSha
 ```
 
-Dla QA używaj branch aliasu `preview`, nie przypadkowego feature deploymentu.
-
 Nie uznawaj merge w GitHub za dowód wdrożenia, dopóki odpowiadający deployment Vercela nie ma stanu `READY`.
 
-## Aktualny stan infrastruktury
+## Aktualny stan Production
 
-Zweryfikowane 2026-08-26:
+Zweryfikowane 2026-08-30:
 
 ```text
 Vercel project      pozytywka-activity-registration
 Vercel project ID   prj_G9iXemQYiX8fuFkhHuSPTwZ8fQAa
-Vercel team         atypicalmichas
-Vercel framework    nextjs
 Production branch   main
 Preview branch      preview
-GCP project         pozytywka-reg-3sm-260819
-GCP project number  656375661462
+Production SHA      5d8628f5bf908b304dcfc172c95d2b8a5c1244f6
+Production deploy   dpl_5zQbApatboZBQp3J2CX63KT4fn1w
+Deployment state    READY
+Next.js             16.3.3
+REGISTRATIONS_OPEN  TRUE
 ```
+
+Production build dla launch hardeningu przeszedł:
+
+```text
+prod:env:validate   PASS
+sheet:validate      PASS, warnings=[]
+diagnostics         PASS
+Next.js build        PASS
+post-deploy GET      HTTP 200
+cron unauthorized    HTTP 401
+runtime errors       no new warning/error/fatal cluster found
+```
+
+Po zweryfikowanym closed-state smoke `REGISTRATIONS_OPEN` został ustawiony na `TRUE` jako finalna kontrolowana zmiana w `USTAWIENIA`.
 
 Google Sheets:
 
@@ -95,10 +105,6 @@ USTAWIENIA
 PANEL_OPERATORA  # derived dashboard, not a native Table
 ```
 
-`POWIADOMIENIA` is an additive technical outbox. It does not change the schema version stored on historical `ZAPISY` rows.
-
-Both TEST and PROD must normally remain closed outside an explicitly controlled release/QA window.
-
 ## Izolacja TEST i PROD
 
 TEST service account:
@@ -115,7 +121,7 @@ activity-registration-prod@pozytywka-reg-3sm-260819.iam.gserviceaccount.com
 
 Preview uses the TEST identity. Production uses the dedicated PROD identity. The TEST service account must not have access to the PROD Sheet.
 
-The PROD Sheet ACL was rechecked on 2026-08-22 and contains the dedicated PROD application service account, not the TEST application service account. This verifies Sheet-level isolation, not the complete Google Cloud IAM surface.
+The PROD Sheet ACL contains the dedicated PROD application service account and not the TEST application service account. This verifies Sheet-level isolation, not the complete Google Cloud IAM surface.
 
 ## Google WIF
 
@@ -158,20 +164,25 @@ After successful Registration persistence the application maintains two technica
 
 A provider failure does not roll back Registration. The job remains durable and can be retried/reconciled.
 
-Operational commands:
+The first delivery attempt happens immediately after successful Registration. Production also exposes a secured recovery endpoint:
+
+```text
+GET /api/cron/notifications
+Authorization: Bearer <CRON_SECRET>
+```
+
+`CRON_SECRET` exists only in the Vercel Production environment and is not stored in Git.
+
+Current Vercel plan is Hobby, therefore the platform recovery cron runs once daily. Operational commands remain available:
 
 ```bash
 pnpm notifications:reconcile
 pnpm notifications:retry
 ```
 
-First deployment to an existing environment also requires a one-time closed-intake adoption:
+`notifications:adopt` was a one-time historical rollout operation and must not be repeated on current PROD.
 
-```bash
-pnpm notifications:adopt
-```
-
-Historical jobs are marked `SKIPPED`; adoption must not resend old mail. See `docs/NOTIFICATION_OUTBOX.md`.
+See `docs/NOTIFICATION_OUTBOX.md`.
 
 ## Preview environment
 
@@ -189,27 +200,15 @@ TEST REGISTRATIONS_OPEN=FALSE
 
 ## Production environment
 
-Production remains fail-closed until all blocking release gates are complete. The command-level Production gate itself is now verified.
+Production is live. Closing and opening intake remains a controlled operational switch independent of code deployment.
 
-```text
-PROD REGISTRATIONS_OPEN=FALSE
-```
+Normal emergency-close procedure:
 
-Latest verified Production evidence, 2026-08-26:
-
-```text
-Git SHA              01e07a11be2214bbf3fd4380dc2c34b3190ed4ba
-Vercel deployment    dpl_8eEVcfawVZL3pixSDBdjkrWphcUP
-Deployment state     READY
-prod:env:validate    PASS
-sheet:validate       PASS, warnings=[]
-diagnostics          PASS, jobs=2 missing=0 failed=0 expired_leases=0
-Next.js build         PASS
-post-deploy GET       200, registrationsOpen=false, closed-state UX
-runtime errors        none found after smoke
-```
-
-These checks ran inside the exact Vercel Production build environment before the normal Next.js build. They supersede the earlier release-checklist placeholders for exported-env, Sheet validation and diagnostics. Re-run them when Production code, environment or Sheet contract changes.
+1. set PROD `REGISTRATIONS_OPEN=FALSE`,
+2. verify closed-state HTTP 200,
+3. perform code/environment/data maintenance,
+4. run Production gate and smoke,
+5. set `REGISTRATIONS_OPEN=TRUE` only after the verified state is acceptable.
 
 Do not use long-lived service-account JSON private keys. Production authentication uses Vercel OIDC/WIF and the dedicated PROD service account.
 
@@ -224,14 +223,18 @@ Recommended order:
 3. ensure no operator is concurrently editing structural Sheet metadata,
 4. run the approved structural sync/migration,
 5. validate headers/tables/protections,
-6. for first outbox rollout, run safe historical adoption,
-7. run `sheet:validate`, `diagnostics` and reconciliation,
-8. keep intake closed until the environment-specific smoke is complete.
+6. run `sheet:validate`, `diagnostics` and reconciliation,
+7. perform closed-state smoke,
+8. reopen intake only after postconditions pass.
 
 `sheet:bootstrap` is the routine-safe operator refresh path. `sheet:schema-sync` is the explicit structural maintenance path. Do not use them interchangeably.
 
-## Production gates
+## Residual post-launch work
 
-Before public opening, all repository quality gates, Google validation, infrastructure isolation, privacy/retention requirements, child-protection organizational gates, operator access review and manual device/accessibility tests must be complete.
+The current launch is not claimed to solve long-term architectural limitations. Remaining items are tracked in `docs/AUDIT_REMEDIATION_2026-08-30.md`, especially:
 
-Only then may PROD `REGISTRATIONS_OPEN` become `TRUE`.
+- wider Google Cloud IAM review,
+- human/device/accessibility acceptance,
+- GitHub security-default review,
+- migration planning from Sheets transactional core to PostgreSQL,
+- stronger alerting, backup/restore and audit-trail architecture.
