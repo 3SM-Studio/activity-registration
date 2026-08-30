@@ -84,6 +84,7 @@ test("keeps selects and contact fields inside narrow mobile viewport", async ({
   await expectNoHorizontalOverflow(page);
 });
 
+// Matches the narrow iPhone viewport that exposed the country-list overflow.
 test("keeps phone country dropdown inside the phone field at 375 px", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 667 });
   await page.goto("/");
