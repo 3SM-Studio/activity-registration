@@ -1,12 +1,12 @@
 # Dependency policy
 
-Verified: 2026-08-18.
+Verified: 2026-08-30.
 
 ## Runtime and core
 
 - Node.js 24.19.0 LTS
 - pnpm 11.20.0
-- Next.js 16.3.0
+- Next.js 16.3.3
 - React 19.2.8
 - React DOM 19.2.8
 - TypeScript 6.0.3
@@ -14,28 +14,37 @@ Verified: 2026-08-18.
 ## Application
 
 - Zod 4.4.3
-- React Hook Form 7.84.0
-- @hookform/resolvers 5.6.0
-- @vercel/oidc 3.8.2
-- google-auth-library 11.0.0
+- React Hook Form 7.86.0
+- @hookform/resolvers 5.9.1
+- @vercel/oidc 3.8.5
+- google-auth-library 11.0.2
 - Tailwind CSS 4.3.3
 - tailwind-merge 3.6.0
 - clsx 2.1.1
+- date-fns 4.4.0
+- libphonenumber-js 1.13.11
+- react-phone-number-input 3.4.18
+- react-email 6.9.2
+- radix-ui 1.6.7
 
 ## Tooling
 
-- Vitest 4.1.10
+- Vitest 4.1.11
 - Playwright 1.62.1
 - Prettier 3.9.6
 - ESLint 9.39.5
-- eslint-config-next 16.3.0
-- tsx 4.23.1
+- eslint-config-next 16.3.3
+- tsx 4.23.12
+
+## Security baseline
+
+Next.js is pinned to 16.3.3 for the 2026-08-25 security maintenance release. Framework security patches are treated as launch-critical and must not wait for routine feature work.
 
 ## Compatibility pins
 
 ### TypeScript 6.0.3
 
-TypeScript 7 is globally newer, but this project intentionally uses the latest stable 6.x release while the selected Next.js toolchain is still validated around the established TypeScript compiler path. Upgrade to TypeScript 7 only after the complete `pnpm check` and E2E suite pass on the target Next.js release.
+TypeScript 7 is globally newer, but this project intentionally uses the latest stable 6.x release while the selected Next.js toolchain is validated on this compiler line. Upgrade to TypeScript 7 only after the complete `pnpm check` and E2E suite pass on the target Next.js release.
 
 ### ESLint 9.39.5
 
@@ -47,7 +56,8 @@ ESLint 10 is globally newer, but the current Next.js lint stack still contains t
 - `pnpm-lock.yaml` is mandatory before merge/release.
 - No beta, canary, RC or alpha package is selected for the production baseline.
 - A globally newer major is not adopted when it introduces a known compatibility conflict with the selected framework stack.
-- Dependency upgrades require `pnpm check` and critical Playwright scenarios.
+- Dependency upgrades require `pnpm check`, critical Chromium Playwright scenarios and the iPhone WebKit regression suite.
+- Security maintenance releases are reviewed independently of the normal weekly Dependabot cadence.
 
 ## Next.js type generation
 
@@ -55,10 +65,10 @@ ESLint 10 is globally newer, but the current Next.js lint stack still contains t
 
 ## GitHub Actions
 
-CI tracks the current stable major lines verified on 2026-08-18:
+CI currently uses:
 
 - `actions/checkout@v7`,
 - `actions/setup-node@v7`,
 - `pnpm/action-setup@v6`.
 
-Dependabot checks both npm/pnpm dependencies and GitHub Actions weekly.
+Dependabot checks both npm/pnpm dependencies and GitHub Actions weekly. Pinning third-party Actions to immutable commit SHAs remains a supply-chain hardening item after the launch-critical rollout.
