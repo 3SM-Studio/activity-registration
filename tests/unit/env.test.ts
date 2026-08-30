@@ -157,8 +157,12 @@ describe("server environment", () => {
   });
 
   it("rejects production without a strong cron secret", () => {
-    const { CRON_SECRET: _cronSecret, ...withoutCronSecret } = canonicalProductionConfig;
-    expect(() => parseServerEnv(withoutCronSecret)).toThrow();
+    expect(() =>
+      parseServerEnv({
+        ...canonicalProductionConfig,
+        CRON_SECRET: undefined,
+      }),
+    ).toThrow();
     expect(() =>
       parseServerEnv({
         ...canonicalProductionConfig,
