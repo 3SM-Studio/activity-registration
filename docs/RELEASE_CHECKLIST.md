@@ -158,7 +158,8 @@ Canonical TEST Sheet ID:
 - [x] TEST notification/write path was previously verified
 - [x] TEST historical outbox adoption completed safely
 - [x] feature branches are not canonical TEST deployments
-- [ ] current hardened `main` content merged into protected `preview` after direct Production hotfix sequence
+- [x] PR #84 merged the exact hardened Production tree into protected `preview`
+- [x] `preview` commit `41a5eb7f65a49e27ef68aa6f28e251dc846976cb` has tree `c74a2e425d735b9cc5d8285e68acd8884331b4c0`, identical to Production `main` tree before this docs-only follow-up
 
 ## Human acceptance not replaced by CI
 
