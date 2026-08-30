@@ -45,8 +45,15 @@ export async function GET(request: Request) {
     return NextResponse.json({ ok: false }, { status: 503 });
   }
 
+  const registrationRepository = repositories.registrations;
+  const listRegistrations = registrationRepository.listAll?.bind(registrationRepository);
+  if (!listRegistrations) {
+    logger.error("notifications.cron.registration_listing_missing");
+    return NextResponse.json({ ok: false }, { status: 503 });
+  }
+
   try {
-    const registrations = await repositories.registrations.listAll();
+    const registrations = await listRegistrations();
     const result = await reconcileRegistrationNotifications(registrations, {
       ...notificationDependencies,
       outbox,
