@@ -1,0 +1,45 @@
+name: Launch lockfile refresh
+
+on:
+  push:
+    branches:
+      - fix/launch-hardening-2026-08-30
+
+permissions:
+  contents: write
+
+concurrency:
+  group: launch-lockfile-refresh
+  cancel-in-progress: true
+
+jobs:
+  refresh:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: fix/launch-hardening-2026-08-30
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11.20.0
+          run_install: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24.19.0
+          cache: pnpm
+      - name: Refresh lockfile
+        run: pnpm install --lockfile-only
+      - name: Commit lockfile if changed
+        shell: bash
+        run: |
+          if git diff --quiet -- pnpm-lock.yaml; then
+            echo "Lockfile already current."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pnpm-lock.yaml
+          git commit -m "chore: refresh lockfile for launch hardening"
+          git push origin HEAD:fix/launch-hardening-2026-08-30
