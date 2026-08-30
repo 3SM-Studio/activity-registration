@@ -77,13 +77,14 @@ Repository hygiene still requiring UI/admin verification:
 
 ## 4. Preview synchronization
 
-Direct `main -> preview` merge is historically conflicted. A safe sync branch was created from current `preview` and assigned the exact current `main` tree without force-pushing the protected branch.
+Direct `main -> preview` merge was historically conflicted. A safe sync branch was created from the old `preview` and assigned the exact current Production `main` tree without force-pushing the protected branch.
 
 - [x] sync branch tree equals current Production `main` tree,
 - [x] PR #84 opened against protected `preview`,
 - [x] required `check` passed,
 - [x] required `webkit` passed,
-- [ ] PR #84 merged to `preview`.
+- [x] PR #84 merged to protected `preview` as `41a5eb7f65a49e27ef68aa6f28e251dc846976cb`,
+- [x] resulting `preview` tree is `c74a2e425d735b9cc5d8285e68acd8884331b4c0`, exactly matching the Production `main` tree before the docs-only follow-up.
 
 ## 5. Deliberately not rushed into the launch hotfix
 
