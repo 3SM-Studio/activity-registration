@@ -7,6 +7,7 @@ import {
   type InternalGroup,
   type PublicOffering,
 } from "@/domain/catalog";
+import { ageForGroupEligibility } from "@/domain/group-eligibility";
 import { offeringAcceptsRegistration } from "@/domain/offering-intake";
 import type { ApplicationRepositories } from "@/domain/repositories";
 import {
@@ -101,19 +102,6 @@ function groupSupportsAge(group: InternalGroup, age: number): boolean {
   return (
     (group.ageMin === null || age >= group.ageMin) && (group.ageMax === null || age <= group.ageMax)
   );
-}
-
-function ageForGroupEligibility(
-  birthDate: string,
-  seasonStartDate: string,
-  ageAtSubmission: number,
-): number {
-  const ageAtSeasonStart = calculateAgeAtDate(birthDate, seasonStartDate);
-
-  // A child can legitimately be born after a season has already started, for example
-  // rolling infant/toddler activities. In that case a negative season-start age is not a
-  // meaningful eligibility value, so use the age at the actual registration instead.
-  return ageAtSeasonStart < 0 ? ageAtSubmission : ageAtSeasonStart;
 }
 
 export async function submitRegistration(
