@@ -54,20 +54,22 @@ GitHub branch HEAD == odpowiedni Vercel deployment githubCommitSha
 
 Nie uznawaj merge w GitHub za dowód wdrożenia, dopóki odpowiadający deployment Vercela nie ma stanu `READY`.
 
-## Aktualny stan Production
+Nie zapisuj bieżącego `main` HEAD w dokumentacji jako trwałej stałej. Docs-only merge również przesuwa HEAD i może tworzyć Production deployment bez zmiany runtime aplikacji. Poniższe identyfikatory są evidence konkretnego runtime-changing launchu, nie aliasem „zawsze aktualnego” deploymentu.
+
+## Launch-hardening runtime evidence
 
 Zweryfikowane 2026-08-30:
 
 ```text
-Vercel project      pozytywka-activity-registration
-Vercel project ID   prj_G9iXemQYiX8fuFkhHuSPTwZ8fQAa
-Production branch   main
-Preview branch      preview
-Production SHA      5d8628f5bf908b304dcfc172c95d2b8a5c1244f6
-Production deploy   dpl_5zQbApatboZBQp3J2CX63KT4fn1w
-Deployment state    READY
-Next.js             16.3.3
-REGISTRATIONS_OPEN  TRUE
+Vercel project         pozytywka-activity-registration
+Vercel project ID      prj_G9iXemQYiX8fuFkhHuSPTwZ8fQAa
+Production branch      main
+Preview branch         preview
+Runtime-changing SHA   5d8628f5bf908b304dcfc172c95d2b8a5c1244f6
+Runtime deployment     dpl_5zQbApatboZBQp3J2CX63KT4fn1w
+Deployment state       READY
+Next.js                16.3.3
+REGISTRATIONS_OPEN     TRUE
 ```
 
 Production build dla launch hardeningu przeszedł:
@@ -76,13 +78,15 @@ Production build dla launch hardeningu przeszedł:
 prod:env:validate   PASS
 sheet:validate      PASS, warnings=[]
 diagnostics         PASS
-Next.js build        PASS
-post-deploy GET      HTTP 200
-cron unauthorized    HTTP 401
-runtime errors       no new warning/error/fatal cluster found
+Next.js build       PASS
+post-deploy GET     HTTP 200
+cron unauthorized   HTTP 401
+runtime errors      no new warning/error/fatal cluster found
 ```
 
 Po zweryfikowanym closed-state smoke `REGISTRATIONS_OPEN` został ustawiony na `TRUE` jako finalna kontrolowana zmiana w `USTAWIENIA`.
+
+Późniejsze docs-only merge mogą mieć nowszy SHA i deployment. Ich aktualny stan należy sprawdzać bezpośrednio w GitHub i Vercel.
 
 Google Sheets:
 
