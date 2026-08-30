@@ -30,23 +30,26 @@ async function expectNoHorizontalOverflow(page: Page) {
   }
 }
 
-test("keeps selects and contact fields inside narrow mobile viewport", async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name === "desktop-chromium", "Mobile regression coverage only.");
+test(
+  "keeps selects and contact fields inside narrow mobile viewport",
+  async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name === "desktop-chromium", "Mobile regression coverage only.");
 
-  await page.goto("/");
-  await expect(page.locator('form[data-hydrated="true"]')).toBeVisible();
-  await expectNoHorizontalOverflow(page);
+    await page.goto("/");
+    await expect(page.locator('form[data-hydrated="true"]')).toBeVisible();
+    await expectNoHorizontalOverflow(page);
 
-  const city = page.getByRole("combobox", { name: /Miasto/ });
-  await city.click();
-  await page.getByRole("option", { name: "Gdynia", exact: true }).click();
+    const city = page.getByRole("combobox", { name: /Miasto/ });
+    await city.click();
+    await page.getByRole("option", { name: "Gdynia", exact: true }).click();
 
-  const offering = page.getByRole("combobox", { name: /Zajęcia/ });
-  await offering.click();
-  await page.getByRole("option", { name: "Taniec współczesny", exact: true }).click();
+    const offering = page.getByRole("combobox", { name: /Zajęcia/ });
+    await offering.click();
+    await page.getByRole("option", { name: "Taniec współczesny", exact: true }).click();
 
-  await page.getByLabel(/Numer telefonu/).fill("500 000 000");
-  await page.getByLabel(/Adres e-mail/).fill("mobilny@example.com");
+    await page.getByLabel(/Numer telefonu/).fill("500 000 000");
+    await page.getByLabel(/Adres e-mail/).fill("mobilny@example.com");
 
-  await expectNoHorizontalOverflow(page);
-});
+    await expectNoHorizontalOverflow(page);
+  },
+);
