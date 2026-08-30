@@ -1,8 +1,23 @@
 # Activity Registration
 
-Publiczny system zapisów na zajęcia dla projektów 3SM Studio, obecnie wdrażany dla Pracowni Twórczej Pozytywka.
+Publiczny system zgłoszeń na zajęcia dla projektów 3SM Studio, obecnie używany przez Pracownię Twórczą Pozytywka.
 
-Status: schema v4 działa na Preview i Production. Production jest wdrożone, a `REGISTRATIONS_OPEN` pozostaje celowo `FALSE` podczas launch hardeningu 2026-08-30. Otwarcie zapisów następuje dopiero po zielonym CI, zweryfikowanym wdrożeniu Production i zamknięciu wymaganych manualnych gate'ów release.
+## Status
+
+Production jest aktywne i przyjmuje zgłoszenia na ofertę 2026/2027.
+
+Zweryfikowany stan po launch hardeningu 2026-08-30:
+
+- Production branch: `main`
+- Production SHA: `5d8628f5bf908b304dcfc172c95d2b8a5c1244f6`
+- Vercel deployment: `dpl_5zQbApatboZBQp3J2CX63KT4fn1w`
+- deployment state: `READY`
+- `REGISTRATIONS_OPEN=TRUE`
+- 3 aktywne lokalizacje
+- 18 aktywnych ofert
+- Next.js 16.3.3
+- `check` i `webkit` wymagane przez aktywny GitHub ruleset dla `main` i `preview`
+- Production smoke po wdrożeniu: HTTP 200, formularz otwarty, brak nowego klastra warning/error/fatal
 
 Repozytorium jest świadomie publiczne. Sekrety, tokeny, credentials i PII nie mogą trafiać do Git.
 
@@ -36,11 +51,11 @@ Browser
   -> Google Sheets
 ```
 
-Google Sheets jest adapterem storage, a nie domeną aplikacji.
+Google Sheets jest aktualnym adapterem storage. System pozostaje request-intake, nie automatyczną rezerwacją miejsca.
 
-Po skutecznym zapisie Registration aplikacja utrzymuje trwały outbox powiadomień. Każde nowe zgłoszenie ma osobny job potwierdzenia dla uczestnika i powiadomienia administratora. Awaria e-maila nie cofa Registration, ale pozostawia trwały stan do retry/reconciliation zamiast bezpowrotnie gubić wysyłkę.
+Po skutecznym zapisie Registration aplikacja utrzymuje trwały outbox powiadomień. Każde nowe zgłoszenie ma osobny job potwierdzenia dla uczestnika i powiadomienia administratora. Awaria e-maila nie cofa Registration, tylko pozostawia trwały stan do retry/reconciliation.
 
-Pierwsza próba wysyłki odbywa się bezpośrednio po zgłoszeniu. Production ma również zabezpieczony `GET /api/cron/notifications`, autoryzowany przez `CRON_SECRET`, jako dodatkowy reconciliation worker. Na obecnym planie Vercel Hobby awaryjny platformowy cron działa raz dziennie. Szczegóły: `docs/NOTIFICATION_OUTBOX.md`.
+Pierwsza próba wysyłki odbywa się bezpośrednio po zgłoszeniu. Production ma również zabezpieczony `GET /api/cron/notifications`, autoryzowany przez `CRON_SECRET`, jako dodatkowy reconciliation worker. Na obecnym planie Vercel Hobby platformowy cron działa raz dziennie. Szczegóły: `docs/NOTIFICATION_OUTBOX.md`.
 
 ## Wymagania lokalne
 
@@ -89,34 +104,14 @@ Jawna synchronizacja strukturalna:
 APP_ENV=test DATA_BACKEND=google-sheets pnpm sheet:schema-sync
 ```
 
-Outbox po pierwszym wdrożeniu:
+Outbox:
 
 ```bash
-pnpm notifications:adopt
 pnpm notifications:reconcile
 pnpm notifications:retry
 ```
 
-`notifications:adopt` służy wyłącznie do jednorazowego oznaczenia historycznych Registration jako `SKIPPED`, gdy zapisy są zamknięte. Szczegóły: `docs/NOTIFICATION_OUTBOX.md`.
-
-Seed syntetycznego TEST wymaga jawnej flagi:
-
-```bash
-APP_ENV=test DATA_BACKEND=google-sheets ALLOW_TEST_SEED=true pnpm seed:test
-```
-
-`seed:test` nie czyści istniejących rekordów `ZAPISY`.
-
-Jawny test integracyjny realnego TEST Sheet:
-
-```bash
-APP_ENV=test \
-DATA_BACKEND=google-sheets \
-ALLOW_TEST_SEED=true \
-pnpm test:integration:sheets
-```
-
-Ta komenda ma twardą blokadę przed `APP_ENV=production`, wymaga jawnej flagi zapisu TEST i używa wyłącznie danych syntetycznych.
+`notifications:adopt` jest jednorazową operacją historyczną i nie powinna być ponownie uruchamiana na obecnym PROD.
 
 ## Quality gate
 
@@ -127,54 +122,29 @@ pnpm check
 pnpm test:e2e
 ```
 
-CI uruchamia krytyczny zestaw Chromium oraz osobny profil iPhone WebKit.
+CI uruchamia krytyczny zestaw Chromium oraz osobny profil iPhone WebKit. Chronione branche wymagają zielonych statusów `check` i `webkit`.
 
-Przed wdrożeniem Google-backed środowiska:
-
-```bash
-APP_ENV=test DATA_BACKEND=google-sheets pnpm sheet:validate
-APP_ENV=test DATA_BACKEND=google-sheets pnpm diagnostics
-APP_ENV=test DATA_BACKEND=google-sheets ALLOW_TEST_SEED=true pnpm test:integration:sheets
-```
-
-`diagnostics` obejmuje także health outboxu: brakujące joby, `FAILED` i wygasłe lease. `pnpm-lock.yaml` jest obowiązkowy przed merge i release.
+Przed zmianą Production code/environment/Sheet contract uruchamiany jest także Production gate obejmujący `prod:env:validate`, `sheet:validate` i `diagnostics`.
 
 ## TEST / Preview
 
-Zweryfikowany flow:
+Canonical Preview używa osobnego TEST Sheet i TEST service account. Nie może korzystać z produkcyjnego arkusza ani produkcyjnej identity.
 
-```text
-Vercel Preview
--> Vercel OIDC
--> Google WIF
--> TEST service account
--> TEST Google Sheet read/write
--> Registration API
--> durable notification outbox
--> Resend
-```
-
-Preview nie może korzystać z tożsamości mającej dostęp do PROD Sheet. Po hotfixie Production `preview` musi zostać ponownie zsynchronizowany z aktualnym `main`, zanim zostanie uznany za kanoniczny staging następnej zmiany.
+Po bezpośrednim hotfixie Production `preview` musi zostać zsynchronizowany z aktualnym `main`, zanim ponownie stanie się kanonicznym stagingiem.
 
 ## Dokumentacja
 
-Przed większą zmianą przeczytaj:
+Najważniejsze źródła prawdy:
 
-- `docs/PROJECT_BLUEPRINT.md`
-- `docs/DECISIONS.md`
-- `docs/ARCHITECTURE.md`
-- `docs/DATA_MODEL.md`
-- `docs/SECURITY.md`
-- `docs/TESTING.md`
+- `docs/IMPLEMENTATION_STATUS.md`
+- `docs/RELEASE_CHECKLIST.md`
 - `docs/DEPLOYMENT.md`
 - `docs/OPERATIONS.md`
 - `docs/NOTIFICATION_OUTBOX.md`
-- `docs/DEPENDENCIES.md`
-- `docs/IMPLEMENTATION_STATUS.md`
-- `docs/RELEASE_CHECKLIST.md`
+- `docs/OFFER_CATALOG_2026-2027.md`
 - `docs/AUDIT_REMEDIATION_2026-08-30.md`
 
-`PROJECT_BLUEPRINT.md` jest planem bazowym sprzed implementacji. Późniejsze jawne decyzje w `DECISIONS.md` i zweryfikowany stan w `IMPLEMENTATION_STATUS.md` zastępują sprzeczne założenia planu.
+Długoterminowe zmiany architektury po launchu, w tym migracja transactional core z Google Sheets do PostgreSQL, pozostają opisane w remediation planie i nie są udawane jako rozwiązane przez launch hotfix.
 
 ## Zasady niepodlegające negocjacji
 
@@ -187,7 +157,7 @@ Przed większą zmianą przeczytaj:
 - preview nie używa produkcyjnego arkusza ani produkcyjnej identity,
 - produkcja nie korzysta z długowiecznego private key service account,
 - sekrety nie trafiają do publicznego repo,
-- Production pozostaje zamknięte podczas hardeningu i otwieramy je dopiero po przejściu aktualnego release gate.
+- `main` i `preview` pozostają chronione aktywnym rulesetem i wymagają PR + zielonego CI.
 
 ## Licencja
 
