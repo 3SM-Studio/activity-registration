@@ -35,40 +35,47 @@ jobs:
         shell: python
         run: |
           from pathlib import Path
+          import re
 
-          def replace(path: str, old: str, new: str) -> None:
+          def replace_regex(path: str, pattern: str, replacement: str, already: str) -> None:
               file = Path(path)
               text = file.read_text(encoding="utf-8")
-              if old not in text:
-                  if new in text:
-                      return
-                  raise SystemExit(f"Expected text not found in {path}")
-              file.write_text(text.replace(old, new, 1), encoding="utf-8")
+              if already in text:
+                  return
+              updated, count = re.subn(pattern, replacement, text, count=1, flags=re.DOTALL)
+              if count != 1:
+                  raise SystemExit(f"Expected text not found in {path}: {pattern}")
+              file.write_text(updated, encoding="utf-8")
 
-          replace(
+          replace_regex(
               "src/components/registration/registration-form.tsx",
-              """Pozytywka sprawdzi dostępne grupy i skontaktuje się z Tobą, żeby ustalić odpowiednią\n                grupę oraz termin. Samo wysłanie formularza nie oznacza jeszcze potwierdzenia\n                miejsca.""",
-              """Pozytywka sprawdzi poprawność zgłoszenia i dostępność miejsca. Po weryfikacji\n                skontaktujemy się z Tobą, żeby potwierdzić udział lub przekazać dalsze kroki. Samo\n                wysłanie formularza nie oznacza jeszcze potwierdzenia miejsca.""",
+              r"Pozytywka sprawdzi dostępne grupy i skontaktuje się z Tobą, żeby ustalić odpowiednią\s+grupę oraz termin\. Samo wysłanie formularza nie oznacza jeszcze potwierdzenia\s+miejsca\.",
+              "Pozytywka sprawdzi poprawność zgłoszenia i dostępność miejsca. Po weryfikacji\\n                skontaktujemy się z Tobą, żeby potwierdzić udział lub przekazać dalsze kroki. Samo\\n                wysłanie formularza nie oznacza jeszcze potwierdzenia miejsca.",
+              "Pozytywka sprawdzi poprawność zgłoszenia i dostępność miejsca.",
           )
-          replace(
+          replace_regex(
               "src/components/registration/registration-form.tsx",
-              "Potwierdzenie otrzymania zgłoszenia wysłaliśmy również na podany adres e-mail.",
+              r"Potwierdzenie otrzymania zgłoszenia wysłaliśmy również na podany adres e-mail\.",
               "Potwierdzenie e-mail powinno dotrzeć na podany adres. Jeśli go nie widzisz, sprawdź folder spam. Nie wysyłaj formularza ponownie tylko z tego powodu.",
+              "Potwierdzenie e-mail powinno dotrzeć na podany adres.",
           )
-          replace(
+          replace_regex(
               "src/emails/registration-confirmation-email.tsx",
-              """sprawdzimy je i wrócimy z informacją o odpowiedniej grupie oraz terminie.""",
-              """sprawdzimy je i wrócimy z potwierdzeniem dostępności oraz dalszymi krokami.""",
+              r"sprawdzimy je i wrócimy z informacją o odpowiedniej grupie oraz terminie\.",
+              "sprawdzimy je i wrócimy z potwierdzeniem dostępności oraz dalszymi krokami.",
+              "wrócimy z potwierdzeniem dostępności oraz dalszymi krokami.",
           )
-          replace(
+          replace_regex(
               "src/emails/registration-confirmation-email.tsx",
-              """title=\"Dobieramy odpowiednią grupę\"\n          description=\"Bierzemy pod uwagę wybrane zajęcia, miasto i wiek uczestnika.\"""",
-              """title=\"Sprawdzamy dostępność\"\n          description=\"Weryfikujemy wybraną ofertę, wiek uczestnika i możliwość przyjęcia zgłoszenia.\"""",
+              r'title="Dobieramy odpowiednią grupę"\s+description="Bierzemy pod uwagę wybrane zajęcia, miasto i wiek uczestnika\."',
+              'title="Sprawdzamy dostępność"\\n          description="Weryfikujemy wybraną ofertę, wiek uczestnika i możliwość przyjęcia zgłoszenia."',
+              'title="Sprawdzamy dostępność"',
           )
-          replace(
+          replace_regex(
               "src/emails/registration-confirmation-email.tsx",
-              """title=\"Kontaktujemy się z Tobą\"\n          description=\"Po weryfikacji Pozytywka przekaże informację o dalszych krokach.\"""",
-              """title=\"Przekazujemy dalsze kroki\"\n          description=\"Po weryfikacji Pozytywka potwierdzi możliwość udziału albo skontaktuje się w sprawie dalszych kroków.\"""",
+              r'title="Kontaktujemy się z Tobą"\s+description="Po weryfikacji Pozytywka przekaże informację o dalszych krokach\."',
+              'title="Przekazujemy dalsze kroki"\\n          description="Po weryfikacji Pozytywka potwierdzi możliwość udziału albo skontaktuje się w sprawie dalszych kroków."',
+              'title="Przekazujemy dalsze kroki"',
           )
       - name: Format changed files
         run: pnpm exec prettier --write src/components/registration/registration-form.tsx src/emails/registration-confirmation-email.tsx
