@@ -1,69 +1,94 @@
 # Audit remediation 2026-08-30
 
-Status: launch hardening in progress. Production intake remains closed until the launch gate is complete.
+Status: launch-critical hardening completed and Production live. Remaining items are explicit post-launch technical, organizational or human follow-up and must not be presented as already solved.
 
-This document records the complete remediation scope from the 2026-08-30 application audit so that launch-critical fixes and post-launch architecture work are not mixed together or forgotten.
+## 1. Launch-critical remediation completed
 
-## 1. Launch-critical remediation
+Implemented and deployed through PR #81 / #82:
 
-Implemented in PR #81:
+- [x] patch Next.js / eslint-config-next to 16.3.3 security maintenance release,
+- [x] map `PARTICIPANT_AGE_NOT_ELIGIBLE` to HTTP 422 instead of false HTTP 500,
+- [x] fix eligibility for children born after the current season started while preserving season-start age for normal school-year groups,
+- [x] move the age-reference edge-case policy into a tested domain helper,
+- [x] pin the production e-mail logo to an immutable Git commit instead of mutable `preview`,
+- [x] reuse Google Auth clients within a warm runtime instead of recreating the WIF client for every Sheets request,
+- [x] bound Google Sheets requests with an application timeout,
+- [x] bound Resend requests with an application timeout,
+- [x] keep non-idempotent Google writes without automatic transport retry,
+- [x] add a secured notification reconciliation endpoint,
+- [x] require a production `CRON_SECRET`,
+- [x] add a Vercel Hobby-compatible daily reconciliation cron,
+- [x] retain immediate e-mail delivery attempt after every successful Registration,
+- [x] correct success-screen wording so it does not claim that an asynchronous e-mail has already been delivered,
+- [x] correct confirmation-mail wording for concrete offerings,
+- [x] align the final form disclaimer with request-intake semantics,
+- [x] add iPhone WebKit E2E coverage in CI,
+- [x] add regression coverage for production cron configuration and post-season-start births.
 
-- patch Next.js / eslint-config-next to 16.3.3 security maintenance release,
-- map `PARTICIPANT_AGE_NOT_ELIGIBLE` to HTTP 422 instead of false HTTP 500,
-- fix eligibility for children born after the current season started while preserving season-start age for normal school-year groups,
-- move the age-reference edge-case policy into a tested domain helper,
-- pin the production e-mail logo to an immutable Git commit instead of mutable `preview`,
-- reuse Google Auth clients within a warm runtime instead of recreating the WIF client for every Sheets request,
-- bound Google Sheets requests with an application timeout,
-- bound Resend requests with an application timeout,
-- keep non-idempotent Google writes without automatic transport retry,
-- add a secured notification reconciliation endpoint,
-- require a production `CRON_SECRET`,
-- add a Vercel Hobby-compatible daily reconciliation cron,
-- retain immediate e-mail delivery attempt after every successful Registration,
-- correct success-screen wording so it does not claim that an asynchronous e-mail has already been delivered,
-- correct confirmation-mail wording for concrete offerings,
-- add iPhone WebKit E2E coverage in CI,
-- add regression coverage for production cron configuration and post-season-start births,
-- keep Production `REGISTRATIONS_OPEN=FALSE` throughout the hardening rollout.
+## 2. Launch evidence completed
 
-## 2. Launch gate still requiring evidence
+Automated / infrastructure evidence:
 
-Do not set Production `REGISTRATIONS_OPEN=TRUE` until all required items below are complete.
+- [x] PR #81 `pnpm check` passed,
+- [x] critical Chromium E2E passed,
+- [x] iPhone WebKit E2E passed,
+- [x] PR #81 merged to `main` only after required checks passed,
+- [x] exact `main` SHA reached Vercel Production `READY`,
+- [x] Production build passed `prod:env:validate`, `sheet:validate` and `diagnostics`,
+- [x] closed-state Production GET returned HTTP 200,
+- [x] notification cron endpoint rejected unauthenticated calls with HTTP 401,
+- [x] Vercel accepted the Hobby-compatible daily cron configuration,
+- [x] Production runtime check showed no new warning/error/fatal cluster,
+- [x] Production historical Registration/outbox data remained preserved during rollout,
+- [x] Production outbox had no `FAILED` jobs or expired leases before reopening,
+- [x] `CRON_SECRET` exists in Vercel Production and is not stored in Git,
+- [x] active GitHub ruleset protects `main` and `preview`, requires PR + `check` + `webkit`, blocks deletion/force push and permits only squash on those branches,
+- [x] Production reopened only after the verified deployment and data path were healthy,
+- [x] live Production GET returns HTTP 200 with `REGISTRATIONS_OPEN=TRUE` and the current 3-location / 18-offering catalog.
 
-### Automated
+Current verified Production:
 
-- [ ] PR #81 final `pnpm check` passes,
-- [ ] critical Chromium E2E passes,
-- [ ] iPhone WebKit E2E passes,
-- [ ] PR #81 merged to `main` only after all checks pass,
-- [ ] exact new `main` SHA reaches Vercel Production `READY`,
-- [ ] Production build passes `prod:env:validate`, `sheet:validate` and `diagnostics`,
-- [ ] closed-state Production GET returns HTTP 200,
-- [ ] notification cron endpoint rejects unauthenticated calls,
-- [ ] Vercel registers the daily cron successfully,
-- [ ] Production runtime logs show no new warning/error/fatal cluster,
-- [ ] Production Sheet retains historical Registration/outbox data unchanged during rollout,
-- [ ] `preview` is synchronized with the verified Production code after the hotfix.
+```text
+SHA         5d8628f5bf908b304dcfc172c95d2b8a5c1244f6
+Deployment  dpl_5zQbApatboZBQp3J2CX63KT4fn1w
+State       READY
+Intake      OPEN
+```
 
-### Manual / organizational
+## 3. Remaining human / organizational evidence
 
-- [ ] `CRON_SECRET` exists in the Vercel Production environment and is not stored in Git,
-- [ ] GitHub `main` and `preview` rulesets/branch protection are enabled if repository permissions allow it,
-- [ ] broader Google Cloud IAM least-privilege review is completed or explicitly accepted as a documented residual launch risk,
-- [ ] full Standardy Ochrony Małoletnich v1.1 are physically available/displayed as required by the adopted procedure,
-- [ ] shortened child-friendly Standardy are physically available/displayed as required by the adopted procedure,
-- [ ] real Android Chrome smoke is complete,
-- [ ] real iPhone Safari smoke is complete,
-- [ ] keyboard-only flow is manually accepted,
-- [ ] visible focus states are manually accepted,
-- [ ] 200% zoom/reflow is manually accepted,
-- [ ] visual contrast/readability is manually accepted,
-- [ ] final human read-through of privacy notice and adopted child-protection documents is complete.
+These cannot be honestly replaced by automated CI:
 
-## 3. Deliberately not rushed into the launch hotfix
+- [ ] broader Google Cloud IAM least-privilege review beyond the Sheet ACL,
+- [ ] full Standardy Ochrony Małoletnich v1.1 physically available/displayed as required by the adopted procedure,
+- [ ] shortened child-friendly Standardy physically available/displayed as required by the adopted procedure,
+- [ ] real Android Chrome smoke,
+- [ ] real iPhone Safari smoke,
+- [ ] keyboard-only flow manually accepted,
+- [ ] visible focus states manually accepted,
+- [ ] 200% zoom/reflow manually accepted,
+- [ ] visual contrast/readability manually accepted,
+- [ ] final human read-through of privacy notice and adopted child-protection documents.
 
-The following findings are real, but replacing the storage/model architecture several hours before public launch would increase deployment risk. They remain mandatory follow-up work.
+Repository hygiene still requiring UI/admin verification:
+
+- [ ] normalize repository-level merge settings where desired: merge commits off, rebase off, auto-merge on, head-branch cleanup on, update branch on,
+- [ ] verify GitHub security defaults available to the repository/organization: Dependabot alerts/security updates, secret scanning/push protection, private vulnerability reporting and CodeQL/default scanning as applicable.
+
+## 4. Preview synchronization
+
+Direct `main -> preview` merge was historically conflicted. A safe sync branch was created from the old `preview` and assigned the exact current Production `main` tree without force-pushing the protected branch.
+
+- [x] sync branch tree equals current Production `main` tree,
+- [x] PR #84 opened against protected `preview`,
+- [x] required `check` passed,
+- [x] required `webkit` passed,
+- [x] PR #84 merged to protected `preview` as `41a5eb7f65a49e27ef68aa6f28e251dc846976cb`,
+- [x] resulting `preview` tree is `c74a2e425d735b9cc5d8285e68acd8884331b4c0`, exactly matching the Production `main` tree before the docs-only follow-up.
+
+## 5. Deliberately not rushed into the launch hotfix
+
+The following findings remain real. Replacing the storage/model architecture several hours before public launch would have increased risk, so they remain mandatory follow-up work.
 
 ### P1 architecture and reliability
 
@@ -107,15 +132,8 @@ The following findings are real, but replacing the storage/model architecture se
 29. Cache stable public catalog reads separately from fresh release switches to reduce Google API load without delaying emergency close/open controls.
 30. Keep `preview` synchronized after every direct Production hotfix so staging remains meaningful.
 
-## 4. Launch decision rule
+## 6. Current engineering decision
 
-The launch hotfix does not pretend to solve the long-term database redesign. The launch is acceptable only when:
+Do not rewrite the application during launch stabilization. The live v4 system remains acceptable as a small request-intake application provided its known residual risks are tracked and operations stay disciplined.
 
-1. current Production code is secure and verified,
-2. current data path is healthy,
-3. automatic first-attempt notification delivery works and durable failed state cannot disappear,
-4. the daily recovery worker is configured for the current Hobby plan,
-5. required human/legal/organizational gates are completed or a responsible owner explicitly records why a specific non-legal item is accepted as residual risk,
-6. the form is opened only as the final controlled action.
-
-After launch, the first architecture initiative is transactional-core migration planning, not another layer of transactional behavior on top of Google Sheets.
+The first significant architecture initiative after launch is transactional-core migration planning, not another layer of transactional behavior on top of Google Sheets.
