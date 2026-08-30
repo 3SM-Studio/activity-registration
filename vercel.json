@@ -6,5 +6,11 @@
       "preview": true,
       "main": true
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/notifications",
+      "schedule": "*/5 * * * *"
+    }
+  ]
 }
