@@ -324,12 +324,13 @@ export function RegistrationForm({ catalog, settings }: RegistrationFormProps) {
             <div className="mx-auto mt-6 max-w-xl rounded-2xl border border-border bg-muted/45 p-4 text-left sm:p-5">
               <h3 className="font-semibold text-foreground">Co dalej?</h3>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                Pozytywka sprawdzi dostępne grupy i skontaktuje się z Tobą, żeby ustalić odpowiednią
-                grupę oraz termin. Samo wysłanie formularza nie oznacza jeszcze potwierdzenia
-                miejsca.
+                Pozytywka sprawdzi poprawność zgłoszenia i dostępność miejsca. Po weryfikacji
+                skontaktujemy się z Tobą, żeby potwierdzić udział lub przekazać dalsze kroki. Samo
+                wysłanie formularza nie oznacza jeszcze potwierdzenia miejsca.
               </p>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                Potwierdzenie otrzymania zgłoszenia wysłaliśmy również na podany adres e-mail.
+                Potwierdzenie e-mail powinno dotrzeć na podany adres. Jeśli go nie widzisz, sprawdź
+                folder spam. Nie wysyłaj formularza ponownie tylko z tego powodu.
               </p>
             </div>
 

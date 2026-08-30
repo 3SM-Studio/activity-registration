@@ -3,6 +3,7 @@ import { withRetry } from "@/lib/retry";
 import { getGoogleAccessToken } from "@/infrastructure/google/auth";
 
 const SHEETS_API_ROOT = "https://sheets.googleapis.com/v4/spreadsheets";
+const SHEETS_REQUEST_TIMEOUT_MS = 6_000;
 
 export class SheetsApiError extends Error {
   readonly status: number;
@@ -172,10 +173,16 @@ export class GoogleSheetsClient implements SheetsClient {
       headers.set("Authorization", `Bearer ${accessToken}`);
       headers.set("Content-Type", "application/json");
 
-      const response = await fetch(`${SHEETS_API_ROOT}/${this.spreadsheetId}${path}`, {
-        ...init,
-        headers,
-      });
+      let response: Response;
+      try {
+        response = await fetch(`${SHEETS_API_ROOT}/${this.spreadsheetId}${path}`, {
+          ...init,
+          headers,
+          signal: init.signal ?? AbortSignal.timeout(SHEETS_REQUEST_TIMEOUT_MS),
+        });
+      } catch {
+        throw new SheetsApiError(503, "Google Sheets API request failed or timed out.");
+      }
 
       if (!response.ok) {
         throw new SheetsApiError(

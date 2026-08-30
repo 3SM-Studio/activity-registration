@@ -33,7 +33,7 @@ export function RegistrationConfirmationEmail({
         description={
           <>
             Zgłoszenie dotyczące <strong>{participantName}</strong> dotarło do Pozytywki. Teraz
-            sprawdzimy je i wrócimy z informacją o odpowiedniej grupie oraz terminie.
+            sprawdzimy je i wrócimy z potwierdzeniem dostępności oraz dalszymi krokami.
           </>
         }
       />
@@ -58,13 +58,13 @@ export function RegistrationConfirmationEmail({
         />
         <StepRow
           number={2}
-          title="Dobieramy odpowiednią grupę"
-          description="Bierzemy pod uwagę wybrane zajęcia, miasto i wiek uczestnika."
+          title="Sprawdzamy dostępność"
+          description="Weryfikujemy wybraną ofertę, wiek uczestnika i możliwość przyjęcia zgłoszenia."
         />
         <StepRow
           number={3}
-          title="Kontaktujemy się z Tobą"
-          description="Po weryfikacji Pozytywka przekaże informację o dalszych krokach."
+          title="Przekazujemy dalsze kroki"
+          description="Po weryfikacji Pozytywka potwierdzi możliwość udziału albo skontaktuje się w sprawie dalszych kroków."
           last
         />
       </EmailCard>

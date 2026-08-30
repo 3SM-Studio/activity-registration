@@ -29,7 +29,26 @@ Google Sheets nie udostępnia transakcyjnego compare-and-swap. Dlatego drugi poz
 
 Po awarii provider job przechodzi do `FAILED`. Retry używa exponential backoff od 1 minuty do maksymalnie 24 godzin. Do arkusza trafia wyłącznie bezpieczny kod `EMAIL_PROVIDER_ERROR`, bez treści wyjątku i bez PII.
 
-## Reconciliation
+## Automatyczny worker
+
+Każde nowe zgłoszenie nadal próbuje wysłać swoje dwa powiadomienia natychmiast po zapisaniu Registration. Dodatkowo Production ma zabezpieczony endpoint:
+
+```text
+GET /api/cron/notifications
+Authorization: Bearer <CRON_SECRET>
+```
+
+Endpoint uruchamia pełny reconciliation i podejmuje wyłącznie joby, które są due. `CRON_SECRET` jest wymagany w Production i musi mieć co najmniej 32 znaki. Nie wolno zapisywać go w repozytorium ani w logach.
+
+Projekt działa na Vercel Hobby, dlatego platformowy cron jest ustawiony na raz dziennie:
+
+```text
+15 2 * * *
+```
+
+To jest warstwa awaryjnego odzyskiwania. Pierwsza próba wysyłki pozostaje natychmiastowa. W czasie aktywnego launchu operator powinien dodatkowo obserwować `POWIADOMIENIA` / `diagnostics` i ręcznie uruchomić retry, jeśli provider chwilowo zawiedzie. Częstszy automatyczny worker wymaga innego schedulera albo planu Vercel pozwalającego na częstsze crony.
+
+## Reconciliation ręczny
 
 ```bash
 pnpm notifications:reconcile
