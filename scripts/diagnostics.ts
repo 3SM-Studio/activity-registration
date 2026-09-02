@@ -1,8 +1,5 @@
-import {
-  NOTIFICATION_STATUS,
-  NOTIFICATION_TYPE,
-  notificationJobId,
-} from "../src/domain/notification-outbox";
+import { enabledRegistrationNotificationTypes } from "../src/application/registration-notifications";
+import { NOTIFICATION_STATUS, notificationJobId } from "../src/domain/notification-outbox";
 import { LEGACY_REGISTRATION_STATUS } from "../src/domain/registration";
 import { GoogleSheetsNotificationOutboxRepository } from "../src/infrastructure/google/notification-outbox.repository";
 import { GoogleSheetsRegistrationRepository } from "../src/infrastructure/google/registration.repository";
@@ -59,17 +56,22 @@ async function main() {
     registrationRepository.listAll(),
     outboxRepository.listAll(),
   ]);
+  const enabledNotificationTypes = enabledRegistrationNotificationTypes();
+  const enabledNotificationTypeSet = new Set(enabledNotificationTypes);
   const notificationIds = new Set(notificationJobs.map((job) => job.id));
   const missingNotificationJobs = registrations.flatMap((registration) =>
-    Object.values(NOTIFICATION_TYPE)
+    enabledNotificationTypes
       .map((type) => notificationJobId(registration.id, type))
       .filter((id) => !notificationIds.has(id)),
   );
-  const failedNotificationJobs = notificationJobs.filter(
+  const enabledNotificationJobs = notificationJobs.filter((job) =>
+    enabledNotificationTypeSet.has(job.type),
+  );
+  const failedNotificationJobs = enabledNotificationJobs.filter(
     (job) => job.status === NOTIFICATION_STATUS.failed,
   );
   const nowMs = Date.now();
-  const expiredNotificationLeases = notificationJobs.filter(
+  const expiredNotificationLeases = enabledNotificationJobs.filter(
     (job) =>
       job.status === NOTIFICATION_STATUS.sending &&
       job.leaseUntil !== null &&
@@ -99,6 +101,7 @@ async function main() {
         groupCount: report.groupCount,
         legacyWorkflowStatusCount: 0,
         notificationJobCount: notificationJobs.length,
+        enabledNotificationJobCount: enabledNotificationJobs.length,
         missingNotificationJobCount: 0,
         failedNotificationJobCount: 0,
         expiredNotificationLeaseCount: 0,
