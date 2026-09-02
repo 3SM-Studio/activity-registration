@@ -17,14 +17,11 @@ describe("Pozytywka 2026/2027 offer catalog", () => {
   });
 
   it("contains 21 Olkusz, 8 Bukowno and 5 Boleslaw offerings", () => {
-    const counts = POZYTYWKA_OFFERINGS_2026_2027.reduce<Record<string, number>>(
-      (result, row) => {
-        const cityId = String(row.CITY_ID);
-        result[cityId] = (result[cityId] ?? 0) + 1;
-        return result;
-      },
-      {},
-    );
+    const counts = POZYTYWKA_OFFERINGS_2026_2027.reduce<Record<string, number>>((result, row) => {
+      const cityId = String(row.CITY_ID);
+      result[cityId] = (result[cityId] ?? 0) + 1;
+      return result;
+    }, {});
 
     expect(counts).toEqual({ olkusz: 21, bukowno: 8, boleslaw: 5 });
   });

@@ -219,8 +219,7 @@ export const POZYTYWKA_OFFERINGS_2026_2027: readonly CatalogRow[] = [
     OFFERING_ID: "olkusz-stretching-tancerzy",
     CITY_ID: "olkusz",
     NAME: "Stretching dla tancerzy",
-    PUBLIC_DESCRIPTION:
-      "Soboty 11:00-12:00. Opłata 45 zł / zajęcia lub karnet 150 zł.",
+    PUBLIC_DESCRIPTION: "Soboty 11:00-12:00. Opłata 45 zł / zajęcia lub karnet 150 zł.",
     ACTIVE: "TAK",
     SORT_ORDER: 150,
     REGISTRATION_MODE: "ROLLING",
@@ -233,8 +232,7 @@ export const POZYTYWKA_OFFERINGS_2026_2027: readonly CatalogRow[] = [
     OFFERING_ID: "olkusz-stretching-dorosli",
     CITY_ID: "olkusz",
     NAME: "Stretching dla dorosłych",
-    PUBLIC_DESCRIPTION:
-      "Wtorki 19:15-20:15. Opłata 45 zł / zajęcia lub karnet 150 zł.",
+    PUBLIC_DESCRIPTION: "Wtorki 19:15-20:15. Opłata 45 zł / zajęcia lub karnet 150 zł.",
     ACTIVE: "TAK",
     SORT_ORDER: 160,
     REGISTRATION_MODE: "ROLLING",
@@ -247,8 +245,7 @@ export const POZYTYWKA_OFFERINGS_2026_2027: readonly CatalogRow[] = [
     OFFERING_ID: "olkusz-male-raczki-wielka-sztuka",
     CITY_ID: "olkusz",
     NAME: "Małe rączki - wielka sztuka · 4-6 lat",
-    PUBLIC_DESCRIPTION:
-      "Kreatywna plastyka dla dzieci. Poniedziałki 16:00-17:00. Opłata 200 zł.",
+    PUBLIC_DESCRIPTION: "Kreatywna plastyka dla dzieci. Poniedziałki 16:00-17:00. Opłata 200 zł.",
     ACTIVE: "TAK",
     SORT_ORDER: 170,
     REGISTRATION_MODE: "ROLLING",
@@ -261,8 +258,7 @@ export const POZYTYWKA_OFFERINGS_2026_2027: readonly CatalogRow[] = [
     OFFERING_ID: "olkusz-art-misja",
     CITY_ID: "olkusz",
     NAME: "Art Misja · 7-10 lat",
-    PUBLIC_DESCRIPTION:
-      "Kreatywna plastyka dla dzieci. Poniedziałki 17:00-18:00. Opłata 200 zł.",
+    PUBLIC_DESCRIPTION: "Kreatywna plastyka dla dzieci. Poniedziałki 17:00-18:00. Opłata 200 zł.",
     ACTIVE: "TAK",
     SORT_ORDER: 180,
     REGISTRATION_MODE: "ROLLING",
@@ -275,8 +271,7 @@ export const POZYTYWKA_OFFERINGS_2026_2027: readonly CatalogRow[] = [
     OFFERING_ID: "olkusz-cafe-akwarela",
     CITY_ID: "olkusz",
     NAME: "Cafe akwarela · dorośli",
-    PUBLIC_DESCRIPTION:
-      "Twórcze spotkania dla dorosłych. Poniedziałki 18:00-19:00. Opłata 200 zł.",
+    PUBLIC_DESCRIPTION: "Twórcze spotkania dla dorosłych. Poniedziałki 18:00-19:00. Opłata 200 zł.",
     ACTIVE: "TAK",
     SORT_ORDER: 190,
     REGISTRATION_MODE: "ROLLING",
@@ -289,8 +284,7 @@ export const POZYTYWKA_OFFERINGS_2026_2027: readonly CatalogRow[] = [
     OFFERING_ID: "olkusz-hello-melo-4-5",
     CITY_ID: "olkusz",
     NAME: "HELLO-MELO · 4-5 lat",
-    PUBLIC_DESCRIPTION:
-      "W rytmie muzyki, po angielsku. Wtorki 16:15-17:15. Opłata 160 zł.",
+    PUBLIC_DESCRIPTION: "W rytmie muzyki, po angielsku. Wtorki 16:15-17:15. Opłata 160 zł.",
     ACTIVE: "TAK",
     SORT_ORDER: 200,
     REGISTRATION_MODE: "ROLLING",
@@ -440,8 +434,7 @@ export const POZYTYWKA_OFFERINGS_2026_2027: readonly CatalogRow[] = [
     OFFERING_ID: "boleslaw-psikusy",
     CITY_ID: "boleslaw",
     NAME: "Psikusy · 4-6 lat",
-    PUBLIC_DESCRIPTION:
-      "Zespół wokalno-taneczny. Środy 17:00-18:00. Opłata 160 zł / miesiąc.",
+    PUBLIC_DESCRIPTION: "Zespół wokalno-taneczny. Środy 17:00-18:00. Opłata 160 zł / miesiąc.",
     ACTIVE: "TAK",
     SORT_ORDER: 520,
     REGISTRATION_MODE: "ROLLING",
@@ -481,8 +474,7 @@ export const POZYTYWKA_OFFERINGS_2026_2027: readonly CatalogRow[] = [
     OFFERING_ID: "boleslaw-hello-melo-3-6",
     CITY_ID: "boleslaw",
     NAME: "HELLO-MELO · 3-6 lat",
-    PUBLIC_DESCRIPTION:
-      "W rytmie muzyki, po angielsku. Środy 16:00-17:00. Opłata 160 zł.",
+    PUBLIC_DESCRIPTION: "W rytmie muzyki, po angielsku. Środy 16:00-17:00. Opłata 160 zł.",
     ACTIVE: "TAK",
     SORT_ORDER: 550,
     REGISTRATION_MODE: "ROLLING",
