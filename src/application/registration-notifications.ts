@@ -1,12 +1,19 @@
 import { createElement, type ReactElement } from "react";
 import { render, toPlainText } from "react-email";
 
+import { NOTIFICATION_TYPE, type NotificationType } from "@/domain/notification-outbox";
 import type { Registration } from "@/domain/registration";
 import { POZYTYWKA_EMAIL_LOGO_ATTACHMENT } from "@/emails/email-brand-assets";
 import { RegistrationAdminEmail } from "@/emails/registration-admin-email";
 import { RegistrationConfirmationEmail } from "@/emails/registration-confirmation-email";
 
 export const ADMIN_REGISTRATION_EMAIL_ENABLED = false;
+
+export function enabledRegistrationNotificationTypes(): readonly NotificationType[] {
+  return ADMIN_REGISTRATION_EMAIL_ENABLED
+    ? Object.values(NOTIFICATION_TYPE)
+    : [NOTIFICATION_TYPE.confirmation];
+}
 
 export type EmailAttachment = Readonly<{
   path: string;
