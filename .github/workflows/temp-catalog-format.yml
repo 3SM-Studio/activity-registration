@@ -1,0 +1,32 @@
+name: Temporary catalog formatting diff
+
+on:
+  push:
+    branches:
+      - feat/refresh-pozytywka-catalog-sep-2026-preview
+
+permissions:
+  contents: read
+
+jobs:
+  format-diff:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11.20.0
+          run_install: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24.19.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Format target files
+        run: >-
+          pnpm exec prettier --write
+          src/config/pozytywka-offer-2026-2027.ts
+          tests/unit/pozytywka-offer-2026-2027.test.ts
+      - name: Print exact formatting diff
+        run: git diff --no-ext-diff -- src/config/pozytywka-offer-2026-2027.ts tests/unit/pozytywka-offer-2026-2027.test.ts
