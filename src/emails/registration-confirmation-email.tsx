@@ -42,11 +42,14 @@ export function RegistrationConfirmationEmail({
         <SectionTitle>Twoje zgłoszenie</SectionTitle>
         <DetailRow label="Uczestnik" value={participantName} />
         <DetailRow label="Zajęcia" value={registration.offeringNameSnapshot} />
-        <DetailRow label="Miasto" value={registration.cityNameSnapshot} />
+        <DetailRow
+          label="Miasto"
+          value={registration.cityNameSnapshot}
+          last={!registration.seasonNameSnapshot}
+        />
         {registration.seasonNameSnapshot ? (
-          <DetailRow label="Sezon" value={registration.seasonNameSnapshot} />
+          <DetailRow label="Sezon" value={registration.seasonNameSnapshot} last />
         ) : null}
-        <DetailRow label="Numer zgłoszenia" value={registration.id} last />
       </EmailCard>
 
       <EmailCard tone="muted">
@@ -94,7 +97,7 @@ export function RegistrationConfirmationEmail({
         </Text>
       </EmailCard>
 
-      <EmailFooter reference={registration.id} />
+      <EmailFooter />
     </EmailLayout>
   );
 }
