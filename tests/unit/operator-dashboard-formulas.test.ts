@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  AGE_REVIEW_FORMULA,
   POSSIBLE_DUPLICATE_COUNT_FORMULA,
   buildAgeLabel,
   buildAttentionFormula,
@@ -22,6 +23,8 @@ describe("operator dashboard formulas", () => {
     );
     expect(buildPossibleDuplicateCountFormula("2026-2027")).not.toContain("COUNTIF");
     expect(buildAttentionFormula("2026-2027")).toContain('ZAPISY!V2:V;"2026-2027"');
+    expect(buildAttentionFormula("2026-2027")).toContain("ZAPISY!Q2:Q");
+    expect(AGE_REVIEW_FORMULA).toContain("Wiek poza standardowym zakresem grupy");
     expect(buildStatusCountFormula("2026-2027", "NEW")).toBe(
       '=COUNTIFS(ZAPISY!V2:V;"2026-2027";ZAPISY!P2:P;"NEW")',
     );

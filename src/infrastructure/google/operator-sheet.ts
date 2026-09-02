@@ -1,4 +1,4 @@
-import { REGISTRATION_STATUS } from "@/domain/registration";
+import { AGE_REVIEW_NOTE_MARKER, REGISTRATION_STATUS } from "@/domain/registration";
 import { cell, createHeaderMap } from "@/infrastructure/google/header-map";
 import { parseGroupRow } from "@/infrastructure/google/parsers";
 import {
@@ -15,6 +15,7 @@ import {
 import type { SheetMetadata, SheetsClient } from "@/infrastructure/google/sheets-client";
 
 const STATUS_COLUMN_INDEX = REGISTRATION_HEADERS.indexOf("STATUS");
+const NOTES_COLUMN_INDEX = REGISTRATION_HEADERS.indexOf("NOTES");
 const GROUP_COLUMN_INDEX = REGISTRATION_HEADERS.indexOf("ASSIGNED_GROUP_ID");
 const CONTACTED_COLUMN_INDEX = REGISTRATION_HEADERS.indexOf("CONTACTED_AT");
 const CONFIRMED_COLUMN_INDEX = REGISTRATION_HEADERS.indexOf("CONFIRMED_AT");
@@ -24,6 +25,7 @@ const POSSIBLE_DUPLICATE_COLUMN_INDEX = REGISTRATION_HEADERS.indexOf("POSSIBLE_D
 if (
   [
     STATUS_COLUMN_INDEX,
+    NOTES_COLUMN_INDEX,
     GROUP_COLUMN_INDEX,
     CONTACTED_COLUMN_INDEX,
     CONFIRMED_COLUMN_INDEX,
@@ -97,6 +99,8 @@ export const CONFIRMED_WITHOUT_DATE_FORMULA = '=($P2="CONFIRMED")*($Z2="")';
 export const CLOSED_WITHOUT_DATE_FORMULA =
   '=OR(AND($P2="REJECTED";$AA2="");AND($P2="CANCELLED";$AA2=""))';
 export const POSSIBLE_DUPLICATE_COUNT_FORMULA = "=SUMPRODUCT(--(LEN(ZAPISY!AB2:AB)>0))";
+export const AGE_REVIEW_FORMULA =
+  `=ISNUMBER(SEARCH("${AGE_REVIEW_NOTE_MARKER}";$Q2))`;
 
 function formulaText(value: string): string {
   return value.replace(/"/g, '""');
@@ -122,7 +126,8 @@ export function buildAttentionFormula(currentSeasonId: string): string {
     `+COUNTIFS(ZAPISY!V2:V;"${seasonId}";ZAPISY!P2:P;"CONTACTED";ZAPISY!Y2:Y;"")` +
     `+COUNTIFS(ZAPISY!V2:V;"${seasonId}";ZAPISY!P2:P;"CONFIRMED";ZAPISY!Z2:Z;"")` +
     `+COUNTIFS(ZAPISY!V2:V;"${seasonId}";ZAPISY!P2:P;"REJECTED";ZAPISY!AA2:AA;"")` +
-    `+COUNTIFS(ZAPISY!V2:V;"${seasonId}";ZAPISY!P2:P;"CANCELLED";ZAPISY!AA2:AA;"")`
+    `+COUNTIFS(ZAPISY!V2:V;"${seasonId}";ZAPISY!P2:P;"CANCELLED";ZAPISY!AA2:AA;"")` +
+    `+COUNTIFS(ZAPISY!V2:V;"${seasonId}";ZAPISY!Q2:Q;"*${formulaText(AGE_REVIEW_NOTE_MARKER)}*")`
   );
 }
 
@@ -155,6 +160,7 @@ export const OPERATOR_DASHBOARD_LAYOUT = {
 export const OWNED_OPERATOR_FORMAT_FORMULAS = new Set([
   ...REGISTRATION_STATUS_FORMATS.map(({ status }) => statusFormula(status)),
   POSSIBLE_DUPLICATE_FORMULA,
+  AGE_REVIEW_FORMULA,
   CONFIRMED_WITHOUT_GROUP_FORMULA,
   CONTACTED_WITHOUT_DATE_FORMULA,
   CONFIRMED_WITHOUT_DATE_FORMULA,
@@ -942,7 +948,7 @@ export function buildOperatorSheetRequests(
     ],
     [
       REGISTRATION_HEADERS.indexOf("NOTES"),
-      "Tylko neutralne informacje organizacyjne. Nie wpisuj danych zdrowotnych, diagnoz, leków, niepełnosprawności, religii, konfliktów rodzinnych ani innych danych wrażliwych.",
+      "System może dodać ostrzeżenie o wieku poza standardowym zakresem grupy. Po ręcznej weryfikacji możesz je usunąć lub uzupełnić neutralną notatką organizacyjną. Nie wpisuj danych zdrowotnych, diagnoz, leków, niepełnosprawności, religii, konfliktów rodzinnych ani innych danych wrażliwych.",
     ],
     [
       GROUP_COLUMN_INDEX,
@@ -1014,6 +1020,13 @@ export function buildOperatorSheetRequests(
       0,
       REGISTRATION_HEADERS.length,
       { red: 1, green: 0.965, blue: 0.902 },
+    ),
+    warningConditionalFormat(
+      sheet.sheetId,
+      AGE_REVIEW_FORMULA,
+      NOTES_COLUMN_INDEX,
+      NOTES_COLUMN_INDEX + 1,
+      warningColor,
     ),
     warningConditionalFormat(
       sheet.sheetId,

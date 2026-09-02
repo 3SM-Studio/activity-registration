@@ -16,6 +16,7 @@ import {
   type RegistrationDuplicateCriteria,
 } from "@/domain/registration-duplicates";
 import {
+  AGE_REVIEW_NOTE,
   REGISTRATION_SCHEMA_VERSION,
   REGISTRATION_SOURCE,
   REGISTRATION_STATUS,
@@ -249,17 +250,7 @@ export async function submitRegistration(
     season.id,
     offeringId,
   );
-  const hasEligibleGroup = groups.some((group) => groupSupportsAge(group, eligibilityAge));
-
-  if (!hasEligibleGroup) {
-    const message = "Dla wieku uczestnika nie ma obecnie aktywnej grupy w wybranych zajęciach.";
-    throw new ApplicationError(APPLICATION_ERROR_CODE.participantAgeNotEligible, message, {
-      fieldErrors: {
-        birthDate: [message],
-        offeringId: ["Wybierz zajęcia dostępne dla wieku uczestnika."],
-      },
-    });
-  }
+  const ageReviewRequired = !groups.some((group) => groupSupportsAge(group, eligibilityAge));
 
   const duplicateCriteria: RegistrationDuplicateCriteria = {
     seasonId: season.id,
@@ -309,7 +300,7 @@ export async function submitRegistration(
     confirmedAt: null,
     closedAt: null,
     possibleDuplicateOf: possibleDuplicateRegistrationId(duplicateMatch),
-    notes: "",
+    notes: ageReviewRequired ? AGE_REVIEW_NOTE : "",
     privacyNoticeVersion: settings.privacyNoticeVersion ?? "unconfigured",
     source: REGISTRATION_SOURCE.web,
     createdAt: now,
