@@ -91,11 +91,9 @@ export function BrandHeader() {
             style={{
               border: 0,
               display: "block",
-              filter: "brightness(0) invert(1)",
               height: "49px",
               outline: "none",
               textDecoration: "none",
-              WebkitFilter: "brightness(0) invert(1)",
               width: "64px",
             }}
           />
@@ -396,7 +394,7 @@ export function WarningNotice({
   );
 }
 
-export function EmailFooter({ reference }: Readonly<{ reference?: string }>) {
+export function EmailFooter() {
   return (
     <Section style={{ padding: "18px 16px 4px", textAlign: "center" }}>
       <Text
@@ -420,7 +418,6 @@ export function EmailFooter({ reference }: Readonly<{ reference?: string }>) {
         }}
       >
         Wiadomość systemowa dotycząca zgłoszenia na zajęcia.
-        {reference ? ` Numer zgłoszenia: ${reference}.` : ""}
       </Text>
     </Section>
   );
