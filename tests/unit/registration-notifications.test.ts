@@ -2,12 +2,15 @@ import { describe, expect, it } from "vitest";
 
 import {
   ADMIN_REGISTRATION_EMAIL_ENABLED,
+  REGISTRATION_REPLY_TO_EMAIL,
   buildRegistrationNotificationMessages,
+  enabledRegistrationNotificationTypes,
   sendRegistrationNotifications,
   type EmailMessage,
   type EmailSender,
 } from "@/application/registration-notifications";
 import { asCityId, asOfferingId, asSeasonId } from "@/domain/catalog";
+import { NOTIFICATION_TYPE } from "@/domain/notification-outbox";
 import {
   REGISTRATION_SCHEMA_VERSION,
   REGISTRATION_SOURCE,
@@ -64,6 +67,11 @@ class RecordingSender implements EmailSender {
 describe("registration notifications", () => {
   it("keeps the administrative registration email disabled", () => {
     expect(ADMIN_REGISTRATION_EMAIL_ENABLED).toBe(false);
+    expect(enabledRegistrationNotificationTypes()).toEqual([NOTIFICATION_TYPE.confirmation]);
+  });
+
+  it("routes participant replies directly to Pozytywka", () => {
+    expect(REGISTRATION_REPLY_TO_EMAIL).toBe("pozytywka.boleslaw@gmail.com");
   });
 
   it("builds only the participant confirmation while admin email is disabled", async () => {
@@ -75,6 +83,7 @@ describe("registration notifications", () => {
     expect(messages).toHaveLength(1);
     expect(messages[0]).toMatchObject({
       to: ["anna@example.com"],
+      replyTo: "pozytywka.boleslaw@gmail.com",
       idempotencyKey: "registration-confirmation/reg_11111111-1111-4111-8111-111111111111",
       attachments: [
         {
@@ -138,6 +147,7 @@ describe("registration notifications", () => {
 
     expect(sender.messages).toHaveLength(1);
     expect(sender.messages[0]?.idempotencyKey).toMatch(/^registration-confirmation\//);
+    expect(sender.messages[0]?.replyTo).toBe("pozytywka.boleslaw@gmail.com");
     expect(result).toEqual({ attempted: 1, failed: 0 });
   });
 });

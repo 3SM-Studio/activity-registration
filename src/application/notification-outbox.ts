@@ -1,12 +1,11 @@
 import {
-  ADMIN_REGISTRATION_EMAIL_ENABLED,
   buildRegistrationNotificationMessages,
+  enabledRegistrationNotificationTypes,
   type RegistrationNotificationDependencies,
   type RegistrationNotificationResult,
 } from "@/application/registration-notifications";
 import {
   NOTIFICATION_STATUS,
-  NOTIFICATION_TYPE,
   notificationJobId,
   notificationTypeForIdempotencyKey,
   type NotificationOutboxJob,
@@ -35,12 +34,6 @@ type ProviderFailure = Readonly<{
   providerCode: string | null;
   retryAfterMs: number | null;
 }>;
-
-function enabledNotificationTypes(): readonly NotificationType[] {
-  return ADMIN_REGISTRATION_EMAIL_ENABLED
-    ? Object.values(NOTIFICATION_TYPE)
-    : [NOTIFICATION_TYPE.confirmation];
-}
 
 function pendingJob(
   registration: Registration,
@@ -73,7 +66,7 @@ export async function ensureRegistrationNotificationJobs(
     (await outbox.listForRegistration(registration.id)).map((job) => job.id),
   );
 
-  for (const type of enabledNotificationTypes()) {
+  for (const type of enabledRegistrationNotificationTypes()) {
     const job = pendingJob(registration, type, now);
     if (!existing.has(job.id)) {
       await outbox.create(job);
