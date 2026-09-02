@@ -40,6 +40,7 @@ describe("ResendEmailSender", () => {
     const headers = new Headers(calls[0]?.init?.headers);
     expect(headers.get("authorization")).toBe("Bearer re_test");
     expect(headers.get("idempotency-key")).toBe(message.idempotencyKey);
+    expect(headers.get("user-agent")).toBe("pozytywka-activity-registration/1.0");
 
     expect(JSON.parse(String(calls[0]?.init?.body))).toEqual({
       from: message.from,
@@ -58,19 +59,30 @@ describe("ResendEmailSender", () => {
     });
   });
 
-  it("turns a rejected provider response into a typed error", async () => {
+  it("preserves Resend quota error type and retry-after metadata", async () => {
     const fetchStub = (async () =>
-      new Response(JSON.stringify({ message: "rejected" }), {
-        status: 403,
-        headers: { "Content-Type": "application/json" },
-      })) as typeof fetch;
+      new Response(
+        JSON.stringify({
+          name: "daily_quota_exceeded",
+          message: "You have reached your daily email quota.",
+        }),
+        {
+          status: 429,
+          headers: {
+            "Content-Type": "application/json",
+            "Retry-After": "120",
+          },
+        },
+      )) as typeof fetch;
 
     const sender = new ResendEmailSender("re_test", fetchStub);
 
     await expect(sender.send(message)).rejects.toEqual(
       expect.objectContaining<Partial<ResendEmailError>>({
         name: "ResendEmailError",
-        status: 403,
+        status: 429,
+        providerCode: "daily_quota_exceeded",
+        retryAfterMs: 120_000,
       }),
     );
   });
