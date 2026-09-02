@@ -1,0 +1,36 @@
+name: temp-format-age-warning
+
+on:
+  push:
+    branches:
+      - fix/operator-sheet-hardening
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: fix/operator-sheet-hardening
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11.20.0
+          run_install: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24.19.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec prettier --write src/infrastructure/google/operator-sheet.ts
+      - name: Commit formatted file and remove helper
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/temp-format-age-warning.yml
+          git add src/infrastructure/google/operator-sheet.ts
+          git commit -m "style: format age warning changes"
+          git push origin HEAD:fix/operator-sheet-hardening
