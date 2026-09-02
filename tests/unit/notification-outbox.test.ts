@@ -157,11 +157,11 @@ class FakeOutbox implements NotificationOutboxRepository {
 class RecordingSender implements EmailSender {
   readonly messages: EmailMessage[] = [];
 
-  constructor(private readonly failAdmin = false) {}
+  constructor(private readonly shouldFail = false) {}
 
   async send(message: EmailMessage) {
     this.messages.push(message);
-    if (this.failAdmin && message.idempotencyKey.startsWith("registration-admin/")) {
+    if (this.shouldFail) {
       throw new Error("synthetic provider failure");
     }
     return { id: `mail-${this.messages.length}` };
@@ -179,19 +179,18 @@ const baseNotificationConfig = {
 } as const;
 
 describe("durable notification outbox", () => {
-  it("creates exactly two stable pending jobs", async () => {
+  it("creates exactly one stable pending confirmation job while admin email is disabled", async () => {
     const outbox = new FakeOutbox();
     await ensureRegistrationNotificationJobs(registration(), outbox, "2026-08-22T12:00:00.000Z");
     await ensureRegistrationNotificationJobs(registration(), outbox, "2026-08-22T12:01:00.000Z");
 
-    expect(outbox.jobs).toHaveLength(2);
-    expect(outbox.jobs.map((job) => job.type).sort()).toEqual(
-      [NOTIFICATION_TYPE.admin, NOTIFICATION_TYPE.confirmation].sort(),
-    );
-    expect(outbox.jobs.every((job) => job.status === NOTIFICATION_STATUS.pending)).toBe(true);
+    expect(outbox.jobs).toHaveLength(1);
+    expect(outbox.jobs[0]?.type).toBe(NOTIFICATION_TYPE.confirmation);
+    expect(outbox.jobs[0]?.status).toBe(NOTIFICATION_STATUS.pending);
+    expect(outbox.jobs.some((job) => job.type === NOTIFICATION_TYPE.admin)).toBe(false);
   });
 
-  it("persists partial failure and retries only the failed notification after backoff", async () => {
+  it("persists a participant-email failure and retries it after backoff", async () => {
     const outbox = new FakeOutbox();
     const failingSender = new RecordingSender(true);
     const first = await dispatchRegistrationNotificationJobs(
@@ -201,45 +200,33 @@ describe("durable notification outbox", () => {
         "2026-08-22T12:00:00.000Z",
         "2026-08-22T12:00:00.000Z",
         "2026-08-22T12:00:01.000Z",
-        "2026-08-22T12:00:01.000Z",
-        "2026-08-22T12:00:02.000Z",
         "2026-08-22T12:00:02.000Z",
       ),
     );
 
-    expect(first).toEqual({ attempted: 2, failed: 1 });
-    expect(outbox.jobs.find((job) => job.type === NOTIFICATION_TYPE.confirmation)?.status).toBe(
-      NOTIFICATION_STATUS.sent,
-    );
-    const failed = outbox.jobs.find((job) => job.type === NOTIFICATION_TYPE.admin);
+    expect(first).toEqual({ attempted: 1, failed: 1 });
+    const failed = outbox.jobs.find((job) => job.type === NOTIFICATION_TYPE.confirmation);
     expect(failed).toMatchObject({
       status: NOTIFICATION_STATUS.failed,
       attemptCount: 1,
       errorCode: "EMAIL_PROVIDER_ERROR",
     });
-    expect(failed?.nextAttemptAt).toBe("2026-08-22T12:01:02.000Z");
+    expect(failed?.nextAttemptAt).toBe("2026-08-22T12:01:01.000Z");
 
     const successfulSender = new RecordingSender(false);
     const retry = await dispatchRegistrationNotificationJobs(
       registration(),
       { ...baseNotificationConfig, sender: successfulSender, outbox },
-      clock(
-        "2026-08-22T12:02:00.000Z",
-        "2026-08-22T12:02:00.000Z",
-        "2026-08-22T12:02:01.000Z",
-        "2026-08-22T12:02:02.000Z",
-      ),
+      clock("2026-08-22T12:02:00.000Z", "2026-08-22T12:02:00.000Z", "2026-08-22T12:02:01.000Z"),
     );
 
     expect(retry).toEqual({ attempted: 1, failed: 0 });
     expect(successfulSender.messages).toHaveLength(1);
-    expect(successfulSender.messages[0]?.idempotencyKey).toMatch(/^registration-admin\//);
-    expect(outbox.jobs.find((job) => job.type === NOTIFICATION_TYPE.admin)?.status).toBe(
-      NOTIFICATION_STATUS.sent,
-    );
+    expect(successfulSender.messages[0]?.idempotencyKey).toMatch(/^registration-confirmation\//);
+    expect(outbox.jobs[0]?.status).toBe(NOTIFICATION_STATUS.sent);
   });
 
-  it("reconcile repairs missing jobs after persistence and is idempotent after delivery", async () => {
+  it("reconcile repairs the confirmation job and is idempotent after delivery", async () => {
     const outbox = new FakeOutbox();
     const sender = new RecordingSender();
     const first = await reconcileRegistrationNotifications(
@@ -248,8 +235,8 @@ describe("durable notification outbox", () => {
       { now: () => new Date("2026-08-22T13:00:00.000Z") },
     );
 
-    expect(first).toMatchObject({ registrations: 1, attempted: 2, failed: 0 });
-    expect(sender.messages).toHaveLength(2);
+    expect(first).toMatchObject({ registrations: 1, attempted: 1, failed: 0 });
+    expect(sender.messages).toHaveLength(1);
 
     const second = await reconcileRegistrationNotifications(
       [registration()],
@@ -258,6 +245,6 @@ describe("durable notification outbox", () => {
     );
 
     expect(second).toMatchObject({ registrations: 1, attempted: 0, failed: 0 });
-    expect(sender.messages).toHaveLength(2);
+    expect(sender.messages).toHaveLength(1);
   });
 });

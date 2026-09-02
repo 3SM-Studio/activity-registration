@@ -6,6 +6,8 @@ import { POZYTYWKA_EMAIL_LOGO_ATTACHMENT } from "@/emails/email-brand-assets";
 import { RegistrationAdminEmail } from "@/emails/registration-admin-email";
 import { RegistrationConfirmationEmail } from "@/emails/registration-confirmation-email";
 
+export const ADMIN_REGISTRATION_EMAIL_ENABLED = false;
+
 export type EmailAttachment = Readonly<{
   path: string;
   filename: string;
@@ -89,10 +91,13 @@ export async function buildRegistrationNotificationMessages(
   registration: Registration,
   dependencies: Pick<RegistrationNotificationDependencies, "from" | "adminEmails">,
 ): Promise<readonly EmailMessage[]> {
-  return Promise.all([
-    confirmationMessage(registration, dependencies.from),
-    adminMessage(registration, dependencies.from, dependencies.adminEmails),
-  ]);
+  const messages: Promise<EmailMessage>[] = [confirmationMessage(registration, dependencies.from)];
+
+  if (ADMIN_REGISTRATION_EMAIL_ENABLED) {
+    messages.push(adminMessage(registration, dependencies.from, dependencies.adminEmails));
+  }
+
+  return Promise.all(messages);
 }
 
 export async function sendRegistrationNotifications(

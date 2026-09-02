@@ -1,4 +1,5 @@
 import {
+  ADMIN_REGISTRATION_EMAIL_ENABLED,
   buildRegistrationNotificationMessages,
   type RegistrationNotificationDependencies,
   type RegistrationNotificationResult,
@@ -35,6 +36,12 @@ type ProviderFailure = Readonly<{
   retryAfterMs: number | null;
 }>;
 
+function enabledNotificationTypes(): readonly NotificationType[] {
+  return ADMIN_REGISTRATION_EMAIL_ENABLED
+    ? Object.values(NOTIFICATION_TYPE)
+    : [NOTIFICATION_TYPE.confirmation];
+}
+
 function pendingJob(
   registration: Registration,
   type: NotificationType,
@@ -66,7 +73,7 @@ export async function ensureRegistrationNotificationJobs(
     (await outbox.listForRegistration(registration.id)).map((job) => job.id),
   );
 
-  for (const type of Object.values(NOTIFICATION_TYPE)) {
+  for (const type of enabledNotificationTypes()) {
     const job = pendingJob(registration, type, now);
     if (!existing.has(job.id)) {
       await outbox.create(job);

@@ -137,7 +137,7 @@ function registration(): Registration {
 }
 
 describe("quota-aware notification retry", () => {
-  it("keeps daily-quota failures durable and delays retry for more than 24 hours", async () => {
+  it("keeps daily-quota failures durable and delays the participant email retry for more than 24 hours", async () => {
     const outbox = new MemoryOutbox();
     const now = () => new Date("2026-09-02T10:00:00.000Z");
 
@@ -152,13 +152,11 @@ describe("quota-aware notification retry", () => {
         },
         now,
       ),
-    ).resolves.toEqual({ attempted: 2, failed: 2 });
+    ).resolves.toEqual({ attempted: 1, failed: 1 });
 
-    expect(outbox.jobs).toHaveLength(2);
-    for (const job of outbox.jobs) {
-      expect(job.status).toBe(NOTIFICATION_STATUS.failed);
-      expect(job.errorCode).toBe("RESEND_DAILY_QUOTA_EXCEEDED");
-      expect(job.nextAttemptAt).toBe("2026-09-03T10:05:00.000Z");
-    }
+    expect(outbox.jobs).toHaveLength(1);
+    expect(outbox.jobs[0]?.status).toBe(NOTIFICATION_STATUS.failed);
+    expect(outbox.jobs[0]?.errorCode).toBe("RESEND_DAILY_QUOTA_EXCEEDED");
+    expect(outbox.jobs[0]?.nextAttemptAt).toBe("2026-09-03T10:05:00.000Z");
   });
 });
