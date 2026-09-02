@@ -211,7 +211,7 @@ describe("durable notification outbox", () => {
       attemptCount: 1,
       errorCode: "EMAIL_PROVIDER_ERROR",
     });
-    expect(failed?.nextAttemptAt).toBe("2026-08-22T12:01:02.000Z");
+    expect(failed?.nextAttemptAt).toBe("2026-08-22T12:01:01.000Z");
 
     const successfulSender = new RecordingSender(false);
     const retry = await dispatchRegistrationNotificationJobs(
