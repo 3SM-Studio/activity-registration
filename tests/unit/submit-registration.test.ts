@@ -24,7 +24,12 @@ import {
   isPotentialDuplicateCandidate,
   type RegistrationDuplicateCriteria,
 } from "@/domain/registration-duplicates";
-import { REGISTRATION_STATUS, type Registration, type RequestId } from "@/domain/registration";
+import {
+  AGE_REVIEW_NOTE,
+  REGISTRATION_STATUS,
+  type Registration,
+  type RequestId,
+} from "@/domain/registration";
 import type { PublicSettings } from "@/domain/settings";
 
 const currentSeason: Season = {
@@ -276,7 +281,7 @@ describe("submitRegistration", () => {
     expect(registrations.records[0]?.guardianLastName).toBeNull();
   });
 
-  it("uses the season start date for group age eligibility", async () => {
+  it("accepts an age outside the standard group range and flags it for operator review", async () => {
     const youthGroup: InternalGroup = {
       ...defaultGroup,
       ageMin: 13,
@@ -284,15 +289,15 @@ describe("submitRegistration", () => {
     };
     const catalog = new FakeCatalogRepository(publicCatalog, [youthGroup]);
 
-    await expect(
-      submitRegistration(baseRequest, {
-        repositories: createRepositories(registrations, {}, catalog),
-        now: () => new Date("2026-08-18T12:00:00.000Z"),
-      }),
-    ).rejects.toMatchObject({
-      code: APPLICATION_ERROR_CODE.participantAgeNotEligible,
+    const result = await submitRegistration(baseRequest, {
+      repositories: createRepositories(registrations, {}, catalog),
+      now: () => new Date("2026-08-18T12:00:00.000Z"),
     });
-    expect(registrations.records).toHaveLength(0);
+
+    expect(result.businessDuplicate).toBe(false);
+    expect(result.registration.status).toBe(REGISTRATION_STATUS.new);
+    expect(result.registration.notes).toBe(AGE_REVIEW_NOTE);
+    expect(registrations.records).toHaveLength(1);
   });
 
   it("accepts a child who reaches the group's minimum age by season start", async () => {

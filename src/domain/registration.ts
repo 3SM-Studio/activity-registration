@@ -23,6 +23,11 @@ export const REGISTRATION_SOURCE = {
 
 export type RegistrationSource = (typeof REGISTRATION_SOURCE)[keyof typeof REGISTRATION_SOURCE];
 
+// Age ranges guide operator review only. They must never block creating a registration.
+export const AGE_REVIEW_NOTE_MARKER = "Wiek poza standardowym zakresem grupy" as const;
+export const AGE_REVIEW_NOTE =
+  `⚠ ${AGE_REVIEW_NOTE_MARKER}. Zweryfikuj ręcznie przed potwierdzeniem.` as const;
+
 export const REGISTRATION_STATUS = {
   new: "NEW",
   inReview: "IN_REVIEW",

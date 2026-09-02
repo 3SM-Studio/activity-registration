@@ -9,6 +9,7 @@ describe("operator dashboard layout", () => {
       visibleStartColumnIndex: 1,
       groupHeaderRow: 11,
       groupStartRow: 12,
+      dataEndRow: 1000,
     });
   });
 });
