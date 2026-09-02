@@ -75,6 +75,7 @@ function findTableByName(metadata: readonly SheetMetadata[], tableName: string) 
 function assertTableRange(
   table: TableMetadata | undefined,
   spec: (typeof SUPPORTING_TABLE_SPECS)[number],
+  populatedRowCount: number,
 ): void {
   if (!table) {
     throw new SheetSchemaError(
@@ -83,11 +84,14 @@ function assertTableRange(
   }
 
   const expectedColumnCount = SHEET_SCHEMA[spec.sheet].length;
+  const minimumEndRowIndex = Math.max(populatedRowCount, 2);
   if (
     table.name !== spec.tableName ||
     table.startRowIndex !== 0 ||
     table.startColumnIndex !== 0 ||
-    table.endColumnIndex !== expectedColumnCount
+    table.endColumnIndex !== expectedColumnCount ||
+    table.endRowIndex === undefined ||
+    table.endRowIndex < minimumEndRowIndex
   ) {
     throw new SheetSchemaError(
       `Native ${spec.sheet} table ${spec.tableName} has an invalid range or name.`,
@@ -158,9 +162,11 @@ export async function validateSupportingSheetTables(client: SheetsClient): Promi
       throw new SheetSchemaError(`Missing ${spec.sheet} sheet.`);
     }
 
+    const rows = await client.getValues(`${spec.sheet}!A:ZZ`);
     assertTableRange(
       (sheet.tables ?? []).find((candidate) => candidate.tableId === spec.tableId),
       spec,
+      rows.length,
     );
   }
 }
