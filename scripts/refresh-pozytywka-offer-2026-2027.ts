@@ -7,6 +7,15 @@ import {
 } from "../src/config/pozytywka-offer-2026-2027";
 import { buildRowByHeaders, cell, createHeaderMap } from "../src/infrastructure/google/header-map";
 import {
+  syncOperatorSheetSchema,
+  validateSafeOperatorSheetExperience,
+} from "../src/infrastructure/google/operator-sheet-runtime";
+import { bootstrapSheetStructure } from "../src/infrastructure/google/sheet-admin";
+import {
+  bootstrapSupportingSheetTables,
+  validateSupportingSheetTables,
+} from "../src/infrastructure/google/supporting-sheet-tables";
+import {
   CITY_HEADERS,
   GROUP_HEADERS,
   OFFERING_HEADERS,
@@ -14,12 +23,9 @@ import {
   SHEET,
   SETTING_KEY,
 } from "../src/infrastructure/google/sheets-contracts";
-import { bootstrapSheetStructure } from "../src/infrastructure/google/sheet-admin";
 import type { SheetsClient } from "../src/infrastructure/google/sheets-client";
-import { getServerEnv } from "../src/lib/env";
+import { getServerEnv, PRODUCTION_SPREADSHEET_ID } from "../src/lib/env";
 import { createAdminSheetsClient } from "./_google-admin";
-
-const PRODUCTION_SPREADSHEET_ID = "1DRcWvY8xfZDGjJLWOr8Ax1XsyBw4dWU8C6u9WGNvFfM";
 
 type WritableCell = string | number | boolean;
 
@@ -28,6 +34,21 @@ function writableCell(value: unknown): WritableCell {
     return value;
   }
   return String(value ?? "");
+}
+
+function columnLabel(columnCount: number): string {
+  if (!Number.isInteger(columnCount) || columnCount < 1) {
+    throw new Error(`Invalid sheet column count: ${columnCount}.`);
+  }
+
+  let remaining = columnCount;
+  let label = "";
+  while (remaining > 0) {
+    remaining -= 1;
+    label = String.fromCharCode(65 + (remaining % 26)) + label;
+    remaining = Math.floor(remaining / 26);
+  }
+  return label;
 }
 
 function requireSingleSetting(rows: readonly (readonly unknown[])[], key: string): string {
@@ -94,7 +115,9 @@ async function rewriteCatalogSheet(
 
   await client.clearValues(`${sheetName}!A2:ZZ`);
   if (ordered.length > 0) {
-    await client.appendValues(`${sheetName}!A:ZZ`, ordered);
+    const endColumn = columnLabel(headerRow.length);
+    const endRow = ordered.length + 1;
+    await client.updateValues(`${sheetName}!A2:${endColumn}${endRow}`, ordered);
   }
 }
 
@@ -114,7 +137,15 @@ async function main() {
   }
 
   const client = createAdminSheetsClient();
-  await bootstrapSheetStructure(client);
+  const hardProtectionEditorEmails =
+    env.APP_ENV === "production" && env.GCP_SERVICE_ACCOUNT_EMAIL
+      ? [env.GCP_SERVICE_ACCOUNT_EMAIL]
+      : undefined;
+
+  await bootstrapSheetStructure(
+    client,
+    hardProtectionEditorEmails ? { hardProtectionEditorEmails } : {},
+  );
 
   const settingsRows = await client.getValues(`${SHEET.settings}!A:ZZ`, {
     valueRenderOption: "UNFORMATTED_VALUE",
@@ -152,8 +183,15 @@ async function main() {
   );
   await rewriteCatalogSheet(client, SHEET.groups, GROUP_HEADERS, "GROUP_ID", desiredGroups);
 
+  // Catalog writes can change the populated row count and active group set. Restore
+  // every structure that depends on those values before considering the refresh done.
+  await bootstrapSupportingSheetTables(client);
+  await syncOperatorSheetSchema(client);
+  await validateSupportingSheetTables(client);
+  await validateSafeOperatorSheetExperience(client);
+
   console.info(
-    `Pozytywka offer refresh completed for ${env.APP_ENV}: ${POZYTYWKA_CITIES_2026_2027.length} active locations, ${POZYTYWKA_OFFERINGS_2026_2027.length} active offerings, ${desiredGroups.length} active groups. Existing catalog rows were preserved as inactive. ZAPISY and POWIADOMIENIA were not modified.`,
+    `Pozytywka offer refresh completed for ${env.APP_ENV}: ${POZYTYWKA_CITIES_2026_2027.length} active locations, ${POZYTYWKA_OFFERINGS_2026_2027.length} active offerings, ${desiredGroups.length} active groups. Existing catalog rows were preserved as inactive. Native table ranges, registration protections and the operator dashboard were synchronized. ZAPISY and POWIADOMIENIA were not modified.`,
   );
 }
 
