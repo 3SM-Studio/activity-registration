@@ -3,11 +3,13 @@ import { describe, expect, it } from "vitest";
 import {
   ADMIN_REGISTRATION_EMAIL_ENABLED,
   buildRegistrationNotificationMessages,
+  enabledRegistrationNotificationTypes,
   sendRegistrationNotifications,
   type EmailMessage,
   type EmailSender,
 } from "@/application/registration-notifications";
 import { asCityId, asOfferingId, asSeasonId } from "@/domain/catalog";
+import { NOTIFICATION_TYPE } from "@/domain/notification-outbox";
 import {
   REGISTRATION_SCHEMA_VERSION,
   REGISTRATION_SOURCE,
@@ -64,6 +66,7 @@ class RecordingSender implements EmailSender {
 describe("registration notifications", () => {
   it("keeps the administrative registration email disabled", () => {
     expect(ADMIN_REGISTRATION_EMAIL_ENABLED).toBe(false);
+    expect(enabledRegistrationNotificationTypes()).toEqual([NOTIFICATION_TYPE.confirmation]);
   });
 
   it("builds only the participant confirmation while admin email is disabled", async () => {
