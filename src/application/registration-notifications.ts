@@ -8,6 +8,7 @@ import { RegistrationAdminEmail } from "@/emails/registration-admin-email";
 import { RegistrationConfirmationEmail } from "@/emails/registration-confirmation-email";
 
 export const ADMIN_REGISTRATION_EMAIL_ENABLED = false;
+export const REGISTRATION_REPLY_TO_EMAIL = "pozytywka.boleslaw@gmail.com";
 
 export function enabledRegistrationNotificationTypes(): readonly NotificationType[] {
   return ADMIN_REGISTRATION_EMAIL_ENABLED
@@ -72,6 +73,7 @@ async function confirmationMessage(
     text: rendered.text,
     html: rendered.html,
     idempotencyKey: `registration-confirmation/${registration.id}`,
+    replyTo: REGISTRATION_REPLY_TO_EMAIL,
     attachments: [POZYTYWKA_EMAIL_LOGO_ATTACHMENT],
   };
 }
