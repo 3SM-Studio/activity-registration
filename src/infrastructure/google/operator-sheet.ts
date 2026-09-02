@@ -99,8 +99,7 @@ export const CONFIRMED_WITHOUT_DATE_FORMULA = '=($P2="CONFIRMED")*($Z2="")';
 export const CLOSED_WITHOUT_DATE_FORMULA =
   '=OR(AND($P2="REJECTED";$AA2="");AND($P2="CANCELLED";$AA2=""))';
 export const POSSIBLE_DUPLICATE_COUNT_FORMULA = "=SUMPRODUCT(--(LEN(ZAPISY!AB2:AB)>0))";
-export const AGE_REVIEW_FORMULA =
-  `=ISNUMBER(SEARCH("${AGE_REVIEW_NOTE_MARKER}";$Q2))`;
+export const AGE_REVIEW_FORMULA = `=ISNUMBER(SEARCH("${AGE_REVIEW_NOTE_MARKER}";$Q2))`;
 
 function formulaText(value: string): string {
   return value.replace(/"/g, '""');
