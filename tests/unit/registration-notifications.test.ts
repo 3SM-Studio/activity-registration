@@ -89,9 +89,9 @@ describe("registration notifications", () => {
     expect(messages[0]?.html).toContain("Zgłoszenie otrzymane");
     expect(messages[0]?.html).toContain("Co dzieje się teraz?");
     expect(messages[0]?.text).toContain("nie potwierdzenie miejsca na zajęciach");
-    expect(messages.some((message) => message.idempotencyKey.startsWith("registration-admin/"))).toBe(
-      false,
-    );
+    expect(
+      messages.some((message) => message.idempotencyKey.startsWith("registration-admin/")),
+    ).toBe(false);
   });
 
   it("does not expose duplicate warnings to the participant email", async () => {

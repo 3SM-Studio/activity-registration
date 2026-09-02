@@ -217,11 +217,7 @@ describe("durable notification outbox", () => {
     const retry = await dispatchRegistrationNotificationJobs(
       registration(),
       { ...baseNotificationConfig, sender: successfulSender, outbox },
-      clock(
-        "2026-08-22T12:02:00.000Z",
-        "2026-08-22T12:02:00.000Z",
-        "2026-08-22T12:02:01.000Z",
-      ),
+      clock("2026-08-22T12:02:00.000Z", "2026-08-22T12:02:00.000Z", "2026-08-22T12:02:01.000Z"),
     );
 
     expect(retry).toEqual({ attempted: 1, failed: 0 });
