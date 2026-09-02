@@ -16,12 +16,24 @@ import type { Registration } from "@/domain/registration";
 
 const LEASE_DURATION_MS = 2 * 60_000;
 const MAX_BACKOFF_MS = 24 * 60 * 60_000;
+const DAILY_QUOTA_RETRY_MS = 24 * 60 * 60_000 + 5 * 60_000;
+const MONTHLY_QUOTA_RECHECK_MS = 24 * 60 * 60_000;
 const PROVIDER_ERROR_CODE = "EMAIL_PROVIDER_ERROR";
+const PROVIDER_UNAVAILABLE_ERROR_CODE = "EMAIL_PROVIDER_UNAVAILABLE";
+const PROVIDER_INVALID_RESPONSE_ERROR_CODE = "EMAIL_PROVIDER_INVALID_RESPONSE";
+const RESEND_DAILY_QUOTA_ERROR_CODE = "RESEND_DAILY_QUOTA_EXCEEDED";
+const RESEND_MONTHLY_QUOTA_ERROR_CODE = "RESEND_MONTHLY_QUOTA_EXCEEDED";
+const RESEND_RATE_LIMIT_ERROR_CODE = "RESEND_RATE_LIMIT_EXCEEDED";
 
 export type DurableNotificationDependencies = RegistrationNotificationDependencies &
   Readonly<{
     outbox: NotificationOutboxRepository;
   }>;
+
+type ProviderFailure = Readonly<{
+  providerCode: string | null;
+  retryAfterMs: number | null;
+}>;
 
 function pendingJob(
   registration: Registration,
@@ -62,10 +74,63 @@ export async function ensureRegistrationNotificationJobs(
   }
 }
 
-function retryAt(failedAt: string, attemptCount: number): string {
+function exponentialBackoffMs(attemptCount: number): number {
   const exponent = Math.max(0, Math.min(attemptCount - 1, 10));
-  const delay = Math.min(MAX_BACKOFF_MS, 60_000 * 2 ** exponent);
-  return new Date(Date.parse(failedAt) + delay).toISOString();
+  return Math.min(MAX_BACKOFF_MS, 60_000 * 2 ** exponent);
+}
+
+function providerFailure(error: unknown): ProviderFailure {
+  if (typeof error !== "object" || error === null) {
+    return { providerCode: null, retryAfterMs: null };
+  }
+
+  const candidate = error as Record<string, unknown>;
+  const providerCode =
+    typeof candidate.providerCode === "string" && candidate.providerCode.length > 0
+      ? candidate.providerCode
+      : null;
+  const retryAfterMs =
+    typeof candidate.retryAfterMs === "number" &&
+    Number.isFinite(candidate.retryAfterMs) &&
+    candidate.retryAfterMs >= 0
+      ? candidate.retryAfterMs
+      : null;
+
+  return { providerCode, retryAfterMs };
+}
+
+function persistedErrorCode(failure: ProviderFailure): string {
+  switch (failure.providerCode) {
+    case "daily_quota_exceeded":
+      return RESEND_DAILY_QUOTA_ERROR_CODE;
+    case "monthly_quota_exceeded":
+      return RESEND_MONTHLY_QUOTA_ERROR_CODE;
+    case "rate_limit_exceeded":
+      return RESEND_RATE_LIMIT_ERROR_CODE;
+    case "request_failed":
+      return PROVIDER_UNAVAILABLE_ERROR_CODE;
+    case "invalid_response":
+      return PROVIDER_INVALID_RESPONSE_ERROR_CODE;
+    default:
+      return PROVIDER_ERROR_CODE;
+  }
+}
+
+function retryDelayMs(attemptCount: number, failure: ProviderFailure): number {
+  switch (failure.providerCode) {
+    case "daily_quota_exceeded":
+      return Math.max(DAILY_QUOTA_RETRY_MS, failure.retryAfterMs ?? 0);
+    case "monthly_quota_exceeded":
+      return Math.max(MONTHLY_QUOTA_RECHECK_MS, failure.retryAfterMs ?? 0);
+    case "rate_limit_exceeded":
+      return Math.max(1_000, failure.retryAfterMs ?? exponentialBackoffMs(attemptCount));
+    default:
+      return failure.retryAfterMs ?? exponentialBackoffMs(attemptCount);
+  }
+}
+
+function retryAt(failedAt: string, attemptCount: number, failure: ProviderFailure): string {
+  return new Date(Date.parse(failedAt) + retryDelayMs(attemptCount, failure)).toISOString();
 }
 
 export async function dispatchRegistrationNotificationJobs(
@@ -105,15 +170,16 @@ export async function dispatchRegistrationNotificationJobs(
       await dependencies.sender.send(message);
       const sentAt = now().toISOString();
       await dependencies.outbox.markSent(expectedId, leaseToken, sentAt);
-    } catch {
+    } catch (error) {
       failed += 1;
       const failedAt = now().toISOString();
+      const failure = providerFailure(error);
       await dependencies.outbox.markFailed(
         expectedId,
         leaseToken,
         failedAt,
-        PROVIDER_ERROR_CODE,
-        retryAt(failedAt, claimed.attemptCount),
+        persistedErrorCode(failure),
+        retryAt(failedAt, claimed.attemptCount, failure),
       );
     }
   }
