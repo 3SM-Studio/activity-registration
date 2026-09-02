@@ -98,12 +98,50 @@ export const CLOSED_WITHOUT_DATE_FORMULA =
   '=OR(AND($P2="REJECTED";$AA2="");AND($P2="CANCELLED";$AA2=""))';
 export const POSSIBLE_DUPLICATE_COUNT_FORMULA = "=SUMPRODUCT(--(LEN(ZAPISY!AB2:AB)>0))";
 
-export function buildFreePlacesSummaryFormula(firstGroupRow: number, lastGroupRow: number): string {
-  if (lastGroupRow < firstGroupRow) {
-    return '="BRAK DANYCH"';
-  }
+function formulaText(value: string): string {
+  return value.replace(/"/g, '""');
+}
 
-  return `=IF(COUNT(F${firstGroupRow}:F${lastGroupRow})<>ROWS(F${firstGroupRow}:F${lastGroupRow});"BRAK DANYCH";SUM(H${firstGroupRow}:H${lastGroupRow}))`;
+function statusCountExpression(currentSeasonId: string, status: string): string {
+  return `COUNTIFS(ZAPISY!V2:V;"${formulaText(currentSeasonId)}";ZAPISY!P2:P;"${formulaText(status)}")`;
+}
+
+export function buildStatusCountFormula(currentSeasonId: string, status: string): string {
+  return `=${statusCountExpression(currentSeasonId, status)}`;
+}
+
+export function buildPossibleDuplicateCountFormula(currentSeasonId: string): string {
+  return `=SUMPRODUCT(--(ZAPISY!V2:V="${formulaText(currentSeasonId)}");--(LEN(ZAPISY!AB2:AB)>0))`;
+}
+
+export function buildAttentionFormula(currentSeasonId: string): string {
+  const seasonId = formulaText(currentSeasonId);
+  return (
+    buildPossibleDuplicateCountFormula(currentSeasonId) +
+    `+COUNTIFS(ZAPISY!V2:V;"${seasonId}";ZAPISY!P2:P;"CONFIRMED";ZAPISY!X2:X;"")` +
+    `+COUNTIFS(ZAPISY!V2:V;"${seasonId}";ZAPISY!P2:P;"CONTACTED";ZAPISY!Y2:Y;"")` +
+    `+COUNTIFS(ZAPISY!V2:V;"${seasonId}";ZAPISY!P2:P;"CONFIRMED";ZAPISY!Z2:Z;"")` +
+    `+COUNTIFS(ZAPISY!V2:V;"${seasonId}";ZAPISY!P2:P;"REJECTED";ZAPISY!AA2:AA;"")` +
+    `+COUNTIFS(ZAPISY!V2:V;"${seasonId}";ZAPISY!P2:P;"CANCELLED";ZAPISY!AA2:AA;"")`
+  );
+}
+
+export function buildFreePlacesSummaryFormula(firstGroupRow: number): string {
+  return `=IF(COUNTA(A${firstGroupRow}:A)=0;"BRAK DANYCH";IF(COUNTIFS(A${firstGroupRow}:A;"<>";F${firstGroupRow}:F;"-")+COUNTIFS(A${firstGroupRow}:A;"<>";F${firstGroupRow}:F;"")>0;"BRAK DANYCH";SUMIF(A${firstGroupRow}:A;"<>";H${firstGroupRow}:H)))`;
+}
+
+export function buildAgeLabel(ageMin: number | null, ageMax: number | null): string {
+  if (ageMin === null && ageMax === null) return "bez limitu";
+  if (ageMin !== null && ageMax === null) return `${ageMin}+`;
+  if (ageMin === null && ageMax !== null) return `do ${ageMax}`;
+  return `${ageMin}-${ageMax}`;
+}
+
+export function buildConfirmedGroupCountFormula(
+  currentSeasonId: string,
+  dashboardRow: number,
+): string {
+  return `=COUNTIFS(ZAPISY!V$2:V;"${formulaText(currentSeasonId)}";ZAPISY!X$2:X;$A${dashboardRow};ZAPISY!P$2:P;"CONFIRMED")`;
 }
 
 export const OPERATOR_DASHBOARD_LAYOUT = {
@@ -111,6 +149,7 @@ export const OPERATOR_DASHBOARD_LAYOUT = {
   visibleStartColumnIndex: 1,
   groupHeaderRow: 11,
   groupStartRow: 12,
+  dataEndRow: 1000,
 } as const;
 
 export const OWNED_OPERATOR_FORMAT_FORMULAS = new Set([
@@ -322,15 +361,9 @@ async function bootstrapDashboard(client: SheetsClient, dashboard: SheetMetadata
   await client.clearValues(`${OPERATOR_DASHBOARD_SHEET}!A:K`);
 
   const firstGroupRow = OPERATOR_DASHBOARD_LAYOUT.groupStartRow;
-  const lastGroupRow = firstGroupRow + groups.length - 1;
-  const freePlacesFormula = buildFreePlacesSummaryFormula(firstGroupRow, lastGroupRow);
-  const attentionFormula =
-    "=SUMPRODUCT(--(LEN(ZAPISY!AB2:AB)>0))" +
-    '+COUNTIFS(ZAPISY!P2:P;"CONFIRMED";ZAPISY!X2:X;"")' +
-    '+COUNTIFS(ZAPISY!P2:P;"CONTACTED";ZAPISY!Y2:Y;"")' +
-    '+COUNTIFS(ZAPISY!P2:P;"CONFIRMED";ZAPISY!Z2:Z;"")' +
-    '+COUNTIFS(ZAPISY!P2:P;"REJECTED";ZAPISY!AA2:AA;"")' +
-    '+COUNTIFS(ZAPISY!P2:P;"CANCELLED";ZAPISY!AA2:AA;"")';
+  const freePlacesFormula = buildFreePlacesSummaryFormula(firstGroupRow);
+  const attentionFormula = buildAttentionFormula(currentSeasonId);
+  const statusCount = (status: string) => statusCountExpression(currentSeasonId, status);
 
   const summaryRows = [
     [stringCell(""), stringCell("PANEL OPERATORA - POZYTYWKA")],
@@ -353,13 +386,13 @@ async function bootstrapDashboard(client: SheetsClient, dashboard: SheetMetadata
     ],
     [
       stringCell(""),
-      formulaCell('=COUNTIF(ZAPISY!P2:P;"NEW")'),
+      formulaCell(buildStatusCountFormula(currentSeasonId, "NEW")),
       stringCell(""),
-      formulaCell('=COUNTIF(ZAPISY!P2:P;"IN_REVIEW")+COUNTIF(ZAPISY!P2:P;"CONTACTED")'),
+      formulaCell(`=${statusCount("IN_REVIEW")}+${statusCount("CONTACTED")}`),
       stringCell(""),
-      formulaCell('=COUNTIF(ZAPISY!P2:P;"WAITLISTED")'),
+      formulaCell(buildStatusCountFormula(currentSeasonId, "WAITLISTED")),
       stringCell(""),
-      formulaCell('=COUNTIF(ZAPISY!P2:P;"CONFIRMED")'),
+      formulaCell(buildStatusCountFormula(currentSeasonId, "CONFIRMED")),
     ],
     [],
     [
@@ -376,12 +409,11 @@ async function bootstrapDashboard(client: SheetsClient, dashboard: SheetMetadata
       stringCell(""),
       formulaCell(attentionFormula),
       stringCell(""),
-      formulaCell('=COUNTIF(ZAPISY!P2:P;"REJECTED")+COUNTIF(ZAPISY!P2:P;"CANCELLED")'),
+      formulaCell(`=${statusCount("REJECTED")}+${statusCount("CANCELLED")}`),
       stringCell(""),
       formulaCell(
-        '=COUNTIF(ZAPISY!P2:P;"NEW")+COUNTIF(ZAPISY!P2:P;"IN_REVIEW")+' +
-          'COUNTIF(ZAPISY!P2:P;"CONTACTED")+COUNTIF(ZAPISY!P2:P;"WAITLISTED")+' +
-          'COUNTIF(ZAPISY!P2:P;"CONFIRMED")',
+        `=${statusCount("NEW")}+${statusCount("IN_REVIEW")}+${statusCount("CONTACTED")}+` +
+          `${statusCount("WAITLISTED")}+${statusCount("CONFIRMED")}`,
       ),
       stringCell(""),
       formulaCell(freePlacesFormula),
@@ -403,17 +435,12 @@ async function bootstrapDashboard(client: SheetsClient, dashboard: SheetMetadata
 
   const groupDashboardRows = groups.map((group, index) => {
     const rowNumber = firstGroupRow + index;
-    const ageLabel =
-      group.ageMin === null && group.ageMax === null
-        ? "bez limitu"
-        : `${group.ageMin ?? "…"}-${group.ageMax ?? "…"}`;
+    const ageLabel = buildAgeLabel(group.ageMin, group.ageMax);
     const termLabel = [group.dayOfWeek, group.startTime, group.endTime ? `-${group.endTime}` : null]
       .filter(Boolean)
       .join(" ");
     const capacityCell = group.capacity === null ? stringCell("-") : numberCell(group.capacity);
-    const confirmedCell = formulaCell(
-      `=COUNTIFS(ZAPISY!X2:X;$A${rowNumber};ZAPISY!P2:P;"CONFIRMED")`,
-    );
+    const confirmedCell = formulaCell(buildConfirmedGroupCountFormula(currentSeasonId, rowNumber));
     const freeCell =
       group.capacity === null
         ? stringCell("-")
@@ -462,7 +489,7 @@ async function bootstrapDashboard(client: SheetsClient, dashboard: SheetMetadata
         range: {
           sheetId: dashboard.sheetId,
           startRowIndex: 0,
-          endRowIndex: 1000,
+          endRowIndex: OPERATOR_DASHBOARD_LAYOUT.dataEndRow,
           startColumnIndex: 0,
           endColumnIndex: 11,
         },
@@ -634,13 +661,66 @@ async function bootstrapDashboard(client: SheetsClient, dashboard: SheetMetadata
       repeatCell: {
         range: {
           sheetId: dashboard.sheetId,
-          startRowIndex: 11,
-          endRowIndex: Math.max(11 + groups.length, 12),
+          startRowIndex: firstGroupRow - 1,
+          endRowIndex: OPERATOR_DASHBOARD_LAYOUT.dataEndRow,
           startColumnIndex: 1,
+          endColumnIndex: 3,
+        },
+        cell: {
+          userEnteredFormat: {
+            horizontalAlignment: "LEFT",
+            verticalAlignment: "MIDDLE",
+            wrapStrategy: "WRAP",
+          },
+        },
+        fields:
+          "userEnteredFormat.horizontalAlignment,userEnteredFormat.verticalAlignment,userEnteredFormat.wrapStrategy",
+      },
+    },
+    {
+      repeatCell: {
+        range: {
+          sheetId: dashboard.sheetId,
+          startRowIndex: firstGroupRow - 1,
+          endRowIndex: OPERATOR_DASHBOARD_LAYOUT.dataEndRow,
+          startColumnIndex: 3,
           endColumnIndex: 9,
         },
-        cell: { userEnteredFormat: { verticalAlignment: "MIDDLE", wrapStrategy: "WRAP" } },
-        fields: "userEnteredFormat.verticalAlignment,userEnteredFormat.wrapStrategy",
+        cell: {
+          userEnteredFormat: {
+            horizontalAlignment: "CENTER",
+            verticalAlignment: "MIDDLE",
+            wrapStrategy: "WRAP",
+          },
+        },
+        fields:
+          "userEnteredFormat.horizontalAlignment,userEnteredFormat.verticalAlignment,userEnteredFormat.wrapStrategy",
+      },
+    },
+    {
+      repeatCell: {
+        range: {
+          sheetId: dashboard.sheetId,
+          startRowIndex: firstGroupRow - 1,
+          endRowIndex: OPERATOR_DASHBOARD_LAYOUT.dataEndRow,
+          startColumnIndex: 3,
+          endColumnIndex: 4,
+        },
+        cell: { userEnteredFormat: { numberFormat: { type: "TEXT", pattern: "@" } } },
+        fields: "userEnteredFormat.numberFormat",
+      },
+    },
+    {
+      repeatCell: {
+        range: {
+          sheetId: dashboard.sheetId,
+          startRowIndex: firstGroupRow - 1,
+          endRowIndex: OPERATOR_DASHBOARD_LAYOUT.dataEndRow,
+          startColumnIndex: 8,
+          endColumnIndex: 9,
+        },
+        cell: { userEnteredFormat: { numberFormat: { type: "PERCENT", pattern: "0%" } } },
+        fields: "userEnteredFormat.numberFormat",
       },
     },
   );
@@ -691,21 +771,38 @@ async function bootstrapDashboard(client: SheetsClient, dashboard: SheetMetadata
     });
   }
 
-  if (groups.length > 0) {
-    requests.push({
+  requests.push(
+    {
       repeatCell: {
         range: {
           sheetId: dashboard.sheetId,
-          startRowIndex: firstGroupRow - 1,
-          endRowIndex: lastGroupRow,
-          startColumnIndex: 8,
+          startRowIndex: 7,
+          endRowIndex: 8,
+          startColumnIndex: 7,
           endColumnIndex: 9,
         },
-        cell: { userEnteredFormat: { numberFormat: { type: "PERCENT", pattern: "0%" } } },
-        fields: "userEnteredFormat.numberFormat",
+        cell: {
+          userEnteredFormat: {
+            textFormat: { fontSize: 13, bold: true },
+            wrapStrategy: "CLIP",
+          },
+        },
+        fields: "userEnteredFormat.textFormat,userEnteredFormat.wrapStrategy",
       },
-    });
-    requests.push({
+    },
+    {
+      updateDimensionProperties: {
+        range: {
+          sheetId: dashboard.sheetId,
+          dimension: "ROWS",
+          startIndex: 7,
+          endIndex: 8,
+        },
+        properties: { pixelSize: 42 },
+        fields: "pixelSize",
+      },
+    },
+    {
       addConditionalFormatRule: {
         index: 0,
         rule: {
@@ -713,7 +810,7 @@ async function bootstrapDashboard(client: SheetsClient, dashboard: SheetMetadata
             {
               sheetId: dashboard.sheetId,
               startRowIndex: firstGroupRow - 1,
-              endRowIndex: lastGroupRow,
+              endRowIndex: OPERATOR_DASHBOARD_LAYOUT.dataEndRow,
               startColumnIndex: 7,
               endColumnIndex: 8,
             },
@@ -723,7 +820,7 @@ async function bootstrapDashboard(client: SheetsClient, dashboard: SheetMetadata
               type: "CUSTOM_FORMULA",
               values: [
                 {
-                  userEnteredValue: `=AND($F${firstGroupRow}<>"";$F${firstGroupRow}<>"-";$H${firstGroupRow}=0)`,
+                  userEnteredValue: `=AND($A${firstGroupRow}<>"";$F${firstGroupRow}<>"";$F${firstGroupRow}<>"-";$H${firstGroupRow}=0)`,
                 },
               ],
             },
@@ -734,8 +831,8 @@ async function bootstrapDashboard(client: SheetsClient, dashboard: SheetMetadata
           },
         },
       },
-    });
-    requests.push({
+    },
+    {
       addConditionalFormatRule: {
         index: 1,
         rule: {
@@ -743,7 +840,7 @@ async function bootstrapDashboard(client: SheetsClient, dashboard: SheetMetadata
             {
               sheetId: dashboard.sheetId,
               startRowIndex: firstGroupRow - 1,
-              endRowIndex: lastGroupRow,
+              endRowIndex: OPERATOR_DASHBOARD_LAYOUT.dataEndRow,
               startColumnIndex: 8,
               endColumnIndex: 9,
             },
@@ -751,7 +848,11 @@ async function bootstrapDashboard(client: SheetsClient, dashboard: SheetMetadata
           booleanRule: {
             condition: {
               type: "CUSTOM_FORMULA",
-              values: [{ userEnteredValue: `=$I${firstGroupRow}>=90%` }],
+              values: [
+                {
+                  userEnteredValue: `=AND($A${firstGroupRow}<>"";ISNUMBER($I${firstGroupRow});$I${firstGroupRow}>=90%)`,
+                },
+              ],
             },
             format: {
               backgroundColorStyle: { rgbColor: { red: 1, green: 0.957, blue: 0.839 } },
@@ -760,8 +861,8 @@ async function bootstrapDashboard(client: SheetsClient, dashboard: SheetMetadata
           },
         },
       },
-    });
-  }
+    },
+  );
 
   await client.batchUpdate(requests);
 }
@@ -798,7 +899,9 @@ export function buildAssignedGroupTableRequest(activeGroupIds: readonly string[]
 }
 
 async function readDashboardGroupIds(client: SheetsClient): Promise<readonly string[]> {
-  const rows = await client.getValues(`${OPERATOR_DASHBOARD_SHEET}!A12:A1000`);
+  const rows = await client.getValues(
+    `${OPERATOR_DASHBOARD_SHEET}!A${OPERATOR_DASHBOARD_LAYOUT.groupStartRow}:A${OPERATOR_DASHBOARD_LAYOUT.dataEndRow}`,
+  );
   return rows.map((row) => String(row[0] ?? "").trim()).filter((value) => value.length > 0);
 }
 
