@@ -15,13 +15,22 @@ const SUPPORTING_TABLES = [
   { sheet: SHEET.settings, tableId: "900006", tableName: "Ustawienia" },
 ] as const;
 
-function createClient(metadata: readonly SheetMetadata[]) {
+function createClient(
+  metadata: readonly SheetMetadata[],
+  populatedRows: Partial<Record<(typeof SUPPORTING_TABLES)[number]["sheet"], number>> = {},
+) {
   const batchRequests: Record<string, unknown>[] = [];
 
   const client: SheetsClient = {
     async getValues(range) {
       const spec = SUPPORTING_TABLES.find((candidate) => range.startsWith(`${candidate.sheet}!`));
-      return spec ? [SHEET_SCHEMA[spec.sheet]] : [];
+      if (!spec) return [];
+
+      const rowCount = populatedRows[spec.sheet] ?? 1;
+      return [
+        SHEET_SCHEMA[spec.sheet],
+        ...Array.from({ length: Math.max(0, rowCount - 1) }, () => ["row"]),
+      ];
     },
     async updateValues() {},
     async appendValues() {},
@@ -107,25 +116,26 @@ describe("bootstrapSupportingSheetTables", () => {
 });
 
 describe("validateSupportingSheetTables", () => {
+  function validMetadata(): readonly SheetMetadata[] {
+    return SUPPORTING_TABLES.map(({ sheet, tableId, tableName }, index) => ({
+      sheetId: index + 10,
+      title: sheet,
+      tables: [
+        {
+          tableId,
+          name: tableName,
+          startRowIndex: 0,
+          endRowIndex: 2,
+          startColumnIndex: 0,
+          endColumnIndex: SHEET_SCHEMA[sheet].length,
+          columnProperties: [],
+        },
+      ],
+    }));
+  }
+
   it("accepts the expected native table contract on every supporting sheet", async () => {
-    const metadata: readonly SheetMetadata[] = SUPPORTING_TABLES.map(
-      ({ sheet, tableId, tableName }, index) => ({
-        sheetId: index + 10,
-        title: sheet,
-        tables: [
-          {
-            tableId,
-            name: tableName,
-            startRowIndex: 0,
-            endRowIndex: 2,
-            startColumnIndex: 0,
-            endColumnIndex: SHEET_SCHEMA[sheet].length,
-            columnProperties: [],
-          },
-        ],
-      }),
-    );
-    const { client } = createClient(metadata);
+    const { client } = createClient(validMetadata());
 
     await expect(validateSupportingSheetTables(client)).resolves.toBeUndefined();
   });
@@ -135,6 +145,14 @@ describe("validateSupportingSheetTables", () => {
 
     await expect(validateSupportingSheetTables(client)).rejects.toThrow(
       "Missing native MIASTA table Miasta",
+    );
+  });
+
+  it("rejects a native table that no longer covers all populated rows", async () => {
+    const { client } = createClient(validMetadata(), { [SHEET.offerings]: 6 });
+
+    await expect(validateSupportingSheetTables(client)).rejects.toThrow(
+      "Native OFERTY_ZAJEC table OfertyZajec has an invalid range or name.",
     );
   });
 });
