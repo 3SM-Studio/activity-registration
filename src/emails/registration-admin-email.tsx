@@ -78,7 +78,6 @@ export function RegistrationAdminEmail({ registration }: RegistrationAdminEmailP
 
       <EmailCard tone="default" padding="18px 20px">
         <SectionTitle>Dane systemowe</SectionTitle>
-        <DetailRow label="Numer zgłoszenia" value={registration.id} />
         <DetailRow label="Wysłano" value={registration.submittedAt} last />
         <Text
           style={{
@@ -94,7 +93,7 @@ export function RegistrationAdminEmail({ registration }: RegistrationAdminEmailP
         </Text>
       </EmailCard>
 
-      <EmailFooter reference={registration.id} />
+      <EmailFooter />
     </EmailLayout>
   );
 }
