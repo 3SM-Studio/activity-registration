@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  ADMIN_REGISTRATION_EMAIL_ENABLED,
   buildRegistrationNotificationMessages,
   sendRegistrationNotifications,
   type EmailMessage,
@@ -54,25 +55,24 @@ function registration(overrides: Partial<Registration> = {}): Registration {
 class RecordingSender implements EmailSender {
   readonly messages: EmailMessage[] = [];
 
-  constructor(private readonly shouldFail: (message: EmailMessage) => boolean = () => false) {}
-
   async send(message: EmailMessage): Promise<Readonly<{ id: string }>> {
     this.messages.push(message);
-    if (this.shouldFail(message)) {
-      throw new Error("Synthetic email failure");
-    }
     return { id: `email-${this.messages.length}` };
   }
 }
 
 describe("registration notifications", () => {
-  it("builds separate participant and admin emails with stable idempotency keys", async () => {
+  it("keeps the administrative registration email disabled", () => {
+    expect(ADMIN_REGISTRATION_EMAIL_ENABLED).toBe(false);
+  });
+
+  it("builds only the participant confirmation while admin email is disabled", async () => {
     const messages = await buildRegistrationNotificationMessages(registration(), {
       from: "Pozytywka <zapisy@example.com>",
       adminEmails: ["biuro@example.com"],
     });
 
-    expect(messages).toHaveLength(2);
+    expect(messages).toHaveLength(1);
     expect(messages[0]).toMatchObject({
       to: ["anna@example.com"],
       idempotencyKey: "registration-confirmation/reg_11111111-1111-4111-8111-111111111111",
@@ -89,29 +89,12 @@ describe("registration notifications", () => {
     expect(messages[0]?.html).toContain("Zgłoszenie otrzymane");
     expect(messages[0]?.html).toContain("Co dzieje się teraz?");
     expect(messages[0]?.text).toContain("nie potwierdzenie miejsca na zajęciach");
-    expect(messages[1]).toMatchObject({
-      to: ["biuro@example.com"],
-      idempotencyKey: "registration-admin/reg_11111111-1111-4111-8111-111111111111",
-      attachments: [
-        {
-          filename: "pozytywka-logo.webp",
-          contentId: "pozytywka-logo",
-        },
-      ],
-    });
-    expect(messages[1]?.html).toContain('src="cid:pozytywka-logo"');
-    expect(messages[1]?.html).toContain("Nowe zgłoszenie do obsługi");
-    expect(messages[1]?.html).toContain("Dane systemowe");
-    expect(messages[1]?.replyTo).toBeUndefined();
-    expect(messages[1]?.text).toContain("Pełne dane kontaktowe");
-    expect(messages[1]?.text).not.toContain("Anna Kowalska");
-    expect(messages[1]?.text).not.toContain("2012-01-15");
-    expect(messages[1]?.text).not.toContain("+48500000000");
-    expect(messages[1]?.text).not.toContain("anna@example.com");
-    expect(messages[1]?.text).not.toContain("Jan Kowalski");
+    expect(messages.some((message) => message.idempotencyKey.startsWith("registration-admin/"))).toBe(
+      false,
+    );
   });
 
-  it("keeps probable-duplicate warning internal to the admin notification", async () => {
+  it("does not expose duplicate warnings to the participant email", async () => {
     const messages = await buildRegistrationNotificationMessages(
       registration({
         possibleDuplicateOf: asRegistrationId("reg_33333333-3333-4333-8333-333333333333"),
@@ -122,11 +105,9 @@ describe("registration notifications", () => {
       },
     );
 
+    expect(messages).toHaveLength(1);
     expect(messages[0]?.text).not.toMatch(/duplikat/i);
     expect(messages[0]?.html).not.toMatch(/duplikat/i);
-    expect(messages[1]?.text).toMatch(/możliwy duplikat/i);
-    expect(messages[1]?.html).toMatch(/możliwy duplikat/i);
-    expect(messages[1]?.text).not.toContain("reg_33333333-3333-4333-8333-333333333333");
   });
 
   it("escapes participant-controlled values in rendered HTML", async () => {
@@ -142,10 +123,8 @@ describe("registration notifications", () => {
     expect(messages[0]?.html).toContain("&lt;script&gt;alert(1)&lt;/script&gt;");
   });
 
-  it("attempts both notifications and reports partial failure without throwing", async () => {
-    const sender = new RecordingSender((message) =>
-      message.idempotencyKey.startsWith("registration-admin/"),
-    );
+  it("attempts only the participant confirmation", async () => {
+    const sender = new RecordingSender();
 
     const result = await sendRegistrationNotifications(registration(), {
       sender,
@@ -153,7 +132,8 @@ describe("registration notifications", () => {
       adminEmails: ["biuro@example.com"],
     });
 
-    expect(sender.messages).toHaveLength(2);
-    expect(result).toEqual({ attempted: 2, failed: 1 });
+    expect(sender.messages).toHaveLength(1);
+    expect(sender.messages[0]?.idempotencyKey).toMatch(/^registration-confirmation\//);
+    expect(result).toEqual({ attempted: 1, failed: 0 });
   });
 });
