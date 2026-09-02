@@ -1,0 +1,122 @@
+name: temp-age-ui
+
+on:
+  push:
+    branches:
+      - fix/nonblocking-age-warning-ui
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: fix/nonblocking-age-warning-ui
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11.20.0
+          run_install: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24.19.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Add nonblocking age warning
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('src/components/registration/registration-form.tsx')
+          text = p.read_text()
+          old = 'import { PUBLIC_INTAKE_STATUS, type PublicCatalog, type PublicOffering } from "@/domain/catalog";'
+          new = '''import {
+            PUBLIC_INTAKE_STATUS,
+            offeringSupportsAge,
+            type PublicCatalog,
+            type PublicOffering,
+          } from "@/domain/catalog";'''
+          if old not in text:
+              raise SystemExit('catalog import not found')
+          text = text.replace(old, new, 1)
+
+          old = '''  const selectedOffering = useMemo(
+            () => availableOfferings.find((offering) => offering.id === offeringId) ?? null,
+            [availableOfferings, offeringId],
+          );
+'''
+          new = old + '''  const ageOutsideStandardRange =
+            selectedOffering !== null &&
+            typeof age === "number" &&
+            age >= 0 &&
+            !offeringSupportsAge(selectedOffering, age);
+'''
+          if old not in text:
+              raise SystemExit('selected offering block not found')
+          text = text.replace(old, new, 1)
+
+          old = '''          <Controller
+            name="birthDate"
+            control={control}
+            render={({ field, fieldState }) => (
+              <Field className="max-w-sm" data-invalid={fieldState.invalid}>
+                <FieldLabel htmlFor="birthDate">
+                  Data urodzenia <span aria-hidden="true">*</span>
+                </FieldLabel>
+                <BirthDatePicker
+                  id="birthDate"
+                  value={field.value ?? ""}
+                  required
+                  onChange={(nextBirthDate) => {
+                    field.onChange(nextBirthDate);
+                    if (calculateAgeToday(nextBirthDate) >= 18) {
+                      setValue("guardianFirstName", "", { shouldDirty: true });
+                      setValue("guardianLastName", "", { shouldDirty: true });
+                      clearErrors(["guardianFirstName", "guardianLastName"]);
+                    }
+                  }}
+                  onBlur={field.onBlur}
+                  invalid={fieldState.invalid}
+                  describedBy={fieldState.invalid ? "birthDate-error" : "birthDate-description"}
+                />
+                <FieldDescription id="birthDate-description">
+                  Data urodzenia pomaga nam dobrać odpowiednią grupę wiekową oraz ustalić, czy
+                  potrzebujemy danych rodzica lub opiekuna.
+                </FieldDescription>
+                <FieldError id="birthDate-error" errors={[fieldState.error]} />
+              </Field>
+            )}
+          />
+'''
+          new = old + '''
+          {ageOutsideStandardRange ? (
+            <Alert
+              className="border-amber-300 bg-amber-50 text-amber-950"
+              role="status"
+              data-age-advisory
+            >
+              <CircleAlert aria-hidden="true" />
+              <AlertTitle>Wiek poza standardowym zakresem tych zajęć</AlertTitle>
+              <AlertDescription>
+                Możesz mimo to wysłać zgłoszenie. Pozytywka zweryfikuje możliwość udziału i w razie
+                potrzeby dobierze odpowiednią grupę.
+              </AlertDescription>
+            </Alert>
+          ) : null}
+'''
+          if old not in text:
+              raise SystemExit('birth date controller block not found')
+          text = text.replace(old, new, 1)
+          p.write_text(text)
+          PY
+          pnpm exec prettier --write src/components/registration/registration-form.tsx
+      - name: Commit patch and remove helper
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/temp-age-ui.yml
+          git add src/components/registration/registration-form.tsx
+          git commit -m "fix: show nonblocking age advisory"
+          git push origin HEAD:fix/nonblocking-age-warning-ui
