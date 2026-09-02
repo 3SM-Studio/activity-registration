@@ -134,6 +134,8 @@ async function main() {
     );
   }
 
+  const desiredGroups = pozytywkaGroupsForSeason2026_2027(currentSeasonId);
+
   await rewriteCatalogSheet(
     client,
     SHEET.cities,
@@ -148,16 +150,10 @@ async function main() {
     "OFFERING_ID",
     POZYTYWKA_OFFERINGS_2026_2027,
   );
-  await rewriteCatalogSheet(
-    client,
-    SHEET.groups,
-    GROUP_HEADERS,
-    "GROUP_ID",
-    pozytywkaGroupsForSeason2026_2027(currentSeasonId),
-  );
+  await rewriteCatalogSheet(client, SHEET.groups, GROUP_HEADERS, "GROUP_ID", desiredGroups);
 
   console.info(
-    `Pozytywka offer refresh completed for ${env.APP_ENV}: 3 active locations, 18 active offerings. Existing catalog rows were preserved as inactive. ZAPISY and POWIADOMIENIA were not modified.`,
+    `Pozytywka offer refresh completed for ${env.APP_ENV}: ${POZYTYWKA_CITIES_2026_2027.length} active locations, ${POZYTYWKA_OFFERINGS_2026_2027.length} active offerings, ${desiredGroups.length} active groups. Existing catalog rows were preserved as inactive. ZAPISY and POWIADOMIENIA were not modified.`,
   );
 }
 
