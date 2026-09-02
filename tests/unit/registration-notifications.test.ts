@@ -78,7 +78,7 @@ describe("registration notifications", () => {
       idempotencyKey: "registration-confirmation/reg_11111111-1111-4111-8111-111111111111",
       attachments: [
         {
-          filename: "pozytywka-logo.webp",
+          filename: "pozytywka-email-logo.png",
           contentId: "pozytywka-logo",
         },
       ],
@@ -89,6 +89,10 @@ describe("registration notifications", () => {
     expect(messages[0]?.html).toContain("Zgłoszenie otrzymane");
     expect(messages[0]?.html).toContain("Co dzieje się teraz?");
     expect(messages[0]?.text).toContain("nie potwierdzenie miejsca na zajęciach");
+    expect(messages[0]?.html).not.toContain("Numer zgłoszenia");
+    expect(messages[0]?.text).not.toContain("Numer zgłoszenia");
+    expect(messages[0]?.html).not.toContain("reg_11111111-1111-4111-8111-111111111111");
+    expect(messages[0]?.text).not.toContain("reg_11111111-1111-4111-8111-111111111111");
     expect(
       messages.some((message) => message.idempotencyKey.startsWith("registration-admin/")),
     ).toBe(false);
