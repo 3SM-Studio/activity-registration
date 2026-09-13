@@ -328,7 +328,8 @@ export class GoogleSheetsClient implements SheetsClient {
       throw new SheetsApiError(400, `Google Sheets table ${tableId} has an invalid append range.`);
     }
 
-    const range = `${quoteSheetTitle(resolved.sheetTitle)}!${columnLabel(startColumnIndex)}:${columnLabel(endColumnIndex - 1)}`;
+    const range =
+      `${quoteSheetTitle(resolved.sheetTitle)}!${columnLabel(startColumnIndex)}:${columnLabel(endColumnIndex - 1)}`;
     const response = await this.request<AppendValuesResponse>(
       `/values/${encodeURIComponent(range)}:append?valueInputOption=RAW&insertDataOption=OVERWRITE`,
       {
@@ -344,7 +345,10 @@ export class GoogleSheetsClient implements SheetsClient {
 
     const rowIndex = appendedRowIndex(response.updates?.updatedRange);
     if (rowIndex === null) {
-      throw new SheetsApiError(500, "Google Sheets append response did not identify the written row.");
+      throw new SheetsApiError(
+        500,
+        "Google Sheets append response did not identify the written row.",
+      );
     }
 
     const requests: Record<string, unknown>[] = [];
