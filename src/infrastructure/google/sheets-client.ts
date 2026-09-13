@@ -4,6 +4,7 @@ import { getGoogleAccessToken } from "@/infrastructure/google/auth";
 
 const SHEETS_API_ROOT = "https://sheets.googleapis.com/v4/spreadsheets";
 const SHEETS_REQUEST_TIMEOUT_MS = 6_000;
+const HUMAN_DATE_PATTERN = "dd.mm.yyyy";
 
 export class SheetsApiError extends Error {
   readonly status: number;
@@ -19,6 +20,16 @@ type ValuesResponse = Readonly<{
   range?: string;
   majorDimension?: string;
   values?: readonly (readonly unknown[])[];
+}>;
+
+type AppendValuesResponse = Readonly<{
+  tableRange?: string;
+  updates?: Readonly<{
+    updatedRange?: string;
+    updatedRows?: number;
+    updatedColumns?: number;
+    updatedCells?: number;
+  }>;
 }>;
 
 type GridRangeResponse = Readonly<{
@@ -125,18 +136,46 @@ export type SheetMetadata = Readonly<{
 
 export type ValueRenderOption = "FORMATTED_VALUE" | "UNFORMATTED_VALUE" | "FORMULA";
 
+type ResolvedTable = Readonly<{
+  sheetId: number;
+  sheetTitle: string;
+  table: TableMetadata;
+}>;
+
 function isRetryableSheetsError(error: unknown): boolean {
   return error instanceof SheetsApiError && [429, 500, 502, 503, 504].includes(error.status);
 }
 
-function toCellData(value: string | number | boolean): Readonly<Record<string, unknown>> {
-  if (typeof value === "number") {
-    return { userEnteredValue: { numberValue: value } };
+function columnLabel(columnIndex: number): string {
+  let remaining = columnIndex + 1;
+  let label = "";
+
+  while (remaining > 0) {
+    remaining -= 1;
+    label = String.fromCharCode(65 + (remaining % 26)) + label;
+    remaining = Math.floor(remaining / 26);
   }
-  if (typeof value === "boolean") {
-    return { userEnteredValue: { boolValue: value } };
+
+  return label;
+}
+
+function quoteSheetTitle(title: string): string {
+  return `'${title.replaceAll("'", "''")}'`;
+}
+
+function appendedRowIndex(updatedRange: string | undefined): number | null {
+  if (!updatedRange) {
+    return null;
   }
-  return { userEnteredValue: { stringValue: value } };
+
+  const normalized = updatedRange.replaceAll("$", "");
+  const match = /![A-Z]+(\d+):[A-Z]+(\d+)$/i.exec(normalized);
+  if (!match || match[1] !== match[2]) {
+    return null;
+  }
+
+  const rowNumber = Number(match[1]);
+  return Number.isInteger(rowNumber) && rowNumber > 0 ? rowNumber - 1 : null;
 }
 
 export interface SheetsClient {
@@ -159,7 +198,7 @@ export interface SheetsClient {
 }
 
 export class GoogleSheetsClient implements SheetsClient {
-  private readonly tableSheetIds = new Map<string, number>();
+  private readonly resolvedTables = new Map<string, ResolvedTable>();
 
   constructor(
     private readonly env: ServerEnv,
@@ -235,7 +274,7 @@ export class GoogleSheetsClient implements SheetsClient {
     values: readonly (readonly (string | number | boolean)[])[],
   ): Promise<void> {
     await this.request(
-      `/values/${encodeURIComponent(range)}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,
+      `/values/${encodeURIComponent(range)}:append?valueInputOption=RAW&insertDataOption=OVERWRITE`,
       {
         method: "POST",
         body: JSON.stringify({
@@ -248,50 +287,128 @@ export class GoogleSheetsClient implements SheetsClient {
     );
   }
 
-  private async resolveTableSheetId(tableId: string): Promise<number> {
-    const cached = this.tableSheetIds.get(tableId);
-    if (cached !== undefined) {
+  private async resolveTable(tableId: string): Promise<ResolvedTable> {
+    const cached = this.resolvedTables.get(tableId);
+    if (cached) {
       return cached;
     }
 
     const metadata = await this.getSheetMetadata();
-    const owner = metadata.find((sheet) =>
-      (sheet.tables ?? []).some((table) => table.tableId === tableId),
-    );
+    for (const sheet of metadata) {
+      const table = (sheet.tables ?? []).find((candidate) => candidate.tableId === tableId);
+      if (!table) {
+        continue;
+      }
 
-    if (!owner) {
-      throw new SheetsApiError(400, `Google Sheets table ${tableId} was not found.`);
+      const resolved = {
+        sheetId: sheet.sheetId,
+        sheetTitle: sheet.title,
+        table,
+      } satisfies ResolvedTable;
+      this.resolvedTables.set(tableId, resolved);
+      return resolved;
     }
 
-    this.tableSheetIds.set(tableId, owner.sheetId);
-    return owner.sheetId;
+    throw new SheetsApiError(400, `Google Sheets table ${tableId} was not found.`);
   }
 
   async appendTableRow(
     tableId: string,
     row: readonly (string | number | boolean)[],
   ): Promise<void> {
-    const sheetId = await this.resolveTableSheetId(tableId);
+    const resolved = await this.resolveTable(tableId);
+    const startColumnIndex = resolved.table.startColumnIndex ?? 0;
+    const endColumnIndex = resolved.table.endColumnIndex;
 
-    await this.request(
-      ":batchUpdate",
+    if (
+      typeof endColumnIndex !== "number" ||
+      endColumnIndex <= startColumnIndex ||
+      row.length !== endColumnIndex - startColumnIndex
+    ) {
+      throw new SheetsApiError(400, `Google Sheets table ${tableId} has an invalid append range.`);
+    }
+
+    const range = `${quoteSheetTitle(resolved.sheetTitle)}!${columnLabel(startColumnIndex)}:${columnLabel(endColumnIndex - 1)}`;
+    const response = await this.request<AppendValuesResponse>(
+      `/values/${encodeURIComponent(range)}:append?valueInputOption=RAW&insertDataOption=OVERWRITE`,
       {
         method: "POST",
         body: JSON.stringify({
-          requests: [
-            {
-              appendCells: {
-                sheetId,
-                tableId,
-                rows: [{ values: row.map(toCellData) }],
-                fields: "userEnteredValue",
-              },
-            },
-          ],
+          range,
+          majorDimension: "ROWS",
+          values: [row],
         }),
       },
       false,
     );
+
+    const rowIndex = appendedRowIndex(response.updates?.updatedRange);
+    if (rowIndex === null) {
+      throw new SheetsApiError(500, "Google Sheets append response did not identify the written row.");
+    }
+
+    const requests: Record<string, unknown>[] = [];
+    const currentEndRowIndex = resolved.table.endRowIndex ?? resolved.table.startRowIndex ?? 0;
+    if (rowIndex >= currentEndRowIndex) {
+      requests.push({
+        updateTable: {
+          table: {
+            tableId,
+            range: {
+              sheetId: resolved.sheetId,
+              startRowIndex: resolved.table.startRowIndex ?? 0,
+              endRowIndex: rowIndex + 1,
+              startColumnIndex,
+              endColumnIndex,
+            },
+          },
+          fields: "range",
+        },
+      });
+    }
+
+    for (const column of resolved.table.columnProperties) {
+      if (column.columnType !== "DATE") {
+        continue;
+      }
+
+      const absoluteColumnIndex = startColumnIndex + column.columnIndex;
+      requests.push({
+        repeatCell: {
+          range: {
+            sheetId: resolved.sheetId,
+            startRowIndex: rowIndex,
+            endRowIndex: rowIndex + 1,
+            startColumnIndex: absoluteColumnIndex,
+            endColumnIndex: absoluteColumnIndex + 1,
+          },
+          cell: {
+            userEnteredFormat: {
+              numberFormat: { type: "DATE", pattern: HUMAN_DATE_PATTERN },
+            },
+          },
+          fields: "userEnteredFormat.numberFormat",
+        },
+      });
+    }
+
+    if (requests.length > 0) {
+      await this.request(
+        ":batchUpdate",
+        {
+          method: "POST",
+          body: JSON.stringify({ requests }),
+        },
+        true,
+      );
+    }
+
+    if (rowIndex >= currentEndRowIndex) {
+      this.resolvedTables.set(tableId, {
+        ...resolved,
+        table: { ...resolved.table, endRowIndex: rowIndex + 1 },
+      });
+    }
   }
 
   async clearValues(range: string): Promise<void> {
