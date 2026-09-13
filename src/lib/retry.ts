@@ -6,8 +6,8 @@ export type RetryOptions = Readonly<{
 
 const DEFAULT_RETRY_OPTIONS: RetryOptions = {
   maxAttempts: 4,
-  initialDelayMs: 150,
-  maxDelayMs: 1_500,
+  initialDelayMs: 1_000,
+  maxDelayMs: 4_000,
 };
 
 export async function withRetry<T>(

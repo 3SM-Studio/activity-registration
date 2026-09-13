@@ -1,4 +1,5 @@
 import type { ApplicationRepositories } from "@/domain/repositories";
+import { CachedCatalogRepository } from "@/infrastructure/cached-catalog.repository";
 import { GoogleSheetsCatalogRepository } from "@/infrastructure/google/catalog.repository";
 import { GoogleSheetsNotificationOutboxRepository } from "@/infrastructure/google/notification-outbox.repository";
 import { GoogleSheetsRegistrationRepository } from "@/infrastructure/google/registration.repository";
@@ -7,7 +8,13 @@ import { GoogleSheetsClient } from "@/infrastructure/google/sheets-client";
 import { createMemoryRepositories } from "@/infrastructure/memory/repositories";
 import { getServerEnv } from "@/lib/env";
 
-export function createApplicationRepositories(): ApplicationRepositories {
+type CreateApplicationRepositoriesOptions = Readonly<{
+  cacheCatalog?: boolean;
+}>;
+
+export function createApplicationRepositories(
+  options: CreateApplicationRepositoriesOptions = {},
+): ApplicationRepositories {
   const env = getServerEnv();
 
   if (env.DATA_BACKEND === "memory") {
@@ -19,9 +26,17 @@ export function createApplicationRepositories(): ApplicationRepositories {
   }
 
   const client = new GoogleSheetsClient(env, env.GOOGLE_SPREADSHEET_ID);
+  const googleCatalog = new GoogleSheetsCatalogRepository(client);
+  const catalog =
+    options.cacheCatalog && env.APP_ENV === "production"
+      ? new CachedCatalogRepository(
+          googleCatalog,
+          `${env.APP_ENV}:${env.DATA_BACKEND}:${env.GOOGLE_SPREADSHEET_ID}`,
+        )
+      : googleCatalog;
 
   return {
-    catalog: new GoogleSheetsCatalogRepository(client),
+    catalog,
     registrations: new GoogleSheetsRegistrationRepository(client),
     settings: new GoogleSheetsSettingsRepository(client),
     notifications: new GoogleSheetsNotificationOutboxRepository(client),

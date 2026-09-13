@@ -137,7 +137,7 @@ export async function POST(request: Request) {
     const env = getServerEnv();
 
     stage = "repositories";
-    const repositories = createApplicationRepositories();
+    const repositories = createApplicationRepositories({ cacheCatalog: true });
 
     stage = "notifications";
     const notificationDependencies = createRegistrationNotificationDependencies(env);
@@ -272,7 +272,10 @@ export async function POST(request: Request) {
           code: APPLICATION_ERROR_CODE.temporaryUnavailable,
           message: "System zapisów jest chwilowo niedostępny. Spróbuj ponownie za moment.",
         },
-        { status: 503 },
+        {
+          status: 503,
+          ...(error.status === 429 ? { headers: { "Retry-After": "15" } } : {}),
+        },
       );
     }
 

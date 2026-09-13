@@ -20,10 +20,15 @@ type GetValuesCall = Readonly<{
   valueRenderOption?: ValueRenderOption;
 }>;
 
+const CITY_RANGE = `${SHEET.cities}!A:D`;
+const OFFERING_RANGE = `${SHEET.offerings}!A:K`;
+const SEASON_RANGE = `${SHEET.seasons}!A:F`;
+const GROUP_RANGE = `${SHEET.groups}!A:N`;
+
 function createClient(onGetValues?: (call: GetValuesCall) => void): SheetsClient {
   const values = new Map<string, readonly (readonly unknown[])[]>([
     [
-      `${SHEET.cities}!A:ZZ`,
+      CITY_RANGE,
       [
         SHEET_SCHEMA[SHEET.cities],
         ["gdynia", "Gdynia", "TAK", 10],
@@ -33,7 +38,7 @@ function createClient(onGetValues?: (call: GetValuesCall) => void): SheetsClient
       ],
     ],
     [
-      `${SHEET.offerings}!A:ZZ`,
+      OFFERING_RANGE,
       [
         SHEET_SCHEMA[SHEET.offerings],
         offeringRow("gdynia-hiphop", "gdynia", "Hip-hop", "TAK", 10),
@@ -42,11 +47,11 @@ function createClient(onGetValues?: (call: GetValuesCall) => void): SheetsClient
       ],
     ],
     [
-      `${SHEET.seasons}!A:ZZ`,
+      SEASON_RANGE,
       [SHEET_SCHEMA[SHEET.seasons], ["test-2026-2027", "2026/2027 TEST", 46266, 46599, "TAK", 10]],
     ],
     [
-      `${SHEET.groups}!A:ZZ`,
+      GROUP_RANGE,
       [
         SHEET_SCHEMA[SHEET.groups],
         [
@@ -137,6 +142,19 @@ describe("GoogleSheetsCatalogRepository", () => {
     ).resolves.toHaveLength(2);
   });
 
+  it("reuses the group snapshot within one repository instance", async () => {
+    const calls: GetValuesCall[] = [];
+    const repository = new GoogleSheetsCatalogRepository(createClient((call) => calls.push(call)));
+
+    await repository.getPublicCatalog("2026-08-19", asSeasonId("test-2026-2027"));
+    await repository.findGroupsForOffering(
+      asSeasonId("test-2026-2027"),
+      asOfferingId("gdynia-hiphop"),
+    );
+
+    expect(calls.filter((call) => call.range === GROUP_RANGE)).toHaveLength(1);
+  });
+
   it("reads date-bearing sheet values without locale formatting", async () => {
     const calls: GetValuesCall[] = [];
     const repository = new GoogleSheetsCatalogRepository(createClient((call) => calls.push(call)));
@@ -148,11 +166,11 @@ describe("GoogleSheetsCatalogRepository", () => {
     });
 
     expect(calls).toContainEqual({
-      range: `${SHEET.groups}!A:ZZ`,
+      range: GROUP_RANGE,
       valueRenderOption: "UNFORMATTED_VALUE",
     });
     expect(calls).toContainEqual({
-      range: `${SHEET.seasons}!A:ZZ`,
+      range: SEASON_RANGE,
       valueRenderOption: "UNFORMATTED_VALUE",
     });
   });
