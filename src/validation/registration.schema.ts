@@ -1,5 +1,6 @@
 import { TECHNICAL_ID_PATTERN } from "@/domain/catalog";
 import { calculateAgeToday, isValidIsoDateOnly } from "@/lib/birth-date";
+import { isValidPhone } from "@/lib/phone";
 import { containsWhitespace, normalizePersonName } from "@/lib/text-normalization";
 import { z } from "zod";
 
@@ -36,7 +37,9 @@ export const registrationRequestSchema = z
     }),
     guardianFirstName: optionalPersonName,
     guardianLastName: optionalPersonName,
-    phone: nonEmptyText("Numer telefonu", 40),
+    phone: nonEmptyText("Numer telefonu", 40).refine((value) => !value || isValidPhone(value), {
+      message: "Podaj poprawny numer telefonu.",
+    }),
     email: z
       .string()
       .trim()
