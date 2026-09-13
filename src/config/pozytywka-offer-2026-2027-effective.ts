@@ -66,7 +66,7 @@ function applyOverrides(
   return rows.map((row) => {
     const id = String(row[idHeader] ?? "");
     const override = overrides[id];
-    return override ? { ...row, ...override } : row;
+    return override ? ({ ...row, ...override } as CatalogRow) : row;
   });
 }
 
