@@ -149,7 +149,7 @@ export class GoogleSheetsRegistrationRepository implements RegistrationRepositor
 
   private async verifyNativeAppendResult(requestId: RequestId): Promise<Registration | null> {
     let registrations = await this.readRegistrationsFresh("registrations.append.verify");
-    let stored = this.matchingRequestId(registrations, requestId);
+    const stored = this.matchingRequestId(registrations, requestId);
     if (stored) {
       return stored;
     }
