@@ -1,10 +1,10 @@
 import {
   POZYTYWKA_CITIES_2026_2027,
-  POZYTYWKA_OFFERINGS_2026_2027,
+  POZYTYWKA_EFFECTIVE_OFFERINGS_2026_2027,
   POZYTYWKA_SEASON_2026_2027,
-  pozytywkaGroupsForSeason2026_2027,
-  type CatalogRow,
-} from "../src/config/pozytywka-offer-2026-2027";
+  pozytywkaEffectiveGroupsForSeason2026_2027,
+} from "../src/config/pozytywka-offer-2026-2027-effective";
+import type { CatalogRow } from "../src/config/pozytywka-offer-2026-2027";
 import { buildRowByHeaders, cell, createHeaderMap } from "../src/infrastructure/google/header-map";
 import {
   syncOperatorSheetSchema,
@@ -165,7 +165,7 @@ async function main() {
     );
   }
 
-  const desiredGroups = pozytywkaGroupsForSeason2026_2027(currentSeasonId);
+  const desiredGroups = pozytywkaEffectiveGroupsForSeason2026_2027(currentSeasonId);
 
   await rewriteCatalogSheet(
     client,
@@ -179,7 +179,7 @@ async function main() {
     SHEET.offerings,
     OFFERING_HEADERS,
     "OFFERING_ID",
-    POZYTYWKA_OFFERINGS_2026_2027,
+    POZYTYWKA_EFFECTIVE_OFFERINGS_2026_2027,
   );
   await rewriteCatalogSheet(client, SHEET.groups, GROUP_HEADERS, "GROUP_ID", desiredGroups);
 
@@ -191,7 +191,7 @@ async function main() {
   await validateSafeOperatorSheetExperience(client);
 
   console.info(
-    `Pozytywka offer refresh completed for ${env.APP_ENV}: ${POZYTYWKA_CITIES_2026_2027.length} active locations, ${POZYTYWKA_OFFERINGS_2026_2027.length} active offerings, ${desiredGroups.length} active groups. Existing catalog rows were preserved as inactive. Native table ranges, registration protections and the operator dashboard were synchronized. ZAPISY and POWIADOMIENIA were not modified.`,
+    `Pozytywka offer refresh completed for ${env.APP_ENV}: ${POZYTYWKA_CITIES_2026_2027.length} locations, ${POZYTYWKA_EFFECTIVE_OFFERINGS_2026_2027.length} managed offerings, ${desiredGroups.length} managed groups. Existing catalog rows were preserved as inactive. Native table ranges, registration protections and the operator dashboard were synchronized. ZAPISY and POWIADOMIENIA were not modified.`,
   );
 }
 

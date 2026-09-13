@@ -1,4 +1,4 @@
-import { REGISTRATION_STATUS } from "@/domain/registration";
+import { AGE_REVIEW_NOTE_MARKER, REGISTRATION_STATUS } from "@/domain/registration";
 import { cell, createHeaderMap } from "@/infrastructure/google/header-map";
 import {
   bootstrapOperatorSheetExperience,
@@ -7,6 +7,7 @@ import {
   CONFIRMED_WITHOUT_DATE_FORMULA,
   CONFIRMED_WITHOUT_GROUP_FORMULA,
   CONTACTED_WITHOUT_DATE_FORMULA,
+  OPERATOR_DASHBOARD_LAYOUT,
   POSSIBLE_DUPLICATE_FORMULA,
   REGISTRATION_OPERATOR_FILTER_VIEW_TITLES,
 } from "@/infrastructure/google/operator-sheet";
@@ -55,6 +56,12 @@ type AddConditionalFormatRequest = {
   };
 };
 
+type DashboardFormulaCell = Readonly<{
+  row: number;
+  column: number;
+  formula: string;
+}>;
+
 function addedConditionalFormatFormula(request: Record<string, unknown>): string | null {
   const add = request.addConditionalFormatRule as AddConditionalFormatRequest | undefined;
   return add?.rule?.booleanRule?.condition?.values?.[0]?.userEnteredValue ?? null;
@@ -68,19 +75,92 @@ function registrationSheet(metadata: readonly SheetMetadata[]): SheetMetadata {
   return sheet;
 }
 
-async function readDashboardGroupIds(client: SheetsClient): Promise<readonly string[]> {
-  const rows = await client.getValues(`${OPERATOR_DASHBOARD_SHEET}!A12:A1000`);
-  return rows.map((row) => String(row[0] ?? "").trim()).filter((value) => value.length > 0);
+function formulaText(value: string): string {
+  return value.replace(/"/g, '""');
 }
 
-async function readExpectedActiveGroupIds(client: SheetsClient): Promise<readonly string[]> {
-  const [groupRows, settingsRows] = await Promise.all([
-    client.getValues(`${SHEET.groups}!A:ZZ`, {
-      valueRenderOption: "UNFORMATTED_VALUE",
-    }),
-    client.getValues(`${SHEET.settings}!A:ZZ`),
-  ]);
-  const groupHeaders = createHeaderMap(groupRows[0] ?? [], GROUP_HEADERS);
+function statusCountExpression(currentSeasonId: string, status: string): string {
+  return `COUNTIFS(ZAPISY!V:V;"${formulaText(currentSeasonId)}";ZAPISY!P:P;"${formulaText(status)}")`;
+}
+
+function possibleDuplicateCountExpression(currentSeasonId: string): string {
+  return `COUNTIFS(ZAPISY!V:V;"${formulaText(currentSeasonId)}";ZAPISY!AB:AB;"?*")`;
+}
+
+function attentionFormula(currentSeasonId: string): string {
+  const seasonId = formulaText(currentSeasonId);
+  return (
+    `=${possibleDuplicateCountExpression(currentSeasonId)}` +
+    `+COUNTIFS(ZAPISY!V:V;"${seasonId}";ZAPISY!P:P;"CONFIRMED";ZAPISY!X:X;"")` +
+    `+COUNTIFS(ZAPISY!V:V;"${seasonId}";ZAPISY!P:P;"CONTACTED";ZAPISY!Y:Y;"")` +
+    `+COUNTIFS(ZAPISY!V:V;"${seasonId}";ZAPISY!P:P;"CONFIRMED";ZAPISY!Z:Z;"")` +
+    `+COUNTIFS(ZAPISY!V:V;"${seasonId}";ZAPISY!P:P;"REJECTED";ZAPISY!AA:AA;"")` +
+    `+COUNTIFS(ZAPISY!V:V;"${seasonId}";ZAPISY!P:P;"CANCELLED";ZAPISY!AA:AA;"")` +
+    `+COUNTIFS(ZAPISY!V:V;"${seasonId}";ZAPISY!Q:Q;"*${formulaText(AGE_REVIEW_NOTE_MARKER)}*")`
+  );
+}
+
+export function buildStableDashboardFormulaCells(
+  currentSeasonId: string,
+  groupIds: readonly string[],
+): readonly DashboardFormulaCell[] {
+  const statusCount = (status: string) => statusCountExpression(currentSeasonId, status);
+  const summary: DashboardFormulaCell[] = [
+    { row: 5, column: 2, formula: `=${statusCount("NEW")}` },
+    {
+      row: 5,
+      column: 4,
+      formula: `=${statusCount("IN_REVIEW")}+${statusCount("CONTACTED")}`,
+    },
+    { row: 5, column: 6, formula: `=${statusCount("WAITLISTED")}` },
+    { row: 5, column: 8, formula: `=${statusCount("CONFIRMED")}` },
+    { row: 8, column: 2, formula: attentionFormula(currentSeasonId) },
+    {
+      row: 8,
+      column: 4,
+      formula: `=${statusCount("REJECTED")}+${statusCount("CANCELLED")}`,
+    },
+    {
+      row: 8,
+      column: 6,
+      formula:
+        `=${statusCount("NEW")}+${statusCount("IN_REVIEW")}+${statusCount("CONTACTED")}+` +
+        `${statusCount("WAITLISTED")}+${statusCount("CONFIRMED")}`,
+    },
+  ];
+
+  const groupCells = groupIds.map((_, index) => {
+    const row = OPERATOR_DASHBOARD_LAYOUT.groupStartRow + index;
+    return {
+      row,
+      column: 7,
+      formula:
+        `=COUNTIFS(ZAPISY!V:V;"${formulaText(currentSeasonId)}";` +
+        `ZAPISY!X:X;$A${row};ZAPISY!P:P;"CONFIRMED")`,
+    } satisfies DashboardFormulaCell;
+  });
+
+  return [...summary, ...groupCells];
+}
+
+function formulaUpdateRequest(sheetId: number, cell: DashboardFormulaCell) {
+  return {
+    updateCells: {
+      range: {
+        sheetId,
+        startRowIndex: cell.row - 1,
+        endRowIndex: cell.row,
+        startColumnIndex: cell.column - 1,
+        endColumnIndex: cell.column,
+      },
+      rows: [{ values: [{ userEnteredValue: { formulaValue: cell.formula } }] }],
+      fields: "userEnteredValue",
+    },
+  } as const;
+}
+
+async function readCurrentSeasonId(client: SheetsClient): Promise<string> {
+  const settingsRows = await client.getValues(`${SHEET.settings}!A:ZZ`);
   const settingsHeaders = createHeaderMap(settingsRows[0] ?? [], SETTINGS_HEADERS);
   const currentSeasonRows = settingsRows
     .slice(1)
@@ -95,6 +175,23 @@ async function readExpectedActiveGroupIds(client: SheetsClient): Promise<readonl
     throw new Error("Operator schema validation requires CURRENT_SEASON_ID.");
   }
 
+  return currentSeasonId;
+}
+
+async function readDashboardGroupIds(client: SheetsClient): Promise<readonly string[]> {
+  const rows = await client.getValues(`${OPERATOR_DASHBOARD_SHEET}!A12:A1000`);
+  return rows.map((row) => String(row[0] ?? "").trim()).filter((value) => value.length > 0);
+}
+
+async function readExpectedActiveGroupIds(
+  client: SheetsClient,
+  currentSeasonId: string,
+): Promise<readonly string[]> {
+  const groupRows = await client.getValues(`${SHEET.groups}!A:ZZ`, {
+    valueRenderOption: "UNFORMATTED_VALUE",
+  });
+  const groupHeaders = createHeaderMap(groupRows[0] ?? [], GROUP_HEADERS);
+
   return groupRows
     .slice(1)
     .map((row) => parseGroupRow(row, groupHeaders))
@@ -102,6 +199,71 @@ async function readExpectedActiveGroupIds(client: SheetsClient): Promise<readonl
     .filter((group) => group.active && group.seasonId === currentSeasonId)
     .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, "pl"))
     .map((group) => group.id);
+}
+
+async function stabilizeOperatorDashboardFormulas(client: SheetsClient): Promise<void> {
+  const metadata = await client.getSheetMetadata();
+  const dashboard = metadata.find((candidate) => candidate.title === OPERATOR_DASHBOARD_SHEET);
+  if (!dashboard) {
+    throw new Error("PANEL_OPERATORA sheet is missing. Run sheet:schema-sync.");
+  }
+
+  const currentSeasonId = await readCurrentSeasonId(client);
+  const expectedGroupIds = await readExpectedActiveGroupIds(client, currentSeasonId);
+  const requests = buildStableDashboardFormulaCells(currentSeasonId, expectedGroupIds).map((cell) =>
+    formulaUpdateRequest(dashboard.sheetId, cell),
+  );
+
+  if (requests.length > 0) {
+    await client.batchUpdate(requests);
+  }
+}
+
+async function validateStableDashboardFormulas(
+  client: SheetsClient,
+  currentSeasonId: string,
+  expectedGroupIds: readonly string[],
+): Promise<void> {
+  const expected = buildStableDashboardFormulaCells(currentSeasonId, expectedGroupIds);
+  const summaryExpected = new Map(
+    expected
+      .filter((cell) => cell.column !== 7)
+      .map((cell) => [`${cell.row}:${cell.column}`, cell.formula]),
+  );
+  const summaryRows = await client.getValues(`${OPERATOR_DASHBOARD_SHEET}!B5:H8`, {
+    valueRenderOption: "FORMULA",
+  });
+
+  for (const [key, formula] of summaryExpected) {
+    const [rowText, columnText] = key.split(":");
+    const row = Number(rowText);
+    const column = Number(columnText);
+    const actual = summaryRows[row - 5]?.[column - 2];
+    if (actual !== formula) {
+      throw new Error(
+        `PANEL_OPERATORA formula drift at row ${row}, column ${column}. Run sheet:schema-sync.`,
+      );
+    }
+  }
+
+  if (expectedGroupIds.length === 0) {
+    return;
+  }
+
+  const firstRow = OPERATOR_DASHBOARD_LAYOUT.groupStartRow;
+  const lastRow = firstRow + expectedGroupIds.length - 1;
+  const groupRows = await client.getValues(`${OPERATOR_DASHBOARD_SHEET}!G${firstRow}:G${lastRow}`, {
+    valueRenderOption: "FORMULA",
+  });
+  const groupExpected = expected.filter((cell) => cell.column === 7);
+
+  for (const [index, cell] of groupExpected.entries()) {
+    if (groupRows[index]?.[0] !== cell.formula) {
+      throw new Error(
+        `PANEL_OPERATORA group formula drift at row ${cell.row}. Run sheet:schema-sync.`,
+      );
+    }
+  }
 }
 
 /**
@@ -141,6 +303,7 @@ export async function refreshOperatorSheetRuntime(client: SheetsClient): Promise
   }
 
   await client.batchUpdate(requests);
+  await stabilizeOperatorDashboardFormulas(client);
 }
 
 /**
@@ -186,8 +349,9 @@ export async function validateSafeOperatorSheetExperience(client: SheetsClient):
     throw new Error("ZAPISY STATUS dropdown is stale. Run sheet:schema-sync.");
   }
 
+  const currentSeasonId = await readCurrentSeasonId(client);
   const [expectedGroupIds, dashboardGroupIds] = await Promise.all([
-    readExpectedActiveGroupIds(client),
+    readExpectedActiveGroupIds(client, currentSeasonId),
     readDashboardGroupIds(client),
   ]);
   if (
@@ -254,4 +418,6 @@ export async function validateSafeOperatorSheetExperience(client: SheetsClient):
   if (dashboardHeader[0]?.[0] !== "PANEL OPERATORA - POZYTYWKA") {
     throw new Error("PANEL_OPERATORA dashboard content is missing. Run sheet:schema-sync.");
   }
+
+  await validateStableDashboardFormulas(client, currentSeasonId, expectedGroupIds);
 }
