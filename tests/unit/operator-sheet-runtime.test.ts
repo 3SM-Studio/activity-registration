@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildSafeOperatorRuntimeRequests,
+  buildStableDashboardFormulaCells,
   LEGACY_STATUS_CELL_FORMAT_FORMULAS,
   REQUIRED_OPERATOR_WARNING_FORMULAS,
 } from "@/infrastructure/google/operator-sheet-runtime";
@@ -77,5 +78,23 @@ describe("safe operator Sheets runtime", () => {
       deleteConditionalFormatRule: { sheetId: 1003, index: 7 },
     });
     expect(addedConditionalFormatFormulas(requests)).not.toContain(legacyFormula);
+  });
+
+  it("uses whole-column dashboard references that do not drift when Sheets inserts rows", () => {
+    const formulas = buildStableDashboardFormulaCells("2026-2027", ["group-a", "group-b"]);
+    const newCount = formulas.find((cell) => cell.row === 5 && cell.column === 2)?.formula;
+    const attention = formulas.find((cell) => cell.row === 8 && cell.column === 2)?.formula;
+    const firstGroup = formulas.find((cell) => cell.row === 12 && cell.column === 7)?.formula;
+
+    expect(newCount).toBe('=COUNTIFS(ZAPISY!V:V;"2026-2027";ZAPISY!P:P;"NEW")');
+    expect(attention).toContain('ZAPISY!V:V;"2026-2027"');
+    expect(attention).toContain('ZAPISY!AB:AB;"?*"');
+    expect(firstGroup).toBe(
+      '=COUNTIFS(ZAPISY!V:V;"2026-2027";ZAPISY!X:X;$A12;ZAPISY!P:P;"CONFIRMED")',
+    );
+
+    for (const cell of formulas) {
+      expect(cell.formula).not.toMatch(/ZAPISY![A-Z]+\$?\d+:/);
+    }
   });
 });
