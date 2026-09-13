@@ -1,15 +1,10 @@
 import Image from "next/image";
 import { CircleAlert } from "lucide-react";
 
-import { getPublicFormConfig } from "@/application/get-public-form-config";
 import { PublicFooter } from "@/components/public/public-footer";
 import { RegistrationForm } from "@/components/registration/registration-form";
-import { createApplicationRepositories } from "@/infrastructure/repositories";
-import {
-  getServerEnv,
-  isUnconfiguredVercelPreview,
-  isUnconfiguredVercelProduction,
-} from "@/lib/env";
+import { getPublicFormConfigForRequest } from "@/infrastructure/public-form-config-cache";
+import { isUnconfiguredVercelPreview, isUnconfiguredVercelProduction } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
 
@@ -76,10 +71,7 @@ export default async function HomePage() {
     );
   }
 
-  const env = getServerEnv();
-  const { catalog, settings } = await getPublicFormConfig(createApplicationRepositories(), {
-    requirePrivacyConfiguration: env.APP_ENV === "production",
-  });
+  const { catalog, settings } = await getPublicFormConfigForRequest();
 
   return (
     <main className="relative min-h-screen overflow-hidden px-4 py-6 sm:px-6 sm:py-10 lg:py-14">
