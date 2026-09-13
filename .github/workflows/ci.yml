@@ -30,11 +30,6 @@ jobs:
           cache: pnpm
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      - name: Show formatter diff
-        run: |
-          pnpm exec prettier --write src/infrastructure/google/sheets-client.ts
-          git diff -- src/infrastructure/google/sheets-client.ts
-          exit 1
       - name: Quality gate
         run: pnpm check
       - name: Verify system Chrome
