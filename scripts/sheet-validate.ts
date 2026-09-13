@@ -1,3 +1,5 @@
+import { validateSafeOperatorSheetExperience } from "../src/infrastructure/google/operator-sheet-runtime";
+import { validateRegistrationDatePresentation } from "../src/infrastructure/google/registration-sheet-health";
 import { validateSheetStructure } from "../src/infrastructure/google/sheet-admin";
 import { SHEET } from "../src/infrastructure/google/sheets-contracts";
 import { validateSupportingSheetTables } from "../src/infrastructure/google/supporting-sheet-tables";
@@ -9,6 +11,8 @@ async function main() {
   try {
     const report = await validateSheetStructure(client);
     await validateSupportingSheetTables(client);
+    await validateSafeOperatorSheetExperience(client);
+    await validateRegistrationDatePresentation(client);
 
     console.info(
       JSON.stringify(
@@ -18,6 +22,8 @@ async function main() {
           cityCount: report.cityCount,
           offeringCount: report.offeringCount,
           nativeTables: "ready",
+          operatorExperience: "ready",
+          registrationDatePresentation: "ready",
           warnings: report.warnings,
         },
         null,
