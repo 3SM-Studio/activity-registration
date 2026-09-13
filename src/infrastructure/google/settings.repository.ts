@@ -15,11 +15,13 @@ import {
 } from "@/infrastructure/google/sheets-contracts";
 import type { SheetsClient } from "@/infrastructure/google/sheets-client";
 
+const SETTINGS_RANGE = `${SHEET.settings}!A:B`;
+
 export class GoogleSheetsSettingsRepository implements SettingsRepository {
   constructor(private readonly client: SheetsClient) {}
 
   async getPublicSettings(): Promise<PublicSettings> {
-    const rows = await this.client.getValues(`${SHEET.settings}!A:ZZ`);
+    const rows = await this.client.getValues(SETTINGS_RANGE);
     const headerRow = rows[0] ?? [];
     const headers = createHeaderMap(headerRow, SETTINGS_HEADERS);
 
