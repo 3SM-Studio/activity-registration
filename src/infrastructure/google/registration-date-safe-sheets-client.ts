@@ -6,12 +6,7 @@ import type {
   ValueRenderOption,
 } from "@/infrastructure/google/sheets-client";
 
-const DATE_HEADERS = new Set([
-  "BIRTH_DATE",
-  "CONTACTED_AT",
-  "CONFIRMED_AT",
-  "CLOSED_AT",
-]);
+const DATE_HEADERS = new Set(["BIRTH_DATE", "CONTACTED_AT", "CONFIRMED_AT", "CLOSED_AT"]);
 
 function asHeaderRow(row: readonly unknown[]): readonly string[] | null {
   const headers = row.map((value) => String(value ?? ""));
@@ -89,10 +84,7 @@ export class RegistrationDateSafeSheetsClient implements SheetsClient {
     );
   }
 
-  appendTableRow(
-    tableId: string,
-    row: readonly (string | number | boolean)[],
-  ): Promise<void> {
+  appendTableRow(tableId: string, row: readonly (string | number | boolean)[]): Promise<void> {
     return this.inner.appendTableRow(tableId, this.appendSafeRow(row));
   }
 
