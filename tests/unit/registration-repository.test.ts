@@ -16,7 +16,7 @@ import {
   REGISTRATIONS_TABLE_ID,
   SHEET,
 } from "@/infrastructure/google/sheets-contracts";
-import type { SheetsClient } from "@/infrastructure/google/sheets-client";
+import { SheetsApiError, type SheetsClient } from "@/infrastructure/google/sheets-client";
 
 const registration: Registration = {
   id: asRegistrationId("reg_11111111-1111-4111-8111-111111111111"),
@@ -49,6 +49,9 @@ const registration: Registration = {
   updatedAt: "2026-08-18T12:00:00.000Z",
   schemaVersion: 2,
 };
+
+const REGISTRATION_DATA_RANGE = `${SHEET.registrations}!A:AC`;
+const REGISTRATION_HEADER_RANGE = `${SHEET.registrations}!A1:AC1`;
 
 function workflowDate(value: string | null): string | number {
   if (!value) {
@@ -96,30 +99,60 @@ function rowForHeaders(
   return headers.map((header) => values[header] ?? "");
 }
 
+type ClientOptions = Readonly<{
+  nativeAppendError?: SheetsApiError;
+  dataRowsAfterNativeFailure?: readonly (readonly unknown[])[];
+}>;
+
 function createClient(
   headerRow: readonly string[],
   dataRows: readonly (readonly unknown[])[] = [],
+  options: ClientOptions = {},
 ): {
   readonly client: SheetsClient;
   readonly appended: { tableId: string; row: readonly (string | number | boolean)[] }[];
+  readonly appendedValues: {
+    range: string;
+    values: readonly (readonly (string | number | boolean)[])[];
+  }[];
+  readonly getValueRanges: string[];
 } {
   const appended: { tableId: string; row: readonly (string | number | boolean)[] }[] = [];
+  const appendedValues: {
+    range: string;
+    values: readonly (readonly (string | number | boolean)[])[];
+  }[] = [];
+  const getValueRanges: string[] = [];
+  let nativeAppendAttempted = false;
 
   return {
     appended,
+    appendedValues,
+    getValueRanges,
     client: {
       async getValues(range) {
-        if (range === `${SHEET.registrations}!1:1`) {
+        getValueRanges.push(range);
+        if (range === REGISTRATION_HEADER_RANGE) {
           return [headerRow];
         }
-        if (range === `${SHEET.registrations}!A:ZZ`) {
-          return [headerRow, ...dataRows];
+        if (range === REGISTRATION_DATA_RANGE) {
+          const rows =
+            nativeAppendAttempted && options.dataRowsAfterNativeFailure
+              ? options.dataRowsAfterNativeFailure
+              : dataRows;
+          return [headerRow, ...rows];
         }
         return [];
       },
       async updateValues() {},
-      async appendValues() {},
+      async appendValues(range, values) {
+        appendedValues.push({ range, values });
+      },
       async appendTableRow(tableId, row) {
+        nativeAppendAttempted = true;
+        if (options.nativeAppendError) {
+          throw options.nativeAppendError;
+        }
         appended.push({ tableId, row });
       },
       async clearValues() {},
@@ -206,6 +239,57 @@ describe("GoogleSheetsRegistrationRepository", () => {
     };
 
     await expect(repository.findPotentialDuplicates(criteria)).resolves.toEqual([candidate]);
+  });
+
+  it("reuses one ZAPISY snapshot for idempotency and duplicate checks", async () => {
+    const row = rowForHeaders(REGISTRATION_HEADERS);
+    const { client, getValueRanges } = createClient(REGISTRATION_HEADERS, [row]);
+    const repository = new GoogleSheetsRegistrationRepository(client);
+    const criteria: RegistrationDuplicateCriteria = {
+      seasonId: asSeasonId("test-2026-2027"),
+      offeringId: registration.offeringId,
+      cityId: registration.cityIdSnapshot,
+      participantFirstName: registration.participantFirstName,
+      participantLastName: registration.participantLastName,
+      birthDate: registration.birthDate ?? "",
+      phone: registration.phone,
+      email: registration.email,
+    };
+
+    await repository.findByRequestId(registration.requestId);
+    await repository.findPotentialDuplicates(criteria);
+
+    expect(getValueRanges.filter((range) => range === REGISTRATION_DATA_RANGE)).toHaveLength(1);
+  });
+
+  it("falls back to values.append after a native table 5xx when no row was committed", async () => {
+    const nativeError = new SheetsApiError(500, "native table failure");
+    const { client, appendedValues } = createClient(REGISTRATION_HEADERS, [], {
+      nativeAppendError: nativeError,
+    });
+    const repository = new GoogleSheetsRegistrationRepository(client);
+
+    await expect(repository.create(registration)).resolves.toBeUndefined();
+
+    expect(appendedValues).toEqual([
+      {
+        range: REGISTRATION_DATA_RANGE,
+        values: [rowForHeaders(REGISTRATION_HEADERS)],
+      },
+    ]);
+  });
+
+  it("does not duplicate a row when native append returned 5xx after committing", async () => {
+    const nativeError = new SheetsApiError(500, "ambiguous native table failure");
+    const committedRow = rowForHeaders(REGISTRATION_HEADERS);
+    const { client, appendedValues } = createClient(REGISTRATION_HEADERS, [], {
+      nativeAppendError: nativeError,
+      dataRowsAfterNativeFailure: [committedRow],
+    });
+    const repository = new GoogleSheetsRegistrationRepository(client);
+
+    await expect(repository.create(registration)).resolves.toBeUndefined();
+    expect(appendedValues).toHaveLength(0);
   });
 
   it("fails fast when a matching stored registration has a corrupted technical ID", async () => {
