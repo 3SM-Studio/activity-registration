@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { InvalidPhoneError, normalizePhone } from "@/lib/phone";
+import { InvalidPhoneError, isValidPhone, normalizePhone } from "@/lib/phone";
 
 describe("normalizePhone", () => {
   it.each([
@@ -15,7 +15,11 @@ describe("normalizePhone", () => {
     expect(normalizePhone(input)).toBe(expected);
   });
 
-  it.each(["123", "abc500000000", "+48 123"])('rejects invalid input "%s"', (input) => {
-    expect(() => normalizePhone(input)).toThrow(InvalidPhoneError);
-  });
+  it.each(["123", "abc500000000", "+48 123", "+1 212 000 0000"])(
+    'rejects invalid input "%s"',
+    (input) => {
+      expect(isValidPhone(input)).toBe(false);
+      expect(() => normalizePhone(input)).toThrow(InvalidPhoneError);
+    },
+  );
 });
