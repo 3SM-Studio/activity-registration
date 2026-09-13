@@ -84,6 +84,15 @@ describe("registrationRequestSchema", () => {
     );
   });
 
+  it("rejects an invalid phone number", () => {
+    const result = registrationRequestSchema.safeParse({ ...base, phone: "+1 212 000 0000" });
+    expect(result.success).toBe(false);
+
+    if (!result.success) {
+      expect(result.error.flatten().fieldErrors.phone?.[0]).toBe("Podaj poprawny numer telefonu.");
+    }
+  });
+
   it("rejects invalid email", () => {
     expect(registrationRequestSchema.safeParse({ ...base, email: "not-an-email" }).success).toBe(
       false,
