@@ -9,7 +9,6 @@ const PUBLIC_FORM_CACHE_SECONDS = 60;
 const getCachedProductionPublicFormConfig = unstable_cache(
   async (cacheScope: string) => {
     void cacheScope;
-    const env = getServerEnv();
 
     return getPublicFormConfig(createApplicationRepositories(), {
       requirePrivacyConfiguration: true,
