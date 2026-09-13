@@ -169,9 +169,7 @@ async function main() {
     );
   }
 
-  const desiredOfferings = currentProductionOfferings2026_2027(
-    POZYTYWKA_OFFERINGS_2026_2027,
-  );
+  const desiredOfferings = currentProductionOfferings2026_2027(POZYTYWKA_OFFERINGS_2026_2027);
   const desiredGroups = currentProductionGroups2026_2027(
     pozytywkaGroupsForSeason2026_2027(currentSeasonId),
   );
