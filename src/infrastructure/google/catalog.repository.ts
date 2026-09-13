@@ -26,6 +26,10 @@ import {
 import type { SheetsClient } from "@/infrastructure/google/sheets-client";
 
 const UNFORMATTED_VALUES = { valueRenderOption: "UNFORMATTED_VALUE" } as const;
+const CITY_RANGE = `${SHEET.cities}!A:D`;
+const OFFERING_RANGE = `${SHEET.offerings}!A:K`;
+const SEASON_RANGE = `${SHEET.seasons}!A:F`;
+const GROUP_RANGE = `${SHEET.groups}!A:N`;
 
 function publicAgeRanges(groups: readonly InternalGroup[]): readonly PublicAgeRange[] {
   const seen = new Set<string>();
@@ -46,12 +50,14 @@ function publicAgeRanges(groups: readonly InternalGroup[]): readonly PublicAgeRa
 }
 
 export class GoogleSheetsCatalogRepository implements CatalogRepository {
+  private groupsSnapshot: readonly InternalGroup[] | null = null;
+
   constructor(private readonly client: SheetsClient) {}
 
   private async readCatalog() {
     const [cityRows, offeringRows] = await Promise.all([
-      this.client.getValues(`${SHEET.cities}!A:ZZ`, UNFORMATTED_VALUES),
-      this.client.getValues(`${SHEET.offerings}!A:ZZ`, UNFORMATTED_VALUES),
+      this.client.getValues(CITY_RANGE, UNFORMATTED_VALUES),
+      this.client.getValues(OFFERING_RANGE, UNFORMATTED_VALUES),
     ]);
 
     const cityHeader = cityRows[0] ?? [];
@@ -76,7 +82,7 @@ export class GoogleSheetsCatalogRepository implements CatalogRepository {
   }
 
   private async readSeasons(): Promise<readonly Season[]> {
-    const rows = await this.client.getValues(`${SHEET.seasons}!A:ZZ`, UNFORMATTED_VALUES);
+    const rows = await this.client.getValues(SEASON_RANGE, UNFORMATTED_VALUES);
     const headers = createHeaderMap(rows[0] ?? [], SEASON_HEADERS);
     const seasons = rows
       .slice(1)
@@ -88,7 +94,11 @@ export class GoogleSheetsCatalogRepository implements CatalogRepository {
   }
 
   private async readGroups(): Promise<readonly InternalGroup[]> {
-    const rows = await this.client.getValues(`${SHEET.groups}!A:ZZ`, UNFORMATTED_VALUES);
+    if (this.groupsSnapshot) {
+      return this.groupsSnapshot;
+    }
+
+    const rows = await this.client.getValues(GROUP_RANGE, UNFORMATTED_VALUES);
     const headers = createHeaderMap(rows[0] ?? [], GROUP_HEADERS);
     const groups = rows
       .slice(1)
@@ -96,6 +106,7 @@ export class GoogleSheetsCatalogRepository implements CatalogRepository {
       .filter((group) => group !== null);
 
     assertUniqueIds(groups, "group");
+    this.groupsSnapshot = groups;
     return groups;
   }
 
