@@ -1,4 +1,4 @@
-import { parsePhoneNumberFromString } from "libphonenumber-js";
+import { parsePhoneNumberFromString } from "libphonenumber-js/max";
 
 const PHONE_CHARACTERS = /^[+\d\s().-]+$/;
 
@@ -9,17 +9,31 @@ export class InvalidPhoneError extends Error {
   }
 }
 
-export function normalizePhone(input: string): string {
+function parseValidPhone(input: string) {
   const trimmed = input.trim();
 
   if (!trimmed || !PHONE_CHARACTERS.test(trimmed)) {
-    throw new InvalidPhoneError();
+    return null;
   }
 
   const normalizedPrefix = trimmed.startsWith("00") ? `+${trimmed.slice(2)}` : trimmed;
   const phoneNumber = parsePhoneNumberFromString(normalizedPrefix, "PL");
 
-  if (!phoneNumber || phoneNumber.ext || !phoneNumber.isPossible()) {
+  if (!phoneNumber || phoneNumber.ext || !phoneNumber.isValid()) {
+    return null;
+  }
+
+  return phoneNumber;
+}
+
+export function isValidPhone(input: string): boolean {
+  return parseValidPhone(input) !== null;
+}
+
+export function normalizePhone(input: string): string {
+  const phoneNumber = parseValidPhone(input);
+
+  if (!phoneNumber) {
     throw new InvalidPhoneError();
   }
 
