@@ -226,7 +226,9 @@ async function validateStableDashboardFormulas(
 ): Promise<void> {
   const expected = buildStableDashboardFormulaCells(currentSeasonId, expectedGroupIds);
   const summaryExpected = new Map(
-    expected.filter((cell) => cell.column !== 7).map((cell) => [`${cell.row}:${cell.column}`, cell.formula]),
+    expected
+      .filter((cell) => cell.column !== 7)
+      .map((cell) => [`${cell.row}:${cell.column}`, cell.formula]),
   );
   const summaryRows = await client.getValues(`${OPERATOR_DASHBOARD_SHEET}!B5:H8`, {
     valueRenderOption: "FORMULA",
