@@ -79,11 +79,7 @@ export const POZYTYWKA_EFFECTIVE_OFFERINGS_2026_2027 = applyOverrides(
 );
 
 export function pozytywkaEffectiveGroupsForSeason2026_2027(
-  seasonId = POZYTYWKA_SEASON_2026_2027.SEASON_ID,
+  seasonId: string = POZYTYWKA_SEASON_2026_2027.SEASON_ID,
 ): readonly CatalogRow[] {
-  return applyOverrides(
-    pozytywkaGroupsForSeason2026_2027(seasonId),
-    "GROUP_ID",
-    GROUP_OVERRIDES,
-  );
+  return applyOverrides(pozytywkaGroupsForSeason2026_2027(seasonId), "GROUP_ID", GROUP_OVERRIDES);
 }
