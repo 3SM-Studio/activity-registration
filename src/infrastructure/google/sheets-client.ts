@@ -328,8 +328,7 @@ export class GoogleSheetsClient implements SheetsClient {
       throw new SheetsApiError(400, `Google Sheets table ${tableId} has an invalid append range.`);
     }
 
-    const range =
-      `${quoteSheetTitle(resolved.sheetTitle)}!${columnLabel(startColumnIndex)}:${columnLabel(endColumnIndex - 1)}`;
+    const range = `${quoteSheetTitle(resolved.sheetTitle)}!${columnLabel(startColumnIndex)}:${columnLabel(endColumnIndex - 1)}`;
     const response = await this.request<AppendValuesResponse>(
       `/values/${encodeURIComponent(range)}:append?valueInputOption=RAW&insertDataOption=OVERWRITE`,
       {
