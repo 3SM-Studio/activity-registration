@@ -74,18 +74,21 @@ export class RegistrationDateSafeSheetsClient implements SheetsClient {
     return this.inner.updateValues(range, values);
   }
 
-  appendValues(
+  async appendValues(
     range: string,
     values: readonly (readonly (string | number | boolean)[])[],
   ): Promise<void> {
-    return this.inner.appendValues(
+    await this.inner.appendValues(
       range,
       values.map((row) => this.appendSafeRow(row)),
     );
   }
 
-  appendTableRow(tableId: string, row: readonly (string | number | boolean)[]): Promise<void> {
-    return this.inner.appendTableRow(tableId, this.appendSafeRow(row));
+  async appendTableRow(
+    tableId: string,
+    row: readonly (string | number | boolean)[],
+  ): Promise<void> {
+    await this.inner.appendTableRow(tableId, this.appendSafeRow(row));
   }
 
   clearValues(range: string): Promise<void> {
