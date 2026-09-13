@@ -8,7 +8,13 @@ import { GoogleSheetsClient } from "@/infrastructure/google/sheets-client";
 import { createMemoryRepositories } from "@/infrastructure/memory/repositories";
 import { getServerEnv } from "@/lib/env";
 
-export function createApplicationRepositories(): ApplicationRepositories {
+type CreateApplicationRepositoriesOptions = Readonly<{
+  cacheCatalog?: boolean;
+}>;
+
+export function createApplicationRepositories(
+  options: CreateApplicationRepositoriesOptions = {},
+): ApplicationRepositories {
   const env = getServerEnv();
 
   if (env.DATA_BACKEND === "memory") {
@@ -22,7 +28,7 @@ export function createApplicationRepositories(): ApplicationRepositories {
   const client = new GoogleSheetsClient(env, env.GOOGLE_SPREADSHEET_ID);
   const googleCatalog = new GoogleSheetsCatalogRepository(client);
   const catalog =
-    env.APP_ENV === "production"
+    options.cacheCatalog && env.APP_ENV === "production"
       ? new CachedCatalogRepository(
           googleCatalog,
           `${env.APP_ENV}:${env.DATA_BACKEND}:${env.GOOGLE_SPREADSHEET_ID}`,
