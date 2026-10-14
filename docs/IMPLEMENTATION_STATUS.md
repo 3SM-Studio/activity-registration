@@ -11,10 +11,10 @@ Pozytywka Registration v4 is live in Production and accepting registration reque
 
 The system is intentionally a registration request-intake application, not a CRM, payment system or automatic reservation engine. A submitted form does not guarantee a place; Pozytywka verifies availability and confirms participation separately.
 
-Current verified Production state:
+Verified launch-hardening runtime evidence:
 
-- Git SHA: `5d8628f5bf908b304dcfc172c95d2b8a5c1244f6`
-- Vercel deployment: `dpl_5zQbApatboZBQp3J2CX63KT4fn1w`
+- last runtime-changing Git SHA: `5d8628f5bf908b304dcfc172c95d2b8a5c1244f6`
+- launch-hardening Vercel deployment: `dpl_5zQbApatboZBQp3J2CX63KT4fn1w`
 - deployment: `READY`
 - `REGISTRATIONS_OPEN=TRUE`
 - schema: v4
@@ -23,6 +23,8 @@ Current verified Production state:
 - 18 active public offerings
 - Production GET: HTTP 200
 - post-launch runtime check: no new warning/error/fatal cluster found
+
+Docs-only commits can advance `main` and create new Vercel deployments without changing application runtime behavior. Current branch/deployment identifiers therefore must be read from GitHub/Vercel rather than treated as immutable values in this document.
 
 ## Implemented runtime
 
@@ -109,7 +111,7 @@ PR #81 introduced the launch-critical hardening identified by the audit:
 
 PR #82 aligned the final registration disclaimer with the request-intake semantics.
 
-Production was closed during the rollout, the exact deployment passed the Production build gate, closed-state smoke and cron unauthorized smoke, then `REGISTRATIONS_OPEN` was set back to `TRUE` as the final controlled data change.
+Production was closed during the rollout, the exact runtime-changing deployment passed the Production build gate, closed-state smoke and cron unauthorized smoke, then `REGISTRATIONS_OPEN` was set back to `TRUE` as the final controlled data change.
 
 ## GitHub governance
 
